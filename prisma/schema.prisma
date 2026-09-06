@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  SALES
+  OPERATOR
+  DISPATCH
+  ACCOUNTANT
+  VIEWER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
+  image         String?
+
+  role          UserRole  @default(VIEWER)
+  isActive      Boolean   @default(false) @map("is_active")
+  phone         String?
+  employeeCode  String?   @unique @map("employee_code")
+  activatedAt   DateTime? @map("activated_at")
+  activatedById String?   @map("activated_by_id")
+
+  activatedBy   User?     @relation("UserActivations", fields: [activatedById], references: [id], onDelete: SetNull)
+  activatedUsers User[]   @relation("UserActivations")
+
+  sessions      Session[]
+  accounts      Account[]
+
+  partnersCreated  Partner[]  @relation("PartnerCreatedBy")
+  partnersUpdated  Partner[]  @relation("PartnerUpdatedBy")
+  customersCreated Customer[] @relation("CustomerCreatedBy")
+  customersUpdated Customer[] @relation("CustomerUpdatedBy")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  issuer                String
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  password              String?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+  @@index([providerId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+enum PartnerType {
+  ARCHITECT
+  CARPENTER
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  ON_HOLD
+}
+
+model Partner {
+  id       String      @id @default(cuid())
+  code     String      @unique
+  type     PartnerType
+  name     String
+  firmName String?     @map("firm_name")
+  phone    String
+  altPhone String?     @map("alt_phone")
+  email    String?
+  address  String?
+  city     String?
+  state    String?
+  pincode  String?
+  isActive Boolean     @default(true) @map("is_active")
+  notes    String?
+
+  preferredByArchitect Customer[] @relation("CustomerPreferredArchitect")
+  preferredByCarpenter Customer[] @relation("CustomerPreferredCarpenter")
+
+  createdById String?  @map("created_by_id")
+  createdBy   User?    @relation("PartnerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String?  @map("updated_by_id")
+  updatedBy   User?    @relation("PartnerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([isActive])
+  @@index([name])
+  @@index([phone])
+  @@map("partners")
+}
+
+model Customer {
+  id       String         @id @default(cuid())
+  code     String         @unique
+  name     String
+  type     CustomerType   @default(INDIVIDUAL)
+  status   CustomerStatus @default(ACTIVE)
+
+  phone    String
+  altPhone String?        @map("alt_phone")
+  email    String?
+
+  address  String?
+  city     String?
+  state    String?
+  pincode  String?
+
+  gstin    String?
+  pan      String?
+
+  dateOfBirth     DateTime? @map("date_of_birth") @db.Date
+  anniversaryDate DateTime? @map("anniversary_date") @db.Date
+
+  preferredArchitectId String?  @map("preferred_architect_id")
+  preferredArchitect   Partner? @relation("CustomerPreferredArchitect", fields: [preferredArchitectId], references: [id], onDelete: SetNull)
+  preferredCarpenterId String?  @map("preferred_carpenter_id")
+  preferredCarpenter   Partner? @relation("CustomerPreferredCarpenter", fields: [preferredCarpenterId], references: [id], onDelete: SetNull)
+
+  paymentTermsDays Int?    @map("payment_terms_days")
+  notes            String?
+
+  createdById String?  @map("created_by_id")
+  createdBy   User?    @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String?  @map("updated_by_id")
+  updatedBy   User?    @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([name])
+  @@index([phone])
+  @@index([city])
+  @@index([preferredArchitectId])
+  @@index([preferredCarpenterId])
+  @@map("customers")
+}

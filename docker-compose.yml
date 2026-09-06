@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: madhav-cnc-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: madhav
+      POSTGRES_PASSWORD: madhav
+      POSTGRES_DB: madhav_cnc
+    ports:
+      - "5433:5432"
+    volumes:
+      - madhav-cnc-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U madhav -d madhav_cnc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  madhav-cnc-pgdata:

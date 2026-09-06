@@ -2,6 +2,7 @@ import type {
   DimensionUnit,
   ItemType,
   MaterialSupply,
+  OrderStatus,
   QuotationStatus,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
@@ -87,4 +88,27 @@ export const MATERIAL_SUPPLY_LABELS: Record<MaterialSupply, string> = {
 export const MATERIAL_SUPPLY_DESCRIPTIONS: Record<MaterialSupply, string> = {
   WITH_MATERIAL: 'We supply the material and do the work.',
   WITHOUT_MATERIAL: 'Customer brings the material; we charge job work only.',
+}
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  DRAFT: 'Draft',
+  CONFIRMED: 'Confirmed',
+  IN_PRODUCTION: 'In production',
+  READY: 'Ready',
+  DISPATCHED: 'Dispatched',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+}
+
+export const ORDER_STATUS_COLORS: Record<
+  OrderStatus,
+  'zinc' | 'blue' | 'amber' | 'cyan' | 'purple' | 'lime' | 'red'
+> = {
+  DRAFT: 'zinc',
+  CONFIRMED: 'blue',
+  IN_PRODUCTION: 'amber',
+  READY: 'cyan',
+  DISPATCHED: 'purple',
+  COMPLETED: 'lime',
+  CANCELLED: 'red',
 }

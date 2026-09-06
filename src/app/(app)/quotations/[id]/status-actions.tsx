@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { FormBanner } from '@/components/form-banner'
 import { createRevision, setQuotationStatus } from '@/lib/actions/quotations'
+import { convertQuotationToOrder } from '@/lib/actions/orders'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { QuotationStatus } from '@/generated/prisma/enums'
 
@@ -29,24 +30,26 @@ export function StatusActions({
   status,
   canUpdate,
   canCreate,
+  canCreateOrder,
 }: {
   id: string
   status: QuotationStatus
   canUpdate: boolean
   canCreate: boolean
+  canCreateOrder: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState<SimpleResult | null>(null)
 
-  function run(action: () => Promise<SimpleResult>, navigateOnSuccess = false) {
+  function run(action: () => Promise<SimpleResult>, navigateTo?: (id: string) => string) {
     startTransition(async () => {
       const outcome = await action()
       setResult(outcome)
 
       if (outcome.ok) {
-        if (navigateOnSuccess && outcome.id) {
-          router.push(`/quotations/${outcome.id}/edit`)
+        if (navigateTo && outcome.id) {
+          router.push(navigateTo(outcome.id))
           return
         }
 
@@ -88,11 +91,27 @@ export function StatusActions({
             ),
           )}
 
+        {canCreateOrder && status === 'ACCEPTED' ? (
+          <Button
+            disabled={pending}
+            onClick={() =>
+              run(
+                () => convertQuotationToOrder(id),
+                (orderId) => `/orders/${orderId}`,
+              )
+            }
+          >
+            Convert to order
+          </Button>
+        ) : null}
+
         {canCreate && status !== 'DRAFT' ? (
           <Button
             outline
             disabled={pending}
-            onClick={() => run(() => createRevision(id), true)}
+            onClick={() =>
+              run(() => createRevision(id), (newId) => `/quotations/${newId}/edit`)
+            }
           >
             Create revision
           </Button>

@@ -34,20 +34,22 @@ import {
   MATERIAL_SUPPLY_LABELS,
 } from '@/lib/labels'
 import { documentTotals } from '@/lib/pricing'
-import type { FormState } from '@/lib/actions/quotations'
+import type { FormState } from '@/lib/actions/orders'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
 import { DiscountType, MaterialSupply } from '@/generated/prisma/enums'
 import { currency, emptyLine, LineEditor, type EditorLine } from '@/components/line-editor'
 
-export type QuotationFormValues = {
+export type OrderFormValues = {
   customerId: string | null
   architectId: string | null
   carpenterId: string | null
   materialSupply: MaterialSupply
   subject: string | null
-  quotationDate: string
-  validUntil: string | null
+  orderDate: string
+  dueDate: string | null
+  customerPoNumber: string | null
+  advanceAmount: number
   siteAddress: string | null
   siteCity: string | null
   sitePincode: string | null
@@ -69,7 +71,7 @@ const num = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-export function QuotationForm({
+export function OrderForm({
   action,
   values,
   submitLabel,
@@ -79,7 +81,7 @@ export function QuotationForm({
   carpenters,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
-  values: QuotationFormValues
+  values: OrderFormValues
   submitLabel: string
   customers: CustomerOption[]
   items: ItemOption[]
@@ -181,7 +183,7 @@ export function QuotationForm({
       ) : null}
 
       <Fieldset>
-        <Legend>Quotation</Legend>
+        <Legend>Order</Legend>
         <FieldGroup>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field className="sm:col-span-2">
@@ -227,11 +229,11 @@ export function QuotationForm({
               )}
             </Field>
             <Field>
-              <Label>Quotation date</Label>
+              <Label>Order date</Label>
               <Input
-                name="quotationDate"
+                name="orderDate"
                 type="date"
-                defaultValue={values.quotationDate}
+                defaultValue={values.orderDate}
                 required
               />
             </Field>
@@ -247,11 +249,11 @@ export function QuotationForm({
               />
             </Field>
             <Field>
-              <Label>Valid until</Label>
+              <Label>Due date</Label>
               <Input
-                name="validUntil"
+                name="dueDate"
                 type="date"
-                defaultValue={values.validUntil ?? ''}
+                defaultValue={values.dueDate ?? ''}
               />
             </Field>
           </div>
@@ -388,6 +390,26 @@ export function QuotationForm({
                   value={discountValue}
                   disabled={discountType === 'NONE'}
                   onChange={(event) => setDiscountValue(event.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Field>
+                <Label>Advance received</Label>
+                <Input
+                  name="advanceAmount"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  defaultValue={values.advanceAmount}
+                />
+                <Description>Recorded against this order.</Description>
+              </Field>
+              <Field>
+                <Label>Customer PO number</Label>
+                <Input
+                  name="customerPoNumber"
+                  defaultValue={values.customerPoNumber ?? ''}
                 />
               </Field>
             </div>

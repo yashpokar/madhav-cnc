@@ -12,23 +12,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
-import { Text } from '@/components/catalyst/text'
+import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
-import { getQuotation } from '@/lib/queries/quotations'
+import { getOrder } from '@/lib/queries/orders'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
   DIMENSION_UNIT_SHORT,
   MATERIAL_SUPPLY_DESCRIPTIONS,
   MATERIAL_SUPPLY_LABELS,
-  QUOTATION_STATUS_COLORS,
-  QUOTATION_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  ORDER_STATUS_LABELS,
   UNIT_SHORT,
 } from '@/lib/labels'
-import { StatusActions } from './status-actions'
+import { OrderStatusActions } from './status-actions'
 
 export const metadata: Metadata = {
-  title: 'Quotation',
+  title: 'Order',
 }
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -46,22 +46,20 @@ const dateFormat = new Intl.DateTimeFormat('en-IN', {
 export default async function QuotationDetailPage({
   params,
   searchParams,
-}: PageProps<'/quotations/[id]'>) {
-  const user = await requireCapability('quotation:read')
+}: PageProps<'/orders/[id]'>) {
+  const user = await requireCapability('order:read')
   const { id } = await params
   const query = await searchParams
   const justCreated = query.created === '1'
 
-  const quotation = await getQuotation(id)
+  const order = await getOrder(id)
 
-  if (!quotation) {
+  if (!order) {
     notFound()
   }
 
-  const canUpdate = can(user.role, 'quotation:update')
-  const canCreate = can(user.role, 'quotation:create')
-  const canCreateOrder = can(user.role, 'order:create')
-  const editable = quotation.status !== 'CONVERTED'
+  const canUpdate = can(user.role, 'order:update')
+  const editable = order.status === 'DRAFT' || order.status === 'CONFIRMED'
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -69,42 +67,51 @@ export default async function QuotationDetailPage({
         <div className="grid grid-cols-1 gap-2">
           <div className="flex items-center gap-3">
             <Heading>
-              {quotation.number}
-              {quotation.revision > 1 ? ` R${quotation.revision}` : ''}
+              {order.number}
+        
             </Heading>
-            <Badge color={QUOTATION_STATUS_COLORS[quotation.status]}>
-              {QUOTATION_STATUS_LABELS[quotation.status]}
+            <Badge color={ORDER_STATUS_COLORS[order.status]}>
+              {ORDER_STATUS_LABELS[order.status]}
             </Badge>
             <Badge
               color={
-                quotation.materialSupply === 'WITH_MATERIAL' ? 'sky' : 'orange'
+                order.materialSupply === 'WITH_MATERIAL' ? 'sky' : 'orange'
               }
             >
-              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+              {MATERIAL_SUPPLY_LABELS[order.materialSupply]}
             </Badge>
           </div>
           <Text>
-            {quotation.customer.name}
-            {quotation.subject ? ` · ${quotation.subject}` : ''}
+            {order.customer.name}
+            {order.subject ? ` · ${order.subject}` : ''}
           </Text>
+          {order.quotation ? (
+            <Text>
+              From quotation{' '}
+              <TextLink href={`/quotations/${order.quotation.id}`}>
+                {order.quotation.number}
+                {order.quotation.revision > 1
+                  ? ` R${order.quotation.revision}`
+                  : ''}
+              </TextLink>
+            </Text>
+          ) : null}
         </div>
         {canUpdate && editable ? (
-          <Button href={`/quotations/${quotation.id}/edit`}>Edit</Button>
+          <Button href={`/orders/${order.id}/edit`}>Edit</Button>
         ) : null}
       </div>
 
       {justCreated ? (
         <FormBanner tone="success">
-          Quotation {quotation.number} created
+          Order {order.number} created
         </FormBanner>
       ) : null}
 
-      <StatusActions
-        id={quotation.id}
-        status={quotation.status}
+      <OrderStatusActions
+        id={order.id}
+        status={order.status}
         canUpdate={canUpdate}
-        canCreate={canCreate}
-        canCreateOrder={canCreateOrder}
       />
 
       <Divider />
@@ -113,9 +120,9 @@ export default async function QuotationDetailPage({
         <div>
           <Subheading level={2}>Customer</Subheading>
           <div className="mt-2 text-sm/6">
-            <div className="font-medium">{quotation.customer.name}</div>
+            <div className="font-medium">{order.customer.name}</div>
             <div className="text-zinc-500 dark:text-zinc-400">
-              {quotation.customer.code} · {quotation.customer.phone}
+              {order.customer.code} · {order.customer.phone}
             </div>
           </div>
         </div>
@@ -125,13 +132,13 @@ export default async function QuotationDetailPage({
             <div>
               Architect:{' '}
               <span className="text-zinc-500 dark:text-zinc-400">
-                {quotation.architect?.name ?? '—'}
+                {order.architect?.name ?? '—'}
               </span>
             </div>
             <div>
               Carpenter:{' '}
               <span className="text-zinc-500 dark:text-zinc-400">
-                {quotation.carpenter?.name ?? '—'}
+                {order.carpenter?.name ?? '—'}
               </span>
             </div>
           </div>
@@ -140,10 +147,10 @@ export default async function QuotationDetailPage({
           <Subheading level={2}>Material</Subheading>
           <div className="mt-2 text-sm/6">
             <div className="font-medium">
-              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+              {MATERIAL_SUPPLY_LABELS[order.materialSupply]}
             </div>
             <div className="text-zinc-500 dark:text-zinc-400">
-              {MATERIAL_SUPPLY_DESCRIPTIONS[quotation.materialSupply]}
+              {MATERIAL_SUPPLY_DESCRIPTIONS[order.materialSupply]}
             </div>
           </div>
         </div>
@@ -151,28 +158,26 @@ export default async function QuotationDetailPage({
           <Subheading level={2}>Dates</Subheading>
           <div className="mt-2 text-sm/6">
             <div>
-              Raised:{' '}
+              Ordered:{' '}
               <span className="text-zinc-500 dark:text-zinc-400">
-                {dateFormat.format(quotation.quotationDate)}
+                {dateFormat.format(order.orderDate)}
               </span>
             </div>
             <div>
-              Valid until:{' '}
+              Due:{' '}
               <span className="text-zinc-500 dark:text-zinc-400">
-                {quotation.validUntil
-                  ? dateFormat.format(quotation.validUntil)
-                  : '—'}
+                {order.dueDate ? dateFormat.format(order.dueDate) : '—'}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {quotation.siteAddress || quotation.siteCity ? (
+      {order.siteAddress || order.siteCity ? (
         <div>
           <Subheading level={2}>Site</Subheading>
           <Text className="mt-2">
-            {[quotation.siteAddress, quotation.siteCity, quotation.sitePincode]
+            {[order.siteAddress, order.siteCity, order.sitePincode]
               .filter(Boolean)
               .join(', ')}
           </Text>
@@ -196,7 +201,7 @@ export default async function QuotationDetailPage({
             </TableRow>
           </TableHead>
           <TableBody>
-            {quotation.lines.map((line) => (
+            {order.lines.map((line) => (
               <TableRow key={line.id}>
                 <TableCell className="tabular-nums text-zinc-500 dark:text-zinc-400">
                   {line.position}
@@ -241,50 +246,62 @@ export default async function QuotationDetailPage({
         <dl className="grid w-full max-w-sm grid-cols-2 gap-y-2 text-sm/6">
           <dt className="text-zinc-500 dark:text-zinc-400">Subtotal</dt>
           <dd className="text-right tabular-nums">
-            {currency.format(quotation.subtotal)}
+            {currency.format(order.subtotal)}
           </dd>
           <dt className="text-zinc-500 dark:text-zinc-400">Discount</dt>
           <dd className="text-right tabular-nums">
-            −{currency.format(quotation.discountAmount)}
+            −{currency.format(order.discountAmount)}
           </dd>
           <dt className="text-zinc-500 dark:text-zinc-400">Taxable</dt>
           <dd className="text-right tabular-nums">
-            {currency.format(quotation.taxableAmount)}
+            {currency.format(order.taxableAmount)}
           </dd>
           <dt className="text-zinc-500 dark:text-zinc-400">GST</dt>
           <dd className="text-right tabular-nums">
-            {currency.format(quotation.taxAmount)}
+            {currency.format(order.taxAmount)}
           </dd>
           <dt className="text-zinc-500 dark:text-zinc-400">Round off</dt>
           <dd className="text-right tabular-nums">
-            {currency.format(quotation.roundOff)}
+            {currency.format(order.roundOff)}
           </dd>
           <dt className="border-t border-zinc-950/10 pt-2 font-medium dark:border-white/10">
             Total
           </dt>
           <dd className="border-t border-zinc-950/10 pt-2 text-right text-base/6 font-semibold tabular-nums dark:border-white/10">
-            {currency.format(quotation.total)}
+            {currency.format(order.total)}
           </dd>
+          {order.advanceAmount > 0 ? (
+            <>
+              <dt className="text-zinc-500 dark:text-zinc-400">Advance</dt>
+              <dd className="text-right tabular-nums">
+                −{currency.format(order.advanceAmount)}
+              </dd>
+              <dt className="font-medium">Balance</dt>
+              <dd className="text-right font-semibold tabular-nums">
+                {currency.format(order.total - order.advanceAmount)}
+              </dd>
+            </>
+          ) : null}
         </dl>
       </div>
 
-      {quotation.notes || quotation.terms ? (
+      {order.notes || order.terms ? (
         <>
           <Divider />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-            {quotation.notes ? (
+            {order.notes ? (
               <div>
                 <Subheading level={2}>Notes</Subheading>
                 <Text className="mt-2 whitespace-pre-line">
-                  {quotation.notes}
+                  {order.notes}
                 </Text>
               </div>
             ) : null}
-            {quotation.terms ? (
+            {order.terms ? (
               <div>
                 <Subheading level={2}>Terms &amp; conditions</Subheading>
                 <Text className="mt-2 whitespace-pre-line">
-                  {quotation.terms}
+                  {order.terms}
                 </Text>
               </div>
             ) : null}

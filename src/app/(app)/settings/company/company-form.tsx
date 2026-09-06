@@ -29,6 +29,9 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
     { status: 'idle' },
   )
 
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const [logoVersion, setLogoVersion] = useState(0)
+  const [hasLogo, setHasLogo] = useState(Boolean(setting.logoStoredName))
   const qrInputRef = useRef<HTMLInputElement>(null)
   const [qrPending, startTransition] = useTransition()
   const [qrResult, setQrResult] = useState<SimpleResult | null>(null)
@@ -39,6 +42,30 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
   const keep = (name: string, fallback: string | number | null | undefined) =>
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
+
+  async function uploadImage(
+    file: File,
+    endpoint: string,
+    onDone: () => void,
+  ) {
+    setQrResult(null)
+
+    const body = new FormData()
+    body.append('file', file)
+
+    const response = await fetch(endpoint, { method: 'POST', body })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+      setQrResult({ ok: false, error: payload?.error ?? 'Upload failed' })
+      return
+    }
+
+    onDone()
+    router.refresh()
+  }
 
   async function uploadQr(file: File) {
     setQrResult(null)
@@ -241,6 +268,25 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
         <Fieldset>
           <FieldGroup>
             <Field>
+              <Label>Default advance %</Label>
+              <Input
+                name="defaultAdvancePercent"
+                type="number"
+                step="0.01"
+                min={0}
+                max={100}
+                defaultValue={keep('defaultAdvancePercent', Number(setting.defaultAdvancePercent))}
+                invalid={Boolean(errors.defaultAdvancePercent)}
+              />
+              {errors.defaultAdvancePercent ? (
+                <ErrorMessage>{errors.defaultAdvancePercent}</ErrorMessage>
+              ) : (
+                <Description>
+                  Applied to new quotations. Each quotation can override it.
+                </Description>
+              )}
+            </Field>
+            <Field>
               <Label>Invoice terms</Label>
               <Textarea
                 name="invoiceTerms"
@@ -258,6 +304,63 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
           </Button>
         </div>
       </form>
+
+      <Divider />
+
+      <div className="grid grid-cols-1 gap-4">
+        <Subheading level={2}>Logo</Subheading>
+
+        <div className="flex flex-wrap items-start gap-6">
+          <div className="flex size-28 items-center justify-center rounded-lg bg-zinc-100 p-2 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
+            {hasLogo ? (
+              <img
+                key={logoVersion}
+                src={`/api/company/logo?v=${logoVersion}`}
+                alt="Company logo"
+                className="size-full object-contain"
+              />
+            ) : (
+              <Text className="text-center text-xs/5">No logo</Text>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <Text>
+              Shown on quotations shared with customers. A square image works
+              best.
+            </Text>
+            <div>
+              <Button
+                outline
+                disabled={qrPending}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {hasLogo ? 'Replace logo' : 'Upload logo'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+
+            if (file) {
+              void uploadImage(file, '/api/company/logo', () => {
+                setHasLogo(true)
+                setLogoVersion((value) => value + 1)
+                setQrResult({ ok: true, message: 'Logo updated' })
+              })
+            }
+
+            event.target.value = ''
+          }}
+        />
+      </div>
 
       <Divider />
 

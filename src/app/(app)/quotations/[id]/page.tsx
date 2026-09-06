@@ -28,6 +28,8 @@ import {
 import { StatusActions } from './status-actions'
 import { DesignReferences } from './design-references'
 import { SharePanel } from './share-panel'
+import { PaymentTerms } from '@/components/payment-terms'
+import { getCompanySetting } from '@/lib/queries/company'
 
 export const metadata: Metadata = {
   title: 'Quotation',
@@ -54,7 +56,10 @@ export default async function QuotationDetailPage({
   const query = await searchParams
   const justCreated = query.created === '1'
 
-  const quotation = await getQuotation(id)
+  const [quotation, company] = await Promise.all([
+    getQuotation(id),
+    getCompanySetting(),
+  ])
 
   if (!quotation) {
     notFound()
@@ -297,6 +302,15 @@ export default async function QuotationDetailPage({
           </dd>
         </dl>
       </div>
+
+      <Divider />
+
+      <PaymentTerms
+        total={quotation.total}
+        advancePercent={quotation.advancePercent}
+        company={company}
+        qrSrc={company.upiQrStoredName ? '/api/company/qr' : null}
+      />
 
       {quotation.notes || quotation.terms ? (
         <>

@@ -118,6 +118,7 @@ export async function getQuotation(id: string) {
   return {
     ...quotation,
     discountValue: num(quotation.discountValue),
+    advancePercent: num(quotation.advancePercent),
     subtotal: num(quotation.subtotal),
     discountAmount: num(quotation.discountAmount),
     taxableAmount: num(quotation.taxableAmount),

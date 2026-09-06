@@ -86,6 +86,11 @@ export const quotationInputSchema = z.object({
   status: z.enum(QuotationStatus).default('DRAFT'),
   discountType: z.enum(DiscountType).default('NONE'),
   discountValue: z.coerce.number().min(0).max(99_999_999).default(0),
+  advancePercent: z.coerce
+    .number()
+    .min(0, 'Advance cannot be negative')
+    .max(100, 'Advance cannot exceed 100%')
+    .default(80),
   notes: optionalText(2000),
   terms: optionalText(2000),
   lines: z

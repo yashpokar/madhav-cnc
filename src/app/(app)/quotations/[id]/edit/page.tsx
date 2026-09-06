@@ -71,6 +71,7 @@ export default async function EditQuotationPage({
           sitePincode: quotation.sitePincode,
           discountType: quotation.discountType,
           discountValue: quotation.discountValue,
+          advancePercent: quotation.advancePercent,
           notes: quotation.notes,
           terms: quotation.terms,
           lines: quotation.lines.map((line) => ({

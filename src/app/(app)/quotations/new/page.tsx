@@ -4,6 +4,7 @@ import { Text } from '@/components/catalyst/text'
 import { createQuotation } from '@/lib/actions/quotations'
 import { listCustomerOptions, listItemOptions } from '@/lib/queries/quotations'
 import { listPartnerOptions } from '@/lib/queries/partners'
+import { getDefaultAdvancePercent } from '@/lib/queries/company'
 import { requireCapability } from '@/lib/session'
 import { QuotationForm } from '../quotation-form'
 
@@ -14,12 +15,14 @@ export const metadata: Metadata = {
 export default async function NewQuotationPage() {
   await requireCapability('quotation:create')
 
-  const [customers, items, architects, carpenters] = await Promise.all([
-    listCustomerOptions(),
-    listItemOptions(),
-    listPartnerOptions('ARCHITECT'),
-    listPartnerOptions('CARPENTER'),
-  ])
+  const [customers, items, architects, carpenters, advancePercent] =
+    await Promise.all([
+      listCustomerOptions(),
+      listItemOptions(),
+      listPartnerOptions('ARCHITECT'),
+      listPartnerOptions('CARPENTER'),
+      getDefaultAdvancePercent(),
+    ])
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -50,6 +53,7 @@ export default async function NewQuotationPage() {
           sitePincode: null,
           discountType: 'NONE',
           discountValue: 0,
+          advancePercent,
           notes: null,
           terms: null,
           lines: [],

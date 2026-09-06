@@ -32,6 +32,7 @@ export async function updateCompanySetting(
     accountNumber: formData.get('accountNumber'),
     ifscCode: formData.get('ifscCode'),
     upiId: formData.get('upiId'),
+    defaultAdvancePercent: formData.get('defaultAdvancePercent') || 0,
     invoiceTerms: formData.get('invoiceTerms'),
   })
 

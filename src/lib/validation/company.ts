@@ -80,6 +80,10 @@ export const companySettingSchema = z.object({
     ])
     .optional()
     .transform((value) => (value ? value : null)),
+  defaultAdvancePercent: z.coerce
+    .number()
+    .min(0, 'Advance cannot be negative')
+    .max(100, 'Advance cannot exceed 100%'),
   invoiceTerms: optionalText(2000),
 })
 

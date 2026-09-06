@@ -372,6 +372,8 @@ model Quotation {
   roundOff       Decimal @default(0) @map("round_off") @db.Decimal(6, 2)
   total          Decimal @default(0) @db.Decimal(14, 2)
 
+  advancePercent Decimal @default(80) @map("advance_percent") @db.Decimal(5, 2)
+
   notes String?
   terms String?
 
@@ -650,9 +652,14 @@ model CompanySetting {
   accountNumber   String? @map("account_number")
   ifscCode        String? @map("ifsc_code")
 
+  logoStoredName String? @map("logo_stored_name")
+  logoMimeType   String? @map("logo_mime_type")
+
   upiId          String? @map("upi_id")
   upiQrStoredName String? @map("upi_qr_stored_name")
   upiQrMimeType   String? @map("upi_qr_mime_type")
+
+  defaultAdvancePercent Decimal @default(80) @map("default_advance_percent") @db.Decimal(5, 2)
 
   invoiceTerms String? @map("invoice_terms")
 

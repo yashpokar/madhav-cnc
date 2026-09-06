@@ -67,6 +67,7 @@ export async function getSharedQuotation(quotationId: string) {
       taxAmount: true,
       roundOff: true,
       total: true,
+      advancePercent: true,
       notes: true,
       terms: true,
       customer: {
@@ -131,6 +132,7 @@ export async function getSharedQuotation(quotationId: string) {
     taxAmount: num(quotation.taxAmount),
     roundOff: num(quotation.roundOff),
     total: num(quotation.total),
+    advancePercent: num(quotation.advancePercent),
     lines: quotation.lines.map((line) => ({
       ...line,
       length: optionalNum(line.length),
@@ -159,6 +161,15 @@ export async function getPublicCompany() {
       phone: true,
       email: true,
       gstin: true,
+      bankAccountName: true,
+      bankName: true,
+      bankBranch: true,
+      accountNumber: true,
+      ifscCode: true,
+      upiId: true,
+      upiQrStoredName: true,
+      upiQrMimeType: true,
+      logoStoredName: true,
     },
   })
 

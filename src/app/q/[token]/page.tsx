@@ -8,6 +8,7 @@ import {
   shareIsUsable,
 } from '@/lib/queries/share'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
+import { PaymentTerms } from '@/components/payment-terms'
 import { CommentBox, RespondPanel } from './respond'
 import { PrintButton } from './print-button'
 
@@ -81,8 +82,16 @@ export default async function SharedQuotationPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12 print:max-w-none print:py-0">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-950/10 pb-6">
-        <div>
+      <header className="flex flex-col gap-5 border-b border-zinc-950/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          {company?.logoStoredName ? (
+            <img
+              src={`/q/${token}/logo`}
+              alt={company.companyName ?? 'Logo'}
+              className="size-16 shrink-0 rounded-full object-contain sm:size-20"
+            />
+          ) : null}
+          <div>
           <div className="text-lg/7 font-semibold text-zinc-950">
             {company?.companyName ?? 'Quotation'}
           </div>
@@ -97,8 +106,9 @@ export default async function SharedQuotationPage({
           {company?.gstin ? (
             <div className="text-sm/6 text-zinc-600">GSTIN {company.gstin}</div>
           ) : null}
+          </div>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 sm:text-right">
           <div className="font-mono text-sm/6 font-semibold text-zinc-950">
             {quotation.number}
             {quotation.revision > 1 ? ` R${quotation.revision}` : ''}
@@ -142,8 +152,48 @@ export default async function SharedQuotationPage({
         <p className="mt-6 text-sm/6 text-zinc-950">{quotation.subject}</p>
       ) : null}
 
-      <section className="mt-8 overflow-x-auto">
-        <table className="w-full min-w-[36rem] text-left text-sm/6">
+      <section className="mt-8 grid grid-cols-1 gap-3 sm:hidden">
+        {quotation.lines.map((line) => (
+          <div
+            key={line.id}
+            className="rounded-lg p-4 ring-1 ring-zinc-950/10"
+          >
+            <div className="font-medium text-zinc-950">{line.description}</div>
+            {line.materialSupply === 'WITHOUT_MATERIAL' ? (
+              <div className="mt-0.5 text-xs/5 text-zinc-500">
+                Job work only — material supplied by you
+              </div>
+            ) : null}
+            <dl className="mt-3 grid grid-cols-2 gap-y-1 text-sm/6">
+              {line.dimensionUnit && line.length && line.width ? (
+                <>
+                  <dt className="text-zinc-500">Size</dt>
+                  <dd className="text-right">
+                    {line.length} × {line.width}{' '}
+                    {DIMENSION_UNIT_SHORT[line.dimensionUnit]}
+                    {line.pieces ? ` × ${line.pieces}` : ''}
+                  </dd>
+                </>
+              ) : null}
+              <dt className="text-zinc-500">Quantity</dt>
+              <dd className="text-right tabular-nums">
+                {line.quantity} {UNIT_SHORT[line.unit]}
+              </dd>
+              <dt className="text-zinc-500">Rate</dt>
+              <dd className="text-right tabular-nums">
+                {currency.format(line.rate)}
+              </dd>
+              <dt className="font-medium text-zinc-950">Amount</dt>
+              <dd className="text-right font-semibold tabular-nums text-zinc-950">
+                {currency.format(line.amount)}
+              </dd>
+            </dl>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-8 hidden overflow-x-auto sm:block">
+        <table className="w-full text-left text-sm/6">
           <thead className="border-b border-zinc-950/10 text-xs/5 uppercase tracking-wide text-zinc-500">
             <tr>
               <th className="py-2 pr-2 font-medium">#</th>
@@ -193,7 +243,7 @@ export default async function SharedQuotationPage({
       </section>
 
       <section className="mt-6 flex justify-end">
-        <dl className="grid w-full max-w-xs grid-cols-2 gap-y-2 text-sm/6">
+        <dl className="grid w-full grid-cols-2 gap-y-2 text-sm/6 sm:max-w-xs">
           <dt className="text-zinc-600">Subtotal</dt>
           <dd className="text-right tabular-nums">
             {currency.format(quotation.subtotal)}
@@ -304,6 +354,15 @@ export default async function SharedQuotationPage({
           </div>
         </section>
       ) : null}
+
+      <div className="mt-10">
+        <PaymentTerms
+          total={quotation.total}
+          advancePercent={quotation.advancePercent}
+          company={company}
+          qrSrc={company?.upiQrStoredName ? `/q/${token}/qr` : null}
+        />
+      </div>
 
       {quotation.notes || quotation.terms ? (
         <section className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">

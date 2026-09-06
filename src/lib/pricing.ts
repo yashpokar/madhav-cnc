@@ -65,6 +65,13 @@ export function derivedQuantity({
   return Math.round(area * (pieces ?? 1) * 1000) / 1000
 }
 
+export function paymentSplit(total: number, advancePercent: number) {
+  const advance = round2(total * (advancePercent / 100))
+  const balance = round2(total - advance)
+
+  return { advance, balance }
+}
+
 export function lineTotals(line: LineInput): LineTotals {
   const gross = line.quantity * line.rate
   const discount = gross * (line.discountPercent / 100)

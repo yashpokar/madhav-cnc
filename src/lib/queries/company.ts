@@ -16,4 +16,13 @@ export async function getCompanySetting() {
   })
 }
 
+export async function getDefaultAdvancePercent() {
+  const setting = await prisma.companySetting.findUnique({
+    where: { id: 'default' },
+    select: { defaultAdvancePercent: true },
+  })
+
+  return setting ? setting.defaultAdvancePercent.toNumber() : 80
+}
+
 export type CompanySetting = Awaited<ReturnType<typeof getCompanySetting>>

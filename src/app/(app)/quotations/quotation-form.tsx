@@ -53,6 +53,7 @@ export type QuotationFormValues = {
   sitePincode: string | null
   discountType: DiscountType
   discountValue: number
+  advancePercent: number
   notes: string | null
   terms: string | null
   lines: EditorLine[]
@@ -384,6 +385,18 @@ export function QuotationForm({
                     </ListboxOption>
                   ))}
                 </Listbox>
+              </Field>
+              <Field>
+                <Label>Advance %</Label>
+                <Input
+                  name="advancePercent"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={100}
+                  defaultValue={keep('advancePercent', values.advancePercent)}
+                />
+                <Description>Payable before work begins.</Description>
               </Field>
               <Field>
                 <Label>Value</Label>

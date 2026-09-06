@@ -114,6 +114,9 @@ export function QuotationForm({
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   const totals = useMemo(
     () =>
@@ -232,7 +235,7 @@ export function QuotationForm({
               <Input
                 name="quotationDate"
                 type="date"
-                defaultValue={values.quotationDate}
+                defaultValue={keep('quotationDate', values.quotationDate)}
                 required
               />
             </Field>
@@ -243,7 +246,7 @@ export function QuotationForm({
               <Label>Subject</Label>
               <Input
                 name="subject"
-                defaultValue={values.subject ?? ''}
+                defaultValue={keep('subject', values.subject)}
                 placeholder="Kitchen and wardrobes, 3BHK"
               />
             </Field>
@@ -252,7 +255,7 @@ export function QuotationForm({
               <Input
                 name="validUntil"
                 type="date"
-                defaultValue={values.validUntil ?? ''}
+                defaultValue={keep('validUntil', values.validUntil)}
               />
             </Field>
           </div>
@@ -437,12 +440,12 @@ export function QuotationForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Notes</Label>
-              <Textarea name="notes" rows={4} defaultValue={values.notes ?? ''} />
+              <Textarea name="notes" rows={4} defaultValue={keep('notes', values.notes)} />
               <Description>Shown to the customer.</Description>
             </Field>
             <Field>
               <Label>Terms &amp; conditions</Label>
-              <Textarea name="terms" rows={4} defaultValue={values.terms ?? ''} />
+              <Textarea name="terms" rows={4} defaultValue={keep('terms', values.terms)} />
             </Field>
           </div>
         </FieldGroup>

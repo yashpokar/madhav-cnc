@@ -15,6 +15,7 @@ import {
 } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import { Textarea } from '@/components/catalyst/textarea'
+import { Subheading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { removeUpiQr, updateCompanySetting } from '@/lib/actions/company'
@@ -35,6 +36,9 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
   const [hasQr, setHasQr] = useState(Boolean(setting.upiQrStoredName))
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   async function uploadQr(file: File) {
     setQrResult(null)
@@ -76,7 +80,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Label>Company name</Label>
                 <Input
                   name="companyName"
-                  defaultValue={setting.companyName}
+                  defaultValue={keep('companyName', setting.companyName)}
                   required
                   invalid={Boolean(errors.companyName)}
                 />
@@ -86,7 +90,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               </Field>
               <Field>
                 <Label>Phone</Label>
-                <Input name="phone" defaultValue={setting.phone ?? ''} />
+                <Input name="phone" defaultValue={keep('phone', setting.phone)} />
               </Field>
             </div>
 
@@ -95,25 +99,25 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               <Textarea
                 name="addressLine"
                 rows={2}
-                defaultValue={setting.addressLine ?? ''}
+                defaultValue={keep('addressLine', setting.addressLine)}
               />
             </Field>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
               <Field>
                 <Label>City</Label>
-                <Input name="city" defaultValue={setting.city ?? ''} />
+                <Input name="city" defaultValue={keep('city', setting.city)} />
               </Field>
               <Field>
                 <Label>State</Label>
-                <Input name="state" defaultValue={setting.state ?? ''} />
+                <Input name="state" defaultValue={keep('state', setting.state)} />
               </Field>
               <Field>
                 <Label>Pincode</Label>
                 <Input
                   name="pincode"
                   inputMode="numeric"
-                  defaultValue={setting.pincode ?? ''}
+                  defaultValue={keep('pincode', setting.pincode)}
                   invalid={Boolean(errors.pincode)}
                 />
                 {errors.pincode ? (
@@ -125,7 +129,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input
                   name="email"
                   type="email"
-                  defaultValue={setting.email ?? ''}
+                  defaultValue={keep('email', setting.email)}
                   invalid={Boolean(errors.email)}
                 />
                 {errors.email ? <ErrorMessage>{errors.email}</ErrorMessage> : null}
@@ -138,7 +142,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input
                   name="gstin"
                   className="uppercase"
-                  defaultValue={setting.gstin ?? ''}
+                  defaultValue={keep('gstin', setting.gstin)}
                   invalid={Boolean(errors.gstin)}
                 />
                 {errors.gstin ? <ErrorMessage>{errors.gstin}</ErrorMessage> : null}
@@ -148,7 +152,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input
                   name="pan"
                   className="uppercase"
-                  defaultValue={setting.pan ?? ''}
+                  defaultValue={keep('pan', setting.pan)}
                   invalid={Boolean(errors.pan)}
                 />
                 {errors.pan ? <ErrorMessage>{errors.pan}</ErrorMessage> : null}
@@ -167,12 +171,12 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Label>Account name</Label>
                 <Input
                   name="bankAccountName"
-                  defaultValue={setting.bankAccountName ?? ''}
+                  defaultValue={keep('bankAccountName', setting.bankAccountName)}
                 />
               </Field>
               <Field>
                 <Label>Bank name</Label>
-                <Input name="bankName" defaultValue={setting.bankName ?? ''} />
+                <Input name="bankName" defaultValue={keep('bankName', setting.bankName)} />
               </Field>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -181,7 +185,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input
                   name="accountNumber"
                   inputMode="numeric"
-                  defaultValue={setting.accountNumber ?? ''}
+                  defaultValue={keep('accountNumber', setting.accountNumber)}
                   invalid={Boolean(errors.accountNumber)}
                 />
                 {errors.accountNumber ? (
@@ -193,7 +197,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input
                   name="ifscCode"
                   className="uppercase"
-                  defaultValue={setting.ifscCode ?? ''}
+                  defaultValue={keep('ifscCode', setting.ifscCode)}
                   invalid={Boolean(errors.ifscCode)}
                 />
                 {errors.ifscCode ? (
@@ -202,7 +206,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               </Field>
               <Field>
                 <Label>Branch</Label>
-                <Input name="bankBranch" defaultValue={setting.bankBranch ?? ''} />
+                <Input name="bankBranch" defaultValue={keep('bankBranch', setting.bankBranch)} />
               </Field>
             </div>
           </FieldGroup>
@@ -218,7 +222,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               <Input
                 name="upiId"
                 placeholder="madhavcnc@okhdfcbank"
-                defaultValue={setting.upiId ?? ''}
+                defaultValue={keep('upiId', setting.upiId)}
                 invalid={Boolean(errors.upiId)}
               />
               {errors.upiId ? (
@@ -241,7 +245,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               <Textarea
                 name="invoiceTerms"
                 rows={4}
-                defaultValue={setting.invoiceTerms ?? ''}
+                defaultValue={keep('invoiceTerms', setting.invoiceTerms)}
               />
               <Description>Default terms printed on invoices.</Description>
             </Field>
@@ -258,7 +262,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
       <Divider />
 
       <div className="grid grid-cols-1 gap-4">
-        <Legend>UPI QR code</Legend>
+        <Subheading level={2}>UPI QR code</Subheading>
 
         {qrResult ? (
           <FormBanner tone={qrResult.ok ? 'success' : 'error'}>

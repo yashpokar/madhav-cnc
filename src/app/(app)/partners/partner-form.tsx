@@ -60,6 +60,9 @@ export function PartnerForm({
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-8">
@@ -76,7 +79,7 @@ export function PartnerForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Type</Label>
-              <Select name="type" defaultValue={values.type} disabled={lockType}>
+              <Select name="type" defaultValue={keep('type', values.type)} disabled={lockType}>
                 {Object.values(PartnerType).map((type) => (
                   <option key={type} value={type}>
                     {TYPE_LABELS[type]}
@@ -94,7 +97,7 @@ export function PartnerForm({
               <Label>Name</Label>
               <Input
                 name="name"
-                defaultValue={values.name}
+                defaultValue={keep('name', values.name)}
                 required
                 invalid={Boolean(errors.name)}
               />
@@ -104,7 +107,7 @@ export function PartnerForm({
 
           <Field>
             <Label>Firm name</Label>
-            <Input name="firmName" defaultValue={values.firmName ?? ''} />
+            <Input name="firmName" defaultValue={keep('firmName', values.firmName)} />
             <Description>Optional.</Description>
           </Field>
 
@@ -114,7 +117,7 @@ export function PartnerForm({
               <Input
                 name="phone"
                 type="tel"
-                defaultValue={values.phone}
+                defaultValue={keep('phone', values.phone)}
                 required
                 invalid={Boolean(errors.phone)}
               />
@@ -122,14 +125,14 @@ export function PartnerForm({
             </Field>
             <Field>
               <Label>Alternate phone</Label>
-              <Input name="altPhone" type="tel" defaultValue={values.altPhone ?? ''} />
+              <Input name="altPhone" type="tel" defaultValue={keep('altPhone', values.altPhone)} />
             </Field>
             <Field>
               <Label>Email</Label>
               <Input
                 name="email"
                 type="email"
-                defaultValue={values.email ?? ''}
+                defaultValue={keep('email', values.email)}
                 invalid={Boolean(errors.email)}
               />
               {errors.email ? <ErrorMessage>{errors.email}</ErrorMessage> : null}
@@ -145,23 +148,23 @@ export function PartnerForm({
         <FieldGroup>
           <Field>
             <Label>Address</Label>
-            <Textarea name="address" rows={2} defaultValue={values.address ?? ''} />
+            <Textarea name="address" rows={2} defaultValue={keep('address', values.address)} />
           </Field>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>
               <Label>City</Label>
-              <Input name="city" defaultValue={values.city ?? ''} />
+              <Input name="city" defaultValue={keep('city', values.city)} />
             </Field>
             <Field>
               <Label>State</Label>
-              <Input name="state" defaultValue={values.state ?? ''} />
+              <Input name="state" defaultValue={keep('state', values.state)} />
             </Field>
             <Field>
               <Label>Pincode</Label>
               <Input
                 name="pincode"
                 inputMode="numeric"
-                defaultValue={values.pincode ?? ''}
+                defaultValue={keep('pincode', values.pincode)}
                 invalid={Boolean(errors.pincode)}
               />
               {errors.pincode ? (
@@ -178,7 +181,7 @@ export function PartnerForm({
         <FieldGroup>
           <Field>
             <Label>Notes</Label>
-            <Textarea name="notes" rows={3} defaultValue={values.notes ?? ''} />
+            <Textarea name="notes" rows={3} defaultValue={keep('notes', values.notes)} />
           </Field>
           <SwitchField>
             <Label>Active</Label>

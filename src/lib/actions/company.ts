@@ -5,26 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { companySettingSchema } from '@/lib/validation/company'
 import { deleteUpload } from '@/lib/storage'
-import type { FormState } from '@/lib/actions/partners'
+import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { FormState, SimpleResult }
-
-function fieldErrorsFrom(error: {
-  issues: { path: PropertyKey[]; message: string }[]
-}) {
-  const fieldErrors: Record<string, string> = {}
-
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? '')
-
-    if (key && !fieldErrors[key]) {
-      fieldErrors[key] = issue.message
-    }
-  }
-
-  return fieldErrors
-}
 
 export async function updateCompanySetting(
   _previous: FormState,
@@ -56,6 +40,7 @@ export async function updateCompanySetting(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 

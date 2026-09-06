@@ -82,6 +82,9 @@ export function ItemForm({
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
   const isService = type === 'SERVICE'
 
   return (
@@ -101,7 +104,7 @@ export function ItemForm({
               <Label>Name</Label>
               <Input
                 name="name"
-                defaultValue={values.name}
+                defaultValue={keep('name', values.name)}
                 required
                 invalid={Boolean(errors.name)}
               />
@@ -125,7 +128,7 @@ export function ItemForm({
               <MaterialCombobox
                 name="materialId"
                 options={materials}
-                defaultValue={values.materialId}
+                defaultValue={keep('materialId', values.materialId)}
               />
             </Field>
             <Field>
@@ -145,7 +148,7 @@ export function ItemForm({
             <Textarea
               name="description"
               rows={2}
-              defaultValue={values.description ?? ''}
+              defaultValue={keep('description', values.description)}
             />
           </Field>
         </FieldGroup>
@@ -164,7 +167,7 @@ export function ItemForm({
                 type="number"
                 step="0.01"
                 min={0}
-                defaultValue={values.rate}
+                defaultValue={keep('rate', values.rate)}
                 required
                 invalid={Boolean(errors.rate)}
               />
@@ -177,7 +180,7 @@ export function ItemForm({
                 type="number"
                 step="0.01"
                 min={0}
-                defaultValue={numberValue(values.purchaseRate)}
+                defaultValue={keep('purchaseRate', values.purchaseRate)}
                 invalid={Boolean(errors.purchaseRate)}
               />
               <Description>Optional. Used for margin.</Description>
@@ -190,7 +193,7 @@ export function ItemForm({
                 step="0.01"
                 min={0}
                 max={100}
-                defaultValue={values.taxRatePercent}
+                defaultValue={keep('taxRatePercent', values.taxRatePercent)}
                 required
                 invalid={Boolean(errors.taxRatePercent)}
               />
@@ -205,7 +208,7 @@ export function ItemForm({
             <Input
               name="hsnCode"
               inputMode="numeric"
-              defaultValue={values.hsnCode ?? ''}
+              defaultValue={keep('hsnCode', values.hsnCode)}
               invalid={Boolean(errors.hsnCode)}
             />
             {errors.hsnCode ? (
@@ -237,11 +240,11 @@ export function ItemForm({
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <Field>
                   <Label>Brand</Label>
-                  <Input name="brand" defaultValue={values.brand ?? ''} />
+                  <Input name="brand" defaultValue={keep('brand', values.brand)} />
                 </Field>
                 <Field>
                   <Label>Shade / finish</Label>
-                  <Input name="shade" defaultValue={values.shade ?? ''} />
+                  <Input name="shade" defaultValue={keep('shade', values.shade)} />
                 </Field>
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -272,7 +275,7 @@ export function ItemForm({
                     type="number"
                     step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.thickness)}
+                    defaultValue={keep('thickness', values.thickness)}
                   />
                 </Field>
                 <Field>
@@ -282,7 +285,7 @@ export function ItemForm({
                     type="number"
                     step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.length)}
+                    defaultValue={keep('length', values.length)}
                   />
                 </Field>
                 <Field>
@@ -292,7 +295,7 @@ export function ItemForm({
                     type="number"
                     step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.width)}
+                    defaultValue={keep('width', values.width)}
                   />
                 </Field>
               </div>
@@ -307,7 +310,7 @@ export function ItemForm({
         <FieldGroup>
           <Field>
             <Label>Notes</Label>
-            <Textarea name="notes" rows={3} defaultValue={values.notes ?? ''} />
+            <Textarea name="notes" rows={3} defaultValue={keep('notes', values.notes)} />
           </Field>
           <SwitchField>
             <Label>Active</Label>

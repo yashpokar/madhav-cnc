@@ -9,26 +9,10 @@ import { copyUpload } from '@/lib/storage'
 import { documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
 import type { QuotationData } from '@/lib/validation/quotations'
-import type { FormState } from '@/lib/actions/partners'
+import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import { QuotationStatus } from '@/generated/prisma/enums'
 
 export type { FormState }
-
-function fieldErrorsFrom(error: {
-  issues: { path: PropertyKey[]; message: string }[]
-}) {
-  const fieldErrors: Record<string, string> = {}
-
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join('.')
-
-    if (key && !fieldErrors[key]) {
-      fieldErrors[key] = issue.message
-    }
-  }
-
-  return fieldErrors
-}
 
 function parse(formData: FormData) {
   let lines: unknown = []
@@ -139,6 +123,7 @@ export async function createQuotation(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 
@@ -194,6 +179,7 @@ export async function updateQuotation(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 

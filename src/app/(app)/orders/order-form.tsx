@@ -124,6 +124,9 @@ export function OrderForm({
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   const totals = useMemo(
     () =>
@@ -244,7 +247,7 @@ export function OrderForm({
               <Input
                 name="orderDate"
                 type="date"
-                defaultValue={values.orderDate}
+                defaultValue={keep('orderDate', values.orderDate)}
                 required
               />
             </Field>
@@ -255,7 +258,7 @@ export function OrderForm({
               <Label>Subject</Label>
               <Input
                 name="subject"
-                defaultValue={values.subject ?? ''}
+                defaultValue={keep('subject', values.subject)}
                 placeholder="Kitchen and wardrobes, 3BHK"
               />
             </Field>
@@ -264,7 +267,7 @@ export function OrderForm({
               <Input
                 name="dueDate"
                 type="date"
-                defaultValue={values.dueDate ?? ''}
+                defaultValue={keep('dueDate', values.dueDate)}
               />
             </Field>
           </div>
@@ -441,7 +444,7 @@ export function OrderForm({
                   type="number"
                   step="0.01"
                   min={0}
-                  defaultValue={values.advanceAmount}
+                  defaultValue={keep('advanceAmount', values.advanceAmount)}
                 />
                 <Description>Recorded against this order.</Description>
               </Field>
@@ -449,7 +452,7 @@ export function OrderForm({
                 <Label>Customer PO number</Label>
                 <Input
                   name="customerPoNumber"
-                  defaultValue={values.customerPoNumber ?? ''}
+                  defaultValue={keep('customerPoNumber', values.customerPoNumber)}
                 />
               </Field>
             </div>
@@ -503,12 +506,12 @@ export function OrderForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Notes</Label>
-              <Textarea name="notes" rows={4} defaultValue={values.notes ?? ''} />
+              <Textarea name="notes" rows={4} defaultValue={keep('notes', values.notes)} />
               <Description>Shown to the customer.</Description>
             </Field>
             <Field>
               <Label>Terms &amp; conditions</Label>
-              <Textarea name="terms" rows={4} defaultValue={values.terms ?? ''} />
+              <Textarea name="terms" rows={4} defaultValue={keep('terms', values.terms)} />
             </Field>
           </div>
         </FieldGroup>

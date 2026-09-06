@@ -6,25 +6,9 @@ import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextItemCode } from '@/lib/codes'
 import { materialInputSchema, itemInputSchema } from '@/lib/validation/items'
-import type { FormState } from '@/lib/actions/partners'
+import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 
 export type { FormState }
-
-function fieldErrorsFrom(error: {
-  issues: { path: PropertyKey[]; message: string }[]
-}) {
-  const fieldErrors: Record<string, string> = {}
-
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? '')
-
-    if (key && !fieldErrors[key]) {
-      fieldErrors[key] = issue.message
-    }
-  }
-
-  return fieldErrors
-}
 
 function parse(formData: FormData) {
   return itemInputSchema.safeParse({
@@ -60,6 +44,7 @@ export async function createItem(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 
@@ -86,6 +71,7 @@ export async function updateItem(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 

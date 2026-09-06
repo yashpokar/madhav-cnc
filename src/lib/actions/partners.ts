@@ -6,28 +6,11 @@ import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextPartnerCode } from '@/lib/codes'
 import { partnerInputSchema } from '@/lib/validation/partners'
+import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
+
+export type { FormState }
 import type { PartnerType } from '@/generated/prisma/enums'
 
-export type FormState =
-  | { status: 'idle' }
-  | { status: 'error'; message: string; fieldErrors?: Record<string, string> }
-  | { status: 'success'; message: string; id?: string }
-
-function fieldErrorsFrom(error: {
-  issues: { path: PropertyKey[]; message: string }[]
-}) {
-  const fieldErrors: Record<string, string> = {}
-
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? '')
-
-    if (key && !fieldErrors[key]) {
-      fieldErrors[key] = issue.message
-    }
-  }
-
-  return fieldErrors
-}
 
 function parse(formData: FormData) {
   return partnerInputSchema.safeParse({
@@ -58,6 +41,7 @@ export async function createPartner(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 
@@ -89,6 +73,7 @@ export async function updatePartner(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 

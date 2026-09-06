@@ -89,6 +89,9 @@ export function CustomerForm({
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const submitted = state.status === 'error' ? (state.values ?? {}) : {}
+  const keep = (name: string, fallback: string | number | null | undefined) =>
+    submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-8">
@@ -107,7 +110,7 @@ export function CustomerForm({
               <Label>Name</Label>
               <Input
                 name="name"
-                defaultValue={values.name}
+                defaultValue={keep('name', values.name)}
                 required
                 invalid={Boolean(errors.name)}
               />
@@ -131,7 +134,7 @@ export function CustomerForm({
               <Input
                 name="phone"
                 type="tel"
-                defaultValue={values.phone}
+                defaultValue={keep('phone', values.phone)}
                 required
                 invalid={Boolean(errors.phone)}
               />
@@ -142,7 +145,7 @@ export function CustomerForm({
               <Input
                 name="altPhone"
                 type="tel"
-                defaultValue={values.altPhone ?? ''}
+                defaultValue={keep('altPhone', values.altPhone)}
               />
             </Field>
             <Field>
@@ -150,7 +153,7 @@ export function CustomerForm({
               <Input
                 name="email"
                 type="email"
-                defaultValue={values.email ?? ''}
+                defaultValue={keep('email', values.email)}
                 invalid={Boolean(errors.email)}
               />
               {errors.email ? <ErrorMessage>{errors.email}</ErrorMessage> : null}
@@ -166,23 +169,23 @@ export function CustomerForm({
         <FieldGroup>
           <Field>
             <Label>Address</Label>
-            <Textarea name="address" rows={2} defaultValue={values.address ?? ''} />
+            <Textarea name="address" rows={2} defaultValue={keep('address', values.address)} />
           </Field>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>
               <Label>City</Label>
-              <Input name="city" defaultValue={values.city ?? ''} />
+              <Input name="city" defaultValue={keep('city', values.city)} />
             </Field>
             <Field>
               <Label>State</Label>
-              <Input name="state" defaultValue={values.state ?? ''} />
+              <Input name="state" defaultValue={keep('state', values.state)} />
             </Field>
             <Field>
               <Label>Pincode</Label>
               <Input
                 name="pincode"
                 inputMode="numeric"
-                defaultValue={values.pincode ?? ''}
+                defaultValue={keep('pincode', values.pincode)}
                 invalid={Boolean(errors.pincode)}
               />
               {errors.pincode ? (
@@ -205,7 +208,7 @@ export function CustomerForm({
                 name="preferredArchitectId"
                 type="ARCHITECT"
                 options={architects}
-                defaultValue={values.preferredArchitectId}
+                defaultValue={keep('preferredArchitectId', values.preferredArchitectId)}
                 placeholder="Search architects…"
               />
             </Field>
@@ -215,7 +218,7 @@ export function CustomerForm({
                 name="preferredCarpenterId"
                 type="CARPENTER"
                 options={carpenters}
-                defaultValue={values.preferredCarpenterId}
+                defaultValue={keep('preferredCarpenterId', values.preferredCarpenterId)}
                 placeholder="Search carpenters…"
               />
             </Field>
@@ -238,7 +241,7 @@ export function CustomerForm({
               <Input
                 name="dateOfBirth"
                 type="date"
-                defaultValue={values.dateOfBirth ?? ''}
+                defaultValue={keep('dateOfBirth', values.dateOfBirth)}
               />
             </Field>
             <Field>
@@ -246,7 +249,7 @@ export function CustomerForm({
               <Input
                 name="anniversaryDate"
                 type="date"
-                defaultValue={values.anniversaryDate ?? ''}
+                defaultValue={keep('anniversaryDate', values.anniversaryDate)}
               />
             </Field>
           </div>
@@ -263,7 +266,7 @@ export function CustomerForm({
               <Label>GSTIN</Label>
               <Input
                 name="gstin"
-                defaultValue={values.gstin ?? ''}
+                defaultValue={keep('gstin', values.gstin)}
                 invalid={Boolean(errors.gstin)}
                 className="uppercase"
               />
@@ -273,7 +276,7 @@ export function CustomerForm({
               <Label>PAN</Label>
               <Input
                 name="pan"
-                defaultValue={values.pan ?? ''}
+                defaultValue={keep('pan', values.pan)}
                 invalid={Boolean(errors.pan)}
                 className="uppercase"
               />
@@ -286,7 +289,7 @@ export function CustomerForm({
                 type="number"
                 min={0}
                 max={365}
-                defaultValue={values.paymentTermsDays ?? ''}
+                defaultValue={keep('paymentTermsDays', values.paymentTermsDays)}
               />
               <Description>Days.</Description>
             </Field>
@@ -304,7 +307,7 @@ export function CustomerForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>
               <Label>Status</Label>
-              <Listbox name="status" defaultValue={values.status}>
+              <Listbox name="status" defaultValue={keep('status', values.status)}>
                 {Object.values(CustomerStatus).map((value) => (
                   <ListboxOption key={value} value={value}>
                     <ListboxLabel>{STATUS_LABELS[value]}</ListboxLabel>
@@ -315,7 +318,7 @@ export function CustomerForm({
           </div>
           <Field>
             <Label>Notes</Label>
-            <Textarea name="notes" rows={3} defaultValue={values.notes ?? ''} />
+            <Textarea name="notes" rows={3} defaultValue={keep('notes', values.notes)} />
           </Field>
         </FieldGroup>
       </Fieldset>

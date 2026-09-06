@@ -8,28 +8,12 @@ import { nextOrderNumber } from '@/lib/codes'
 import { documentTotals, lineTotals } from '@/lib/pricing'
 import { orderInputSchema } from '@/lib/validation/orders'
 import type { OrderData } from '@/lib/validation/orders'
-import type { FormState } from '@/lib/actions/partners'
+import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { ensureTasksForOrder } from '@/lib/actions/production'
 import { OrderStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
-
-function fieldErrorsFrom(error: {
-  issues: { path: PropertyKey[]; message: string }[]
-}) {
-  const fieldErrors: Record<string, string> = {}
-
-  for (const issue of error.issues) {
-    const key = issue.path.map(String).join('.')
-
-    if (key && !fieldErrors[key]) {
-      fieldErrors[key] = issue.message
-    }
-  }
-
-  return fieldErrors
-}
 
 function parse(formData: FormData) {
   let lines: unknown = []
@@ -148,6 +132,7 @@ export async function createOrder(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 
@@ -206,6 +191,7 @@ export async function updateOrder(
       status: 'error',
       message: 'Please correct the highlighted fields',
       fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
     }
   }
 

@@ -1,6 +1,7 @@
 import type {
   DimensionUnit,
   ItemType,
+  QuotationStatus,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
 
@@ -54,4 +55,25 @@ export const DIMENSION_UNIT_SHORT: Record<DimensionUnit, string> = {
   MM: 'mm',
   INCH: 'in',
   FT: 'ft',
+}
+
+export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
+  DRAFT: 'Draft',
+  SENT: 'Sent',
+  ACCEPTED: 'Accepted',
+  REJECTED: 'Rejected',
+  EXPIRED: 'Expired',
+  CONVERTED: 'Converted',
+}
+
+export const QUOTATION_STATUS_COLORS: Record<
+  QuotationStatus,
+  'zinc' | 'blue' | 'lime' | 'red' | 'amber' | 'purple'
+> = {
+  DRAFT: 'zinc',
+  SENT: 'blue',
+  ACCEPTED: 'lime',
+  REJECTED: 'red',
+  EXPIRED: 'amber',
+  CONVERTED: 'purple',
 }

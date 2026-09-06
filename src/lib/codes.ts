@@ -4,6 +4,7 @@ import { PartnerType } from '@/generated/prisma/enums'
 const SEQUENCES = {
   customer: { sequence: 'customer_code_seq', prefix: 'CUST' },
   item: { sequence: 'item_code_seq', prefix: 'ITM' },
+  quotation: { sequence: 'quotation_number_seq', prefix: 'QUO' },
   ARCHITECT: { sequence: 'architect_code_seq', prefix: 'ARC' },
   CARPENTER: { sequence: 'carpenter_code_seq', prefix: 'CAR' },
 } as const
@@ -25,6 +26,13 @@ export async function nextCustomerCode() {
 
 export async function nextItemCode() {
   const { sequence, prefix } = SEQUENCES.item
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextQuotationNumber() {
+  const { sequence, prefix } = SEQUENCES.quotation
   const value = await nextValue(sequence)
 
   return `${prefix}-${String(value).padStart(4, '0')}`

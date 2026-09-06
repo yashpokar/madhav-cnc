@@ -177,7 +177,10 @@ export async function updateInvoice(
 
   const existing = await prisma.invoice.findUnique({
     where: { id },
-    select: { status: true, _count: { select: { payments: true } } },
+    select: {
+      status: true,
+      _count: { select: { paymentAllocations: true } },
+    },
   })
 
   if (!existing) {
@@ -238,7 +241,7 @@ export async function setInvoiceStatus(
     select: {
       status: true,
       number: true,
-      _count: { select: { payments: true } },
+      _count: { select: { paymentAllocations: true } },
     },
   })
 
@@ -250,14 +253,14 @@ export async function setInvoiceStatus(
     return { ok: false, error: `Already ${status.toLowerCase()}` }
   }
 
-  if (status === 'DRAFT' && existing._count.payments > 0) {
+  if (status === 'DRAFT' && existing._count.paymentAllocations > 0) {
     return {
       ok: false,
       error: 'Payments are recorded against this invoice, so it cannot go back to draft',
     }
   }
 
-  if (status === 'CANCELLED' && existing._count.payments > 0) {
+  if (status === 'CANCELLED' && existing._count.paymentAllocations > 0) {
     return {
       ok: false,
       error: 'Remove the recorded payments before cancelling this invoice',
@@ -292,8 +295,9 @@ export async function recordPayment(
     select: {
       status: true,
       total: true,
+      customerId: true,
       advanceAdjusted: true,
-      payments: { select: { amount: true } },
+      paymentAllocations: { select: { amount: true } },
     },
   })
 
@@ -314,8 +318,8 @@ export async function recordPayment(
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
-  const alreadyPaid = invoice.payments.reduce(
-    (sum, payment) => sum + payment.amount.toNumber(),
+  const alreadyPaid = invoice.paymentAllocations.reduce(
+    (sum, allocation) => sum + allocation.amount.toNumber(),
     0,
   )
   const due =
@@ -333,13 +337,16 @@ export async function recordPayment(
   await prisma.payment.create({
     data: {
       number,
-      invoiceId,
+      customerId: invoice.customerId,
       amount: parsed.data.amount,
       mode: parsed.data.mode,
       reference: parsed.data.reference,
       paidOn: parsed.data.paidOn,
       notes: parsed.data.notes,
       recordedById: user.id,
+      allocations: {
+        create: [{ invoiceId, amount: parsed.data.amount }],
+      },
     },
   })
 
@@ -349,24 +356,43 @@ export async function recordPayment(
   return { ok: true, message: `Payment ${number} recorded` }
 }
 
-export async function deletePayment(paymentId: string): Promise<SimpleResult> {
+export async function removeAllocation(
+  allocationId: string,
+): Promise<SimpleResult> {
   await requireCapability('payment:delete')
 
-  const payment = await prisma.payment.findUnique({
-    where: { id: paymentId },
-    select: { invoiceId: true, number: true },
+  const allocation = await prisma.paymentAllocation.findUnique({
+    where: { id: allocationId },
+    select: {
+      invoiceId: true,
+      payment: {
+        select: { id: true, number: true, _count: { select: { allocations: true } } },
+      },
+    },
   })
 
-  if (!payment) {
+  if (!allocation) {
     return { ok: false, error: 'Payment not found' }
   }
 
-  await prisma.payment.delete({ where: { id: paymentId } })
+  const lastOne = allocation.payment._count.allocations === 1
+
+  if (lastOne) {
+    await prisma.payment.delete({ where: { id: allocation.payment.id } })
+  } else {
+    await prisma.paymentAllocation.delete({ where: { id: allocationId } })
+  }
 
   revalidatePath('/invoices')
-  revalidatePath(`/invoices/${payment.invoiceId}`)
+  revalidatePath('/payments')
+  revalidatePath(`/invoices/${allocation.invoiceId}`)
 
-  return { ok: true, message: `${payment.number} removed` }
+  return {
+    ok: true,
+    message: lastOne
+      ? `${allocation.payment.number} removed`
+      : `${allocation.payment.number} unapplied from this invoice and moved back on account`,
+  }
 }
 
 export async function suggestInterState(

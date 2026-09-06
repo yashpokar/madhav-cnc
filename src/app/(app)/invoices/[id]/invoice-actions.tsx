@@ -13,7 +13,7 @@ import {
 } from '@/components/catalyst/listbox'
 import { FormBanner } from '@/components/form-banner'
 import {
-  deletePayment,
+  removeAllocation,
   duplicateInvoice,
   recordPayment,
   setInvoiceStatus,
@@ -206,10 +206,10 @@ export function InvoiceActions({
 }
 
 export function RemovePaymentButton({
-  paymentId,
+  allocationId,
   canDelete,
 }: {
-  paymentId: string
+  allocationId: string
   canDelete: boolean
 }) {
   const router = useRouter()
@@ -222,11 +222,11 @@ export function RemovePaymentButton({
   return (
     <Button
       plain
-      aria-label="Remove payment"
+      aria-label="Unapply payment"
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          await deletePayment(paymentId)
+          await removeAllocation(allocationId)
           router.refresh()
         })
       }

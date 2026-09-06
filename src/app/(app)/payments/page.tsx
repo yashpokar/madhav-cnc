@@ -74,6 +74,7 @@ export default async function PaymentsPage() {
   const user = await requireCapability('payment:read')
   const data = await getReceivables()
   const canSeeOrders = can(user.role, 'order:read')
+  const canRecord = can(user.role, 'payment:create')
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -82,9 +83,14 @@ export default async function PaymentsPage() {
           <Heading>Payments</Heading>
           <Text>What is still to be recovered, and what has come in.</Text>
         </div>
-        <Button outline href="/invoices?tab=issued">
-          Issued invoices
-        </Button>
+        <div className="flex gap-3">
+          <Button outline href="/invoices?tab=issued">
+            Issued invoices
+          </Button>
+          {canRecord ? (
+            <Button href="/payments/new">Record receipt</Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,8 +98,8 @@ export default async function PaymentsPage() {
           label="Yet to recover"
           value={currency.format(data.netReceivable)}
           hint={
-            data.creditOutstanding > 0
-              ? `${currency.format(data.outstanding)} billed less ${currency.format(data.creditOutstanding)} credit notes`
+            data.creditOutstanding > 0 || data.onAccountTotal > 0
+              ? `${currency.format(data.outstanding)} billed, less ${currency.format(data.creditOutstanding + data.onAccountTotal)} credit held`
               : `across ${data.invoices.length} issued invoice${data.invoices.length === 1 ? '' : 's'}`
           }
         />
@@ -159,6 +165,7 @@ export default async function PaymentsPage() {
                   <TableHeader className="text-right">Invoices</TableHeader>
                   <TableHeader className="text-right">Due</TableHeader>
                   <TableHeader className="text-right">Overdue</TableHeader>
+                  <TableHeader className="text-right">On account</TableHeader>
                   <TableHeader className="text-right">Credit notes</TableHeader>
                   <TableHeader className="text-right">Net</TableHeader>
                   <TableHeader className="text-right">Oldest</TableHeader>
@@ -191,6 +198,9 @@ export default async function PaymentsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
+                      {row.onAccount > 0 ? `−${exact.format(row.onAccount)}` : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {row.credit > 0 ? `−${exact.format(row.credit)}` : '—'}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
@@ -216,7 +226,7 @@ export default async function PaymentsPage() {
               <Table dense grid striped>
                 <TableHead>
                   <TableRow>
-                    <TableHeader>Invoice</TableHeader>
+                    <TableHeader>Applied to</TableHeader>
                     <TableHeader>Customer</TableHeader>
                     <TableHeader>Due date</TableHeader>
                     <TableHeader className="text-right">Total</TableHeader>
@@ -348,7 +358,7 @@ export default async function PaymentsPage() {
                   <TableHeader>Receipt</TableHeader>
                   <TableHeader>Date</TableHeader>
                   <TableHeader>Customer</TableHeader>
-                  <TableHeader>Invoice</TableHeader>
+                  <TableHeader>Applied to</TableHeader>
                   <TableHeader>Mode</TableHeader>
                   <TableHeader>Reference</TableHeader>
                   <TableHeader className="text-right">Amount</TableHeader>
@@ -356,10 +366,7 @@ export default async function PaymentsPage() {
               </TableHead>
               <TableBody>
                 {data.payments.map((payment) => (
-                  <TableRow
-                    key={payment.id}
-                    href={`/invoices/${payment.invoice.id}`}
-                  >
+                  <TableRow key={payment.id} href={`/payments/${payment.id}`}>
                     <TableCell className="font-mono text-xs">
                       {payment.number}
                     </TableCell>
@@ -367,10 +374,22 @@ export default async function PaymentsPage() {
                       {dateFormat.format(payment.paidOn)}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {payment.invoice.customer.name}
+                      {payment.customer.name}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {payment.invoice.number}
+                      {payment.invoiceNumbers.length === 0 ? (
+                        <span className="font-sans text-amber-600 dark:text-amber-400">
+                          On account
+                        </span>
+                      ) : (
+                        payment.invoiceNumbers.join(', ')
+                      )}
+                      {payment.unallocated > 0 &&
+                      payment.invoiceNumbers.length > 0 ? (
+                        <div className="font-sans text-amber-600 dark:text-amber-400">
+                          {exact.format(payment.unallocated)} on account
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
                     <TableCell className="text-zinc-500 dark:text-zinc-400">

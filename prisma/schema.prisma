@@ -223,6 +223,7 @@ model Customer {
   orders     Order[]
   invoices   Invoice[]
   creditDebitNotes CreditDebitNote[]
+  payments         Payment[]
 
   @@index([status])
   @@index([name])
@@ -906,7 +907,7 @@ model Invoice {
   terms String?
 
   lines    InvoiceLine[]
-  payments Payment[]
+  paymentAllocations PaymentAllocation[]
   creditDebitNotes CreditDebitNote[]
 
   createdById String? @map("created_by_id")
@@ -958,8 +959,8 @@ model Payment {
   id     String @id @default(cuid())
   number String @unique
 
-  invoiceId String  @map("invoice_id")
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   amount    Decimal     @db.Decimal(14, 2)
   mode      PaymentMode @default(UPI)
@@ -972,9 +973,29 @@ model Payment {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([invoiceId])
+  allocations PaymentAllocation[]
+
+  @@index([customerId])
   @@index([paidOn])
   @@map("payments")
+}
+
+model PaymentAllocation {
+  id String @id @default(cuid())
+
+  paymentId String  @map("payment_id")
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  invoiceId String  @map("invoice_id")
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
 }
 
 enum NoteKind {

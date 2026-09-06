@@ -41,7 +41,8 @@ export function bucketFor(days: number): AgingKey {
 }
 
 export async function getReceivables(today = new Date()) {
-  const [invoices, notes, uninvoiced, recentPayments] = await Promise.all([
+  const [invoices, notes, uninvoiced, recentPayments, allReceipts] =
+    await Promise.all([
     prisma.invoice.findMany({
       where: { status: 'ISSUED' },
       orderBy: { invoiceDate: 'asc' },
@@ -54,7 +55,7 @@ export async function getReceivables(today = new Date()) {
         advanceAdjusted: true,
         customer: { select: { id: true, name: true, phone: true } },
         order: { select: { id: true, number: true } },
-        payments: { select: { amount: true } },
+        paymentAllocations: { select: { amount: true } },
       },
     }),
     prisma.creditDebitNote.findMany({
@@ -93,21 +94,26 @@ export async function getReceivables(today = new Date()) {
         amount: true,
         mode: true,
         reference: true,
-        invoice: {
-          select: {
-            id: true,
-            number: true,
-            customer: { select: { id: true, name: true } },
-          },
+        customer: { select: { id: true, name: true } },
+        allocations: {
+          select: { amount: true, invoice: { select: { number: true } } },
         },
+      },
+    }),
+    prisma.payment.findMany({
+      select: {
+        amount: true,
+        customerId: true,
+        customer: { select: { id: true, name: true } },
+        allocations: { select: { amount: true } },
       },
     }),
   ])
 
   const open = invoices
     .map((invoice) => {
-      const paid = invoice.payments.reduce(
-        (sum, payment) => sum + num(payment.amount),
+      const paid = invoice.paymentAllocations.reduce(
+        (sum, allocation) => sum + num(allocation.amount),
         0,
       )
       const due = round2(
@@ -149,6 +155,25 @@ export async function getReceivables(today = new Date()) {
       amount: round2(rows.reduce((sum, row) => sum + row.due, 0)),
     }
   })
+
+  const onAccountByCustomer = new Map<string, number>()
+  const onAccountNames = new Map<string, string>()
+
+  for (const receipt of allReceipts) {
+    const allocated = receipt.allocations.reduce(
+      (sum, allocation) => sum + num(allocation.amount),
+      0,
+    )
+    const unallocated = round2(num(receipt.amount) - allocated)
+
+    if (unallocated <= 0) continue
+
+    onAccountByCustomer.set(
+      receipt.customerId,
+      round2((onAccountByCustomer.get(receipt.customerId) ?? 0) + unallocated),
+    )
+    onAccountNames.set(receipt.customerId, receipt.customer.name)
+  }
 
   const creditByCustomer = new Map<string, number>()
 
@@ -215,16 +240,40 @@ export async function getReceivables(today = new Date()) {
     })
   }
 
+  for (const [customerId, name] of onAccountNames) {
+    if (byCustomerMap.has(customerId)) continue
+
+    byCustomerMap.set(customerId, {
+      id: customerId,
+      name,
+      phone: '',
+      invoices: 0,
+      due: 0,
+      overdue: 0,
+      oldestDays: 0,
+    })
+  }
+
   const byCustomer = [...byCustomerMap.values()]
     .map((row) => {
       const credit = creditByCustomer.get(row.id) ?? 0
+      const onAccount = onAccountByCustomer.get(row.id) ?? 0
 
-      return { ...row, credit, net: round2(row.due - credit) }
+      return {
+        ...row,
+        credit,
+        onAccount,
+        net: round2(row.due - credit - onAccount),
+      }
     })
     .sort((a, b) => b.net - a.net)
 
   const creditOutstanding = round2(
     [...creditByCustomer.values()].reduce((sum, value) => sum + value, 0),
+  )
+
+  const onAccountTotal = round2(
+    [...onAccountByCustomer.values()].reduce((sum, value) => sum + value, 0),
   )
 
   const toBill = uninvoiced.map((order) => ({
@@ -245,7 +294,8 @@ export async function getReceivables(today = new Date()) {
     outstanding,
     overdue,
     creditOutstanding,
-    netReceivable: round2(outstanding - creditOutstanding),
+    onAccountTotal,
+    netReceivable: round2(outstanding - creditOutstanding - onAccountTotal),
     toBillTotal: round2(toBill.reduce((sum, order) => sum + order.total, 0)),
     collected30: collected._sum.amount ? num(collected._sum.amount) : 0,
     collected30Count: collected._count._all,
@@ -253,10 +303,27 @@ export async function getReceivables(today = new Date()) {
     invoices: [...open].sort((a, b) => b.overdueBy - a.overdueBy),
     byCustomer,
     toBill,
-    payments: recentPayments.map((payment) => ({
-      ...payment,
-      amount: num(payment.amount),
-    })),
+    payments: recentPayments.map((payment) => {
+      const allocated = payment.allocations.reduce(
+        (sum, allocation) => sum + num(allocation.amount),
+        0,
+      )
+
+      return {
+        id: payment.id,
+        number: payment.number,
+        paidOn: payment.paidOn,
+        mode: payment.mode,
+        reference: payment.reference,
+        customer: payment.customer,
+        amount: num(payment.amount),
+        allocated: round2(allocated),
+        unallocated: round2(num(payment.amount) - allocated),
+        invoiceNumbers: payment.allocations.map(
+          (allocation) => allocation.invoice.number,
+        ),
+      }
+    }),
   }
 }
 

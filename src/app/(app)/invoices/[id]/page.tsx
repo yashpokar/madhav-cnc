@@ -355,10 +355,15 @@ export default async function InvoiceDetailPage({
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {currency.format(payment.amount)}
+                        {payment.receiptAmount !== payment.amount ? (
+                          <div className="text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
+                            part of {currency.format(payment.receiptAmount)}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right print:hidden">
                         <RemovePaymentButton
-                          paymentId={payment.id}
+                          allocationId={payment.id}
                           canDelete={canDeletePayment}
                         />
                       </TableCell>

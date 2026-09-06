@@ -56,12 +56,15 @@ export async function listInvoices({
       isInterState: true,
       customer: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },
-      payments: { select: { amount: true } },
+      paymentAllocations: { select: { amount: true } },
     },
   })
 
-  return invoices.map(({ payments, ...invoice }) => {
-    const paid = payments.reduce((sum, payment) => sum + num(payment.amount), 0)
+  return invoices.map(({ paymentAllocations, ...invoice }) => {
+    const paid = paymentAllocations.reduce(
+      (sum, allocation) => sum + num(allocation.amount),
+      0,
+    )
     const total = num(invoice.total)
     const advanceAdjusted = num(invoice.advanceAdjusted)
 
@@ -84,9 +87,13 @@ export async function getInvoice(id: string) {
       order: { select: { id: true, number: true, subject: true } },
       createdBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
-      payments: {
-        orderBy: { paidOn: 'desc' },
-        include: { recordedBy: { select: { name: true } } },
+      paymentAllocations: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          payment: {
+            include: { recordedBy: { select: { name: true } } },
+          },
+        },
       },
     },
   })
@@ -95,8 +102,8 @@ export async function getInvoice(id: string) {
     return null
   }
 
-  const paid = invoice.payments.reduce(
-    (sum, payment) => sum + num(payment.amount),
+  const paid = invoice.paymentAllocations.reduce(
+    (sum, allocation) => sum + num(allocation.amount),
     0,
   )
   const total = num(invoice.total)
@@ -132,9 +139,16 @@ export async function getInvoice(id: string) {
       igstAmount: num(line.igstAmount),
       lineTotal: num(line.lineTotal),
     })),
-    payments: invoice.payments.map((payment) => ({
-      ...payment,
-      amount: num(payment.amount),
+    payments: invoice.paymentAllocations.map((allocation) => ({
+      id: allocation.id,
+      paymentId: allocation.payment.id,
+      number: allocation.payment.number,
+      paidOn: allocation.payment.paidOn,
+      mode: allocation.payment.mode,
+      reference: allocation.payment.reference,
+      recordedBy: allocation.payment.recordedBy,
+      amount: num(allocation.amount),
+      receiptAmount: num(allocation.payment.amount),
     })),
   }
 }

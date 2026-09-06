@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import { Text } from '@/components/catalyst/text'
@@ -28,6 +29,7 @@ export default async function ProductionPage({
   ])
 
   const canUpdate = can(user.role, 'production:update')
+  const canManageStages = can(user.role, 'settings:update')
   const openTasks = tasks.filter(
     (task) => task.status !== 'DONE' && task.status !== 'SKIPPED',
   ).length
@@ -46,7 +48,14 @@ export default async function ProductionPage({
             production
           </Text>
         </div>
-        <SearchField placeholder="Search order, customer…" />
+        <div className="flex items-center gap-3">
+          {canManageStages ? (
+            <Button outline href="/production/stages">
+              Stages
+            </Button>
+          ) : null}
+          <SearchField placeholder="Search order, customer…" />
+        </div>
       </div>
 
       <div className="flex justify-end">

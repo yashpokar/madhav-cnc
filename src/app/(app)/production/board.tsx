@@ -43,14 +43,14 @@ export function ProductionBoard({
       ) : null}
 
       <div className="overflow-x-auto pb-2">
-        <div className="flex gap-4">
+        <div className="flex min-w-max gap-4 lg:min-w-0">
           {stages.map((stage) => {
             const stageTasks = byStage.get(stage.id) ?? []
 
             return (
               <div
                 key={stage.id}
-                className="flex w-72 shrink-0 flex-col gap-3 rounded-lg bg-zinc-950/5 p-3 dark:bg-white/5"
+                className="flex w-64 shrink-0 flex-col gap-3 rounded-lg bg-zinc-950/5 p-3 lg:w-auto lg:min-w-0 lg:flex-1 dark:bg-white/5"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm/6 font-medium">{stage.name}</div>

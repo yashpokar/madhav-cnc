@@ -1063,7 +1063,7 @@ model CreditDebitNote {
   kind   NoteKind
   status NoteStatus @default(DRAFT)
 
-  partyType NoteParty
+  partyType NoteParty  @map("party_type")
   reason    NoteReason @default(OTHER)
 
   customerId String?   @map("customer_id")

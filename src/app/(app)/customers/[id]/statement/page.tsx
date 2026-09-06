@@ -54,6 +54,7 @@ export default async function CustomerStatementPage({
   }
 
   const owing = account.net > 0
+  const settled = Math.abs(account.net) < 0.005
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -114,11 +115,13 @@ export default async function CustomerStatementPage({
           className={
             owing
               ? 'rounded-lg bg-amber-50 p-4 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:ring-amber-400/20'
-              : 'rounded-lg bg-lime-50 p-4 ring-1 ring-lime-950/10 dark:bg-lime-400/10 dark:ring-lime-400/20'
+              : settled
+                ? 'rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
+                : 'rounded-lg bg-lime-50 p-4 ring-1 ring-lime-950/10 dark:bg-lime-400/10 dark:ring-lime-400/20'
           }
         >
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">
-            {owing ? 'Customer owes' : 'In credit'}
+            {owing ? 'Customer owes' : settled ? 'Settled' : 'In credit'}
           </div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
             {currency.format(Math.abs(account.net))}

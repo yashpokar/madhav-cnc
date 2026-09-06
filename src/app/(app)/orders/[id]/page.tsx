@@ -100,9 +100,18 @@ export default async function QuotationDetailPage({
             </Text>
           ) : null}
         </div>
-        {canUpdate && editable ? (
-          <Button href={`/orders/${order.id}/edit`}>Edit</Button>
-        ) : null}
+        <div className="flex gap-3">
+          {can(user.role, 'dispatch:create') &&
+          order.status !== 'DRAFT' &&
+          order.status !== 'CANCELLED' ? (
+            <Button outline href={`/dispatch/new?order=${order.id}`}>
+              New challan
+            </Button>
+          ) : null}
+          {canUpdate && editable ? (
+            <Button href={`/orders/${order.id}/edit`}>Edit</Button>
+          ) : null}
+        </div>
       </div>
 
       {justCreated ? (

@@ -6,6 +6,7 @@ const SEQUENCES = {
   item: { sequence: 'item_code_seq', prefix: 'ITM' },
   quotation: { sequence: 'quotation_number_seq', prefix: 'QUO' },
   order: { sequence: 'order_number_seq', prefix: 'ORD' },
+  dispatch: { sequence: 'dispatch_number_seq', prefix: 'DC' },
   ARCHITECT: { sequence: 'architect_code_seq', prefix: 'ARC' },
   CARPENTER: { sequence: 'carpenter_code_seq', prefix: 'CAR' },
 } as const
@@ -41,6 +42,13 @@ export async function nextQuotationNumber() {
 
 export async function nextOrderNumber() {
   const { sequence, prefix } = SEQUENCES.order
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextDispatchNumber() {
+  const { sequence, prefix } = SEQUENCES.dispatch
   const value = await nextValue(sequence)
 
   return `${prefix}-${String(value).padStart(4, '0')}`

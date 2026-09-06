@@ -1,5 +1,6 @@
 import type {
   DimensionUnit,
+  DispatchStatus,
   ItemType,
   MaterialSupply,
   OrderStatus,
@@ -108,6 +109,23 @@ export const MATERIAL_SUMMARY_COLORS = {
 export const MATERIAL_SUPPLY_DESCRIPTIONS: Record<MaterialSupply, string> = {
   WITH_MATERIAL: 'We supply the material and do the work.',
   WITHOUT_MATERIAL: 'Customer brings the material; we charge job work only.',
+}
+
+export const DISPATCH_STATUS_LABELS: Record<DispatchStatus, string> = {
+  DRAFT: 'Draft',
+  DISPATCHED: 'Dispatched',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+}
+
+export const DISPATCH_STATUS_COLORS: Record<
+  DispatchStatus,
+  'zinc' | 'purple' | 'lime' | 'red'
+> = {
+  DRAFT: 'zinc',
+  DISPATCHED: 'purple',
+  DELIVERED: 'lime',
+  CANCELLED: 'red',
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

@@ -20,8 +20,9 @@ export default async function StagesPage() {
         <div className="grid grid-cols-1 gap-2">
           <Heading>Production stages</Heading>
           <Text>
-            The columns on the production board, in order. New orders get a task
-            for every active stage.
+            The columns on the production board, in order. New orders get a
+            task for every active stage. Completing a stage can move the order
+            forward automatically.
           </Text>
         </div>
         <Button outline href="/production">

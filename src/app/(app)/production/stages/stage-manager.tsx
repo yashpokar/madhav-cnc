@@ -6,6 +6,11 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/16/solid'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Field, Label } from '@/components/catalyst/fieldset'
+import {
+  Listbox,
+  ListboxLabel,
+  ListboxOption,
+} from '@/components/catalyst/listbox'
 import { Input } from '@/components/catalyst/input'
 import {
   Table,
@@ -21,8 +26,10 @@ import {
   moveStage,
   renameStage,
   setStageActive,
+  setStageStatus,
 } from '@/lib/actions/stages'
 import type { SimpleResult } from '@/lib/actions/stages'
+import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import type { StageRow } from '@/lib/queries/stages'
 
 export function StageManager({ stages }: { stages: StageRow[] }) {
@@ -75,6 +82,7 @@ export function StageManager({ stages }: { stages: StageRow[] }) {
           <TableRow>
             <TableHeader className="w-8">#</TableHeader>
             <TableHeader>Stage</TableHeader>
+            <TableHeader>Moves order to</TableHeader>
             <TableHeader>Status</TableHeader>
             <TableHeader className="text-right">Tasks</TableHeader>
             <TableHeader className="text-right">Actions</TableHeader>
@@ -112,6 +120,34 @@ export function StageManager({ stages }: { stages: StageRow[] }) {
                 ) : (
                   <span className="font-medium">{stage.name}</span>
                 )}
+              </TableCell>
+              <TableCell>
+                <Listbox
+                  aria-label={`Order status for ${stage.name}`}
+                  value={stage.linkedStatus ?? 'NONE'}
+                  onChange={(value) =>
+                    run(() =>
+                      setStageStatus(stage.id, value === 'NONE' ? null : value),
+                    )
+                  }
+                >
+                  <ListboxOption value="NONE">
+                    <ListboxLabel>No change</ListboxLabel>
+                  </ListboxOption>
+                  {(
+                    [
+                      'CONFIRMED',
+                      'IN_PRODUCTION',
+                      'READY',
+                      'DISPATCHED',
+                      'COMPLETED',
+                    ] as const
+                  ).map((value) => (
+                    <ListboxOption key={value} value={value}>
+                      <ListboxLabel>{ORDER_STATUS_LABELS[value]}</ListboxLabel>
+                    </ListboxOption>
+                  ))}
+                </Listbox>
               </TableCell>
               <TableCell>
                 {stage.isActive ? (

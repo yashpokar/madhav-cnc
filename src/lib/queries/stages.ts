@@ -8,6 +8,7 @@ export async function listAllStages() {
       name: true,
       sortOrder: true,
       isActive: true,
+      linkedStatus: true,
       _count: { select: { tasks: true } },
     },
   })

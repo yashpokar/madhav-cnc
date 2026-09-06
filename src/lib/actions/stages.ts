@@ -113,6 +113,48 @@ export async function moveStage(
   return { ok: true, message: 'Order updated' }
 }
 
+export async function setStageStatus(
+  id: string,
+  linkedStatus: string | null,
+): Promise<SimpleResult> {
+  await requireCapability('settings:update')
+
+  const allowed = [
+    'CONFIRMED',
+    'IN_PRODUCTION',
+    'READY',
+    'DISPATCHED',
+    'COMPLETED',
+  ]
+
+  if (linkedStatus !== null && !allowed.includes(linkedStatus)) {
+    return { ok: false, error: 'Unknown status' }
+  }
+
+  await prisma.productionStage.update({
+    where: { id },
+    data: {
+      linkedStatus: linkedStatus as
+        | 'CONFIRMED'
+        | 'IN_PRODUCTION'
+        | 'READY'
+        | 'DISPATCHED'
+        | 'COMPLETED'
+        | null,
+    },
+  })
+
+  revalidatePath('/production')
+  revalidatePath('/production/stages')
+
+  return {
+    ok: true,
+    message: linkedStatus
+      ? 'Stage will move the order on completion'
+      : 'Stage no longer changes the order status',
+  }
+}
+
 export async function setStageActive(
   id: string,
   isActive: boolean,

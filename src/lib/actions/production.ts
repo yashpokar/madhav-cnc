@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import type { SimpleResult } from '@/lib/actions/quotations'
-import { ProductionTaskStatus } from '@/generated/prisma/enums'
+import {
+  OrderStatus,
+  ProductionTaskStatus,
+} from '@/generated/prisma/enums'
 
 export type { SimpleResult }
 
@@ -43,7 +46,21 @@ export async function ensureTasksForOrder(orderId: string) {
 
 const FINISHED: ProductionTaskStatus[] = ['DONE', 'SKIPPED']
 
-async function syncOrderFromTasks(orderId: string) {
+const STATUS_ORDER: OrderStatus[] = [
+  'DRAFT',
+  'CONFIRMED',
+  'IN_PRODUCTION',
+  'READY',
+  'DISPATCHED',
+  'COMPLETED',
+]
+
+function rank(status: OrderStatus) {
+  const index = STATUS_ORDER.indexOf(status)
+  return index === -1 ? -1 : index
+}
+
+async function syncOrderFromStages(orderId: string) {
   const [order, tasks] = await Promise.all([
     prisma.order.findUnique({
       where: { id: orderId },
@@ -51,38 +68,42 @@ async function syncOrderFromTasks(orderId: string) {
     }),
     prisma.productionTask.findMany({
       where: { orderId },
-      select: { status: true },
+      orderBy: { position: 'asc' },
+      select: {
+        status: true,
+        stage: { select: { linkedStatus: true } },
+      },
     }),
   ])
 
-  if (!order || tasks.length === 0) {
+  if (!order || tasks.length === 0 || order.status === 'CANCELLED') {
     return null
   }
 
-  const allFinished = tasks.every((task) => FINISHED.includes(task.status))
-  const anyStarted = tasks.some(
-    (task) => task.status !== 'PENDING' && task.status !== 'SKIPPED',
+  const reached = tasks
+    .filter(
+      (task) => FINISHED.includes(task.status) && task.stage.linkedStatus,
+    )
+    .map((task) => task.stage.linkedStatus as OrderStatus)
+
+  if (reached.length === 0) {
+    return null
+  }
+
+  const furthest = reached.reduce((best, status) =>
+    rank(status) > rank(best) ? status : best,
   )
 
-  if (allFinished && order.status === 'IN_PRODUCTION') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'READY' },
-    })
-
-    return 'READY'
+  if (rank(furthest) <= rank(order.status)) {
+    return null
   }
 
-  if (!allFinished && anyStarted && order.status === 'READY') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'IN_PRODUCTION' },
-    })
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { status: furthest },
+  })
 
-    return 'IN_PRODUCTION'
-  }
-
-  return null
+  return furthest
 }
 
 function revalidateFor(orderId: string) {
@@ -131,16 +152,16 @@ export async function setTaskStatus(
     },
   })
 
-  const moved = await syncOrderFromTasks(task.orderId)
+  const moved = await syncOrderFromStages(task.orderId)
 
   revalidateFor(task.orderId)
 
   const stageName = task.stage.name
 
-  if (moved === 'READY') {
+  if (moved) {
     return {
       ok: true,
-      message: `${stageName} done — ${task.order.number} is ready`,
+      message: `${stageName} done — ${task.order.number} is now ${moved.toLowerCase().replace('_', ' ')}`,
     }
   }
 

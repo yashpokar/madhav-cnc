@@ -19,7 +19,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} font-sans antialiased`}
+      className={`${inter.variable} scheme-light font-sans antialiased`}
       suppressHydrationWarning
     >
       <body className="bg-white text-zinc-950 lg:bg-zinc-100 dark:bg-zinc-900 dark:text-white dark:lg:bg-zinc-950">

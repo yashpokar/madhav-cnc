@@ -52,6 +52,8 @@ model User {
   attachmentsUploaded QuotationAttachment[] @relation("AttachmentUploadedBy")
   attachmentsRemoved  QuotationAttachment[] @relation("AttachmentRemovedBy")
   companySettingsUpdated CompanySetting[] @relation("CompanySettingUpdatedBy")
+  dispatchesCreated Dispatch[] @relation("DispatchCreatedBy")
+  dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
   sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
   commentsAuthored QuotationComment[] @relation("CommentAuthor")
 
@@ -498,6 +500,7 @@ model Order {
 
   lines           OrderLine[]
   productionTasks ProductionTask[]
+  dispatches      Dispatch[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -548,6 +551,8 @@ model OrderLine {
 
   notes String?
 
+  dispatchLines DispatchLine[]
+
   @@index([orderId])
   @@index([itemId])
   @@map("order_lines")
@@ -562,10 +567,11 @@ enum ProductionTaskStatus {
 }
 
 model ProductionStage {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  sortOrder Int     @default(0) @map("sort_order")
-  isActive  Boolean @default(true) @map("is_active")
+  id           String       @id @default(cuid())
+  name         String       @unique
+  sortOrder    Int          @default(0) @map("sort_order")
+  isActive     Boolean      @default(true) @map("is_active")
+  linkedStatus OrderStatus? @map("linked_status")
 
   tasks ProductionTask[]
 
@@ -739,4 +745,71 @@ model QuotationComment {
   @@index([quotationId])
   @@index([attachmentId])
   @@map("quotation_comments")
+}
+
+enum DispatchStatus {
+  DRAFT
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+model Dispatch {
+  id     String         @id @default(cuid())
+  number String         @unique
+  status DispatchStatus @default(DRAFT)
+
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  dispatchDate DateTime  @map("dispatch_date") @db.Date
+  deliveredAt  DateTime? @map("delivered_at")
+
+  vehicleNumber   String? @map("vehicle_number")
+  driverName      String? @map("driver_name")
+  driverPhone     String? @map("driver_phone")
+  transporterName String? @map("transporter_name")
+  lrNumber        String? @map("lr_number")
+
+  deliveryAddress String? @map("delivery_address")
+  deliveryCity    String? @map("delivery_city")
+  deliveryPincode String? @map("delivery_pincode")
+
+  receivedByName String?   @map("received_by_name")
+  receivedAt     DateTime? @map("received_at")
+
+  notes String?
+
+  lines DispatchLine[]
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("DispatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("DispatchUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@index([status])
+  @@index([dispatchDate])
+  @@map("dispatches")
+}
+
+model DispatchLine {
+  id         String   @id @default(cuid())
+  dispatchId String   @map("dispatch_id")
+  dispatch   Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+
+  orderLineId String    @map("order_line_id")
+  orderLine   OrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  position    Int
+  description String
+  unit        UnitOfMeasure
+  quantity    Decimal       @db.Decimal(12, 3)
+
+  @@index([dispatchId])
+  @@index([orderLineId])
+  @@map("dispatch_lines")
 }

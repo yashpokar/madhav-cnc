@@ -65,6 +65,37 @@ export function derivedQuantity({
   return Math.round(area * (pieces ?? 1) * 1000) / 1000
 }
 
+export type GstSplit = {
+  cgst: number
+  sgst: number
+  igst: number
+  total: number
+}
+
+export function splitGst(
+  taxAmount: number,
+  isInterState: boolean,
+): GstSplit {
+  const total = round2(taxAmount)
+
+  if (isInterState) {
+    return { cgst: 0, sgst: 0, igst: total, total }
+  }
+
+  const half = round2(total / 2)
+  const other = round2(total - half)
+
+  return { cgst: half, sgst: other, igst: 0, total }
+}
+
+export function sameState(a: string | null, b: string | null): boolean {
+  if (!a || !b) {
+    return false
+  }
+
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
 export function paymentSplit(total: number, advancePercent: number) {
   const advance = round2(total * (advancePercent / 100))
   const balance = round2(total - advance)

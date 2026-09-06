@@ -7,6 +7,8 @@ const SEQUENCES = {
   quotation: { sequence: 'quotation_number_seq', prefix: 'QUO' },
   order: { sequence: 'order_number_seq', prefix: 'ORD' },
   dispatch: { sequence: 'dispatch_number_seq', prefix: 'DC' },
+  invoice: { sequence: 'invoice_number_seq', prefix: 'INV' },
+  payment: { sequence: 'payment_number_seq', prefix: 'PAY' },
   ARCHITECT: { sequence: 'architect_code_seq', prefix: 'ARC' },
   CARPENTER: { sequence: 'carpenter_code_seq', prefix: 'CAR' },
 } as const
@@ -49,6 +51,20 @@ export async function nextOrderNumber() {
 
 export async function nextDispatchNumber() {
   const { sequence, prefix } = SEQUENCES.dispatch
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextInvoiceNumber() {
+  const { sequence, prefix } = SEQUENCES.invoice
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextPaymentNumber() {
+  const { sequence, prefix } = SEQUENCES.payment
   const value = await nextValue(sequence)
 
   return `${prefix}-${String(value).padStart(4, '0')}`

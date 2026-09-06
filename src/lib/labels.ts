@@ -1,7 +1,9 @@
 import type {
   DimensionUnit,
   DispatchStatus,
+  InvoiceStatus,
   ItemType,
+  PaymentMode,
   MaterialSupply,
   OrderStatus,
   QuotationStatus,
@@ -109,6 +111,42 @@ export const MATERIAL_SUMMARY_COLORS = {
 export const MATERIAL_SUPPLY_DESCRIPTIONS: Record<MaterialSupply, string> = {
   WITH_MATERIAL: 'We supply the material and do the work.',
   WITHOUT_MATERIAL: 'Customer brings the material; we charge job work only.',
+}
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  DRAFT: 'Draft',
+  ISSUED: 'Issued',
+  CANCELLED: 'Cancelled',
+}
+
+export const INVOICE_STATUS_COLORS: Record<
+  InvoiceStatus,
+  'zinc' | 'blue' | 'red'
+> = {
+  DRAFT: 'zinc',
+  ISSUED: 'blue',
+  CANCELLED: 'red',
+}
+
+export const PAYMENT_STATE_LABELS = {
+  UNPAID: 'Unpaid',
+  PART_PAID: 'Part paid',
+  PAID: 'Paid',
+} as const
+
+export const PAYMENT_STATE_COLORS = {
+  UNPAID: 'amber',
+  PART_PAID: 'cyan',
+  PAID: 'lime',
+} as const
+
+export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
+  CASH: 'Cash',
+  UPI: 'UPI',
+  BANK_TRANSFER: 'Bank transfer',
+  CHEQUE: 'Cheque',
+  CARD: 'Card',
+  OTHER: 'Other',
 }
 
 export const DISPATCH_STATUS_LABELS: Record<DispatchStatus, string> = {

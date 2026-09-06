@@ -101,6 +101,13 @@ export default async function QuotationDetailPage({
           ) : null}
         </div>
         <div className="flex gap-3">
+          {can(user.role, 'invoice:create') &&
+          order.status !== 'DRAFT' &&
+          order.status !== 'CANCELLED' ? (
+            <Button outline href={`/invoices/new?order=${order.id}`}>
+              New invoice
+            </Button>
+          ) : null}
           {can(user.role, 'dispatch:create') &&
           order.status !== 'DRAFT' &&
           order.status !== 'CANCELLED' ? (

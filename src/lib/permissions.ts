@@ -10,6 +10,8 @@ export const RESOURCES = [
   'dispatch',
   'invoice',
   'payment',
+  'expense',
+  'note',
   'user',
   'settings',
 ] as const
@@ -49,6 +51,8 @@ const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   ACCOUNTANT: [
     'invoice:*',
     'payment:*',
+    'expense:*',
+    'note:*',
     'order:read',
     'quotation:read',
     'customer:read',

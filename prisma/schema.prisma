@@ -52,6 +52,9 @@ model User {
   attachmentsUploaded QuotationAttachment[] @relation("AttachmentUploadedBy")
   attachmentsRemoved  QuotationAttachment[] @relation("AttachmentRemovedBy")
   companySettingsUpdated CompanySetting[] @relation("CompanySettingUpdatedBy")
+  expensesCreated Expense[] @relation("ExpenseCreatedBy")
+  notesCreated    CreditDebitNote[] @relation("NoteCreatedBy")
+  notesUpdated    CreditDebitNote[] @relation("NoteUpdatedBy")
   invoicesCreated Invoice[] @relation("InvoiceCreatedBy")
   invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
   paymentsRecorded Payment[] @relation("PaymentRecordedBy")
@@ -219,6 +222,7 @@ model Customer {
   quotations Quotation[]
   orders     Order[]
   invoices   Invoice[]
+  creditDebitNotes CreditDebitNote[]
 
   @@index([status])
   @@index([name])
@@ -507,6 +511,7 @@ model Order {
   productionTasks ProductionTask[]
   dispatches      Dispatch[]
   invoices        Invoice[]
+  expenses        Expense[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -902,6 +907,7 @@ model Invoice {
 
   lines    InvoiceLine[]
   payments Payment[]
+  creditDebitNotes CreditDebitNote[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -969,4 +975,160 @@ model Payment {
   @@index([invoiceId])
   @@index([paidOn])
   @@map("payments")
+}
+
+enum NoteKind {
+  CREDIT
+  DEBIT
+}
+
+enum NoteParty {
+  CUSTOMER
+  VENDOR
+}
+
+enum NoteReason {
+  SALES_RETURN
+  PURCHASE_RETURN
+  RATE_DIFFERENCE
+  DISCOUNT
+  SHORT_SUPPLY
+  DAMAGED_GOODS
+  OTHER
+}
+
+enum NoteStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+model ExpenseCategory {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id     String @id @default(cuid())
+  number String @unique
+
+  categoryId String?          @map("category_id")
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  expenseDate DateTime @map("expense_date") @db.Date
+  payeeName   String   @map("payee_name")
+  description String?
+
+  amount         Decimal @db.Decimal(14, 2)
+  taxRatePercent Decimal @default(0) @map("tax_rate_percent") @db.Decimal(5, 2)
+  taxAmount      Decimal @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  total          Decimal @db.Decimal(14, 2)
+
+  isInputCredit Boolean @default(false) @map("is_input_credit")
+  vendorGstin   String? @map("vendor_gstin")
+  billNumber    String? @map("bill_number")
+
+  paymentMode PaymentMode @default(BANK_TRANSFER) @map("payment_mode")
+  reference   String?
+  notes       String?
+
+  orderId String? @map("order_id")
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([expenseDate])
+  @@index([categoryId])
+  @@index([orderId])
+  @@map("expenses")
+}
+
+model CreditDebitNote {
+  id     String     @id @default(cuid())
+  number String     @unique
+  kind   NoteKind
+  status NoteStatus @default(DRAFT)
+
+  partyType NoteParty
+  reason    NoteReason @default(OTHER)
+
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vendorName String?   @map("vendor_name")
+  vendorGstin String?  @map("vendor_gstin")
+
+  invoiceId String?  @map("invoice_id")
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  noteDate DateTime @map("note_date") @db.Date
+
+  placeOfSupply String? @map("place_of_supply")
+  isInterState  Boolean @default(false) @map("is_inter_state")
+
+  subtotal      Decimal @default(0) @db.Decimal(14, 2)
+  taxableAmount Decimal @default(0) @map("taxable_amount") @db.Decimal(14, 2)
+  cgstAmount    Decimal @default(0) @map("cgst_amount") @db.Decimal(14, 2)
+  sgstAmount    Decimal @default(0) @map("sgst_amount") @db.Decimal(14, 2)
+  igstAmount    Decimal @default(0) @map("igst_amount") @db.Decimal(14, 2)
+  taxAmount     Decimal @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  roundOff      Decimal @default(0) @map("round_off") @db.Decimal(6, 2)
+  total         Decimal @default(0) @db.Decimal(14, 2)
+
+  reasonNote String? @map("reason_note")
+
+  lines CreditDebitNoteLine[]
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([kind])
+  @@index([status])
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([noteDate])
+  @@map("credit_debit_notes")
+}
+
+model CreditDebitNoteLine {
+  id     String          @id @default(cuid())
+  noteId String          @map("note_id")
+  note   CreditDebitNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  position Int
+
+  description String
+  hsnCode     String?       @map("hsn_code")
+  unit        UnitOfMeasure
+
+  quantity       Decimal @db.Decimal(12, 3)
+  rate           Decimal @db.Decimal(12, 2)
+  taxRatePercent Decimal @default(0) @map("tax_rate_percent") @db.Decimal(5, 2)
+
+  amount     Decimal @db.Decimal(14, 2)
+  cgstAmount Decimal @default(0) @map("cgst_amount") @db.Decimal(14, 2)
+  sgstAmount Decimal @default(0) @map("sgst_amount") @db.Decimal(14, 2)
+  igstAmount Decimal @default(0) @map("igst_amount") @db.Decimal(14, 2)
+  lineTotal  Decimal @map("line_total") @db.Decimal(14, 2)
+
+  @@index([noteId])
+  @@map("credit_debit_note_lines")
 }

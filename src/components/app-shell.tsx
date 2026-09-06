@@ -3,12 +3,14 @@
 import { usePathname } from 'next/navigation'
 import {
   ArrowRightStartOnRectangleIcon,
+  ArrowsRightLeftIcon,
   BanknotesIcon,
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
   ChevronDownIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
+  CreditCardIcon,
   CubeIcon,
   DocumentTextIcon,
   HomeIcon,
@@ -56,6 +58,8 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/production': WrenchScrewdriverIcon,
   '/dispatch': TruckIcon,
   '/invoices': BanknotesIcon,
+  '/notes': ArrowsRightLeftIcon,
+  '/expenses': CreditCardIcon,
   '/admin/users': UsersIcon,
   '/settings/company': BuildingStorefrontIcon,
 }

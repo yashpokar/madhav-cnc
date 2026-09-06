@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { PartnerType } from '@/generated/prisma/enums'
+import { NoteKind, PartnerType } from '@/generated/prisma/enums'
 
 const SEQUENCES = {
   customer: { sequence: 'customer_code_seq', prefix: 'CUST' },
@@ -9,6 +9,9 @@ const SEQUENCES = {
   dispatch: { sequence: 'dispatch_number_seq', prefix: 'DC' },
   invoice: { sequence: 'invoice_number_seq', prefix: 'INV' },
   payment: { sequence: 'payment_number_seq', prefix: 'PAY' },
+  expense: { sequence: 'expense_number_seq', prefix: 'EXP' },
+  CREDIT: { sequence: 'credit_note_number_seq', prefix: 'CN' },
+  DEBIT: { sequence: 'debit_note_number_seq', prefix: 'DN' },
   ARCHITECT: { sequence: 'architect_code_seq', prefix: 'ARC' },
   CARPENTER: { sequence: 'carpenter_code_seq', prefix: 'CAR' },
 } as const
@@ -65,6 +68,20 @@ export async function nextInvoiceNumber() {
 
 export async function nextPaymentNumber() {
   const { sequence, prefix } = SEQUENCES.payment
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextExpenseNumber() {
+  const { sequence, prefix } = SEQUENCES.expense
+  const value = await nextValue(sequence)
+
+  return `${prefix}-${String(value).padStart(4, '0')}`
+}
+
+export async function nextNoteNumber(kind: NoteKind) {
+  const { sequence, prefix } = SEQUENCES[kind]
   const value = await nextValue(sequence)
 
   return `${prefix}-${String(value).padStart(4, '0')}`

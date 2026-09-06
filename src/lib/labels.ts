@@ -3,6 +3,10 @@ import type {
   DispatchStatus,
   InvoiceStatus,
   ItemType,
+  NoteKind,
+  NoteParty,
+  NoteReason,
+  NoteStatus,
   PaymentMode,
   MaterialSupply,
   OrderStatus,
@@ -186,5 +190,52 @@ export const ORDER_STATUS_COLORS: Record<
   READY: 'cyan',
   DISPATCHED: 'purple',
   COMPLETED: 'lime',
+  CANCELLED: 'red',
+}
+
+export const NOTE_KIND_LABELS: Record<NoteKind, string> = {
+  CREDIT: 'Credit note',
+  DEBIT: 'Debit note',
+}
+
+export const NOTE_KIND_SHORT: Record<NoteKind, string> = {
+  CREDIT: 'Credit',
+  DEBIT: 'Debit',
+}
+
+export const NOTE_KIND_COLORS: Record<NoteKind, 'lime' | 'orange'> = {
+  CREDIT: 'lime',
+  DEBIT: 'orange',
+}
+
+export const NOTE_KIND_DESCRIPTIONS: Record<NoteKind, string> = {
+  CREDIT: 'We owe the party — sales return, rate drop or a discount given after billing.',
+  DEBIT: 'The party owes us — purchase return, short supply or a rate correction in our favour.',
+}
+
+export const NOTE_PARTY_LABELS: Record<NoteParty, string> = {
+  CUSTOMER: 'Customer',
+  VENDOR: 'Vendor / supplier',
+}
+
+export const NOTE_REASON_LABELS: Record<NoteReason, string> = {
+  SALES_RETURN: 'Sales return',
+  PURCHASE_RETURN: 'Purchase return',
+  RATE_DIFFERENCE: 'Rate difference',
+  DISCOUNT: 'Post-sale discount',
+  SHORT_SUPPLY: 'Short supply',
+  DAMAGED_GOODS: 'Damaged goods',
+  OTHER: 'Other',
+}
+
+export const NOTE_STATUS_LABELS: Record<NoteStatus, string> = {
+  DRAFT: 'Draft',
+  ISSUED: 'Issued',
+  CANCELLED: 'Cancelled',
+}
+
+export const NOTE_STATUS_COLORS: Record<NoteStatus, 'zinc' | 'blue' | 'red'> = {
+  DRAFT: 'zinc',
+  ISSUED: 'blue',
   CANCELLED: 'red',
 }

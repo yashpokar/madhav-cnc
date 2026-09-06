@@ -2,7 +2,38 @@ import 'dotenv/config'
 import { auth } from '../src/lib/auth'
 import { prisma } from '../src/lib/prisma'
 
+const EXPENSE_CATEGORIES = [
+  'Raw material',
+  'Hardware & fittings',
+  'Job work',
+  'Consumables',
+  'Salary & wages',
+  'Rent',
+  'Electricity',
+  'Machine maintenance',
+  'Transport & freight',
+  'Marketing',
+  'Office & admin',
+  'Bank & finance charges',
+  'Taxes & fees',
+  'Other',
+]
+
+async function seedExpenseCategories() {
+  for (const [index, name] of EXPENSE_CATEGORIES.entries()) {
+    await prisma.expenseCategory.upsert({
+      where: { name },
+      update: {},
+      create: { name, sortOrder: (index + 1) * 10 },
+    })
+  }
+
+  console.log(`Ensured ${EXPENSE_CATEGORIES.length} expense categories`)
+}
+
 async function main() {
+  await seedExpenseCategories()
+
   const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@madhavcnc.local'
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!'
   const name = process.env.SEED_ADMIN_NAME ?? 'Administrator'

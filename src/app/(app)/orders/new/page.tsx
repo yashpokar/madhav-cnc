@@ -52,6 +52,8 @@ export default async function NewOrderPage() {
           discountType: 'NONE',
           discountValue: 0,
           advanceAmount: 0,
+          transportCharge: 0,
+          transportTaxRatePercent: 18,
           notes: null,
           terms: null,
           lines: [],

@@ -15,6 +15,7 @@ import {
 import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { getOrder } from '@/lib/queries/orders'
+import { listTasksForOrder } from '@/lib/queries/production'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -26,6 +27,7 @@ import {
   UNIT_SHORT,
 } from '@/lib/labels'
 import { OrderStatusActions } from './status-actions'
+import { ProductionPanel } from './production-panel'
 
 export const metadata: Metadata = {
   title: 'Order',
@@ -58,6 +60,9 @@ export default async function QuotationDetailPage({
     notFound()
   }
 
+  const tasks = await listTasksForOrder(order.id)
+  const canUpdateProduction = can(user.role, 'production:update')
+
   const canUpdate = can(user.role, 'order:update')
   const editable = order.status === 'DRAFT' || order.status === 'CONFIRMED'
 
@@ -73,13 +78,19 @@ export default async function QuotationDetailPage({
             <Badge color={ORDER_STATUS_COLORS[order.status]}>
               {ORDER_STATUS_LABELS[order.status]}
             </Badge>
-            <Badge
-              color={
-                order.materialSupply === 'WITH_MATERIAL' ? 'sky' : 'orange'
-              }
-            >
-              {MATERIAL_SUPPLY_LABELS[order.materialSupply]}
-            </Badge>
+            {order.lines.some(
+              (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+            ) ? (
+              <Badge color="orange">
+                {order.lines.every(
+                  (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+                )
+                  ? 'Without material'
+                  : 'Mixed material'}
+              </Badge>
+            ) : (
+              <Badge color="sky">With material</Badge>
+            )}
           </div>
           <Text>
             {order.customer.name}
@@ -186,6 +197,15 @@ export default async function QuotationDetailPage({
 
       <Divider />
 
+      <ProductionPanel
+        orderId={order.id}
+        orderStatus={order.status}
+        tasks={tasks}
+        canUpdate={canUpdateProduction}
+      />
+
+      <Divider />
+
       <div className="overflow-x-auto">
         <Table dense grid>
           <TableHead>
@@ -207,7 +227,12 @@ export default async function QuotationDetailPage({
                   {line.position}
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium">{line.description}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{line.description}</span>
+                    {line.materialSupply === 'WITHOUT_MATERIAL' ? (
+                      <Badge color="orange">Job work</Badge>
+                    ) : null}
+                  </div>
                   {line.hsnCode ? (
                     <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">
                       HSN {line.hsnCode}
@@ -252,6 +277,14 @@ export default async function QuotationDetailPage({
           <dd className="text-right tabular-nums">
             −{currency.format(order.discountAmount)}
           </dd>
+          {order.transportCharge > 0 ? (
+            <>
+              <dt className="text-zinc-500 dark:text-zinc-400">Transport</dt>
+              <dd className="text-right tabular-nums">
+                {currency.format(order.transportCharge)}
+              </dd>
+            </>
+          ) : null}
           <dt className="text-zinc-500 dark:text-zinc-400">Taxable</dt>
           <dd className="text-right tabular-nums">
             {currency.format(order.taxableAmount)}

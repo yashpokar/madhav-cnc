@@ -10,6 +10,7 @@ import { orderInputSchema } from '@/lib/validation/orders'
 import type { OrderData } from '@/lib/validation/orders'
 import type { FormState } from '@/lib/actions/partners'
 import type { SimpleResult } from '@/lib/actions/quotations'
+import { ensureTasksForOrder } from '@/lib/actions/production'
 import { OrderStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
@@ -55,6 +56,8 @@ function parse(formData: FormData) {
     discountType: formData.get('discountType') ?? undefined,
     discountValue: formData.get('discountValue') || 0,
     advanceAmount: formData.get('advanceAmount') || 0,
+    transportCharge: formData.get('transportCharge') || 0,
+    transportTaxRatePercent: formData.get('transportTaxRatePercent') || 0,
     notes: formData.get('notes'),
     terms: formData.get('terms'),
     lines,
@@ -99,6 +102,8 @@ function buildPersistable(data: OrderData) {
     lines: data.lines,
     discountType: data.discountType,
     discountValue: data.discountValue,
+    transportCharge: data.transportCharge,
+    transportTaxRatePercent: data.transportTaxRatePercent,
   })
 
   const lines = data.lines.map((line, index) => {
@@ -109,6 +114,7 @@ function buildPersistable(data: OrderData) {
       itemId: line.itemId,
       description: line.description,
       unit: line.unit,
+      materialSupply: line.materialSupply,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,
@@ -172,6 +178,8 @@ export async function createOrder(
       discountType: parsed.data.discountType,
       discountValue: parsed.data.discountValue,
       advanceAmount: parsed.data.advanceAmount,
+      transportCharge: parsed.data.transportCharge,
+      transportTaxRatePercent: parsed.data.transportTaxRatePercent,
       notes: parsed.data.notes,
       terms: parsed.data.terms,
       ...totals,
@@ -245,6 +253,8 @@ export async function updateOrder(
         discountType: parsed.data.discountType,
         discountValue: parsed.data.discountValue,
         advanceAmount: parsed.data.advanceAmount,
+        transportCharge: parsed.data.transportCharge,
+        transportTaxRatePercent: parsed.data.transportTaxRatePercent,
         notes: parsed.data.notes,
         terms: parsed.data.terms,
         ...totals,
@@ -297,8 +307,13 @@ export async function setOrderStatus(
     data: { status, updatedById: user.id },
   })
 
+  if (status === 'IN_PRODUCTION') {
+    await ensureTasksForOrder(id)
+  }
+
   revalidatePath('/orders')
   revalidatePath(`/orders/${id}`)
+  revalidatePath('/production')
 
   return { ok: true, message: `Marked as ${status.toLowerCase().replace('_', ' ')}` }
 }
@@ -363,6 +378,7 @@ export async function convertQuotationToOrder(
             itemId: line.itemId,
             description: line.description,
             unit: line.unit,
+            materialSupply: line.materialSupply,
             dimensionUnit: line.dimensionUnit,
             length: line.length,
             width: line.width,

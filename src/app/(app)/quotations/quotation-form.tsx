@@ -110,7 +110,7 @@ export function QuotationForm({
   )
   const [discountValue, setDiscountValue] = useState(String(values.discountValue))
   const [lines, setLines] = useState<EditorLine[]>(
-    values.lines.length > 0 ? values.lines : [emptyLine()],
+    values.lines.length > 0 ? values.lines : [emptyLine(values.materialSupply)],
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
@@ -148,6 +148,7 @@ export function QuotationForm({
       itemId: line.itemId,
       description: line.description,
       unit: line.unit,
+      materialSupply: line.materialSupply,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,
@@ -257,7 +258,7 @@ export function QuotationForm({
           </div>
 
           <Field>
-            <Label>Material</Label>
+            <Label>Default material supply</Label>
             <RadioGroup
               name="materialSupply"
               value={materialSupply}
@@ -274,6 +275,9 @@ export function QuotationForm({
                 </RadioField>
               ))}
             </RadioGroup>
+            <Description className="mt-3">
+              Applied to new lines. Each line can be set individually below.
+            </Description>
           </Field>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

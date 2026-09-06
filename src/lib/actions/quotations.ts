@@ -106,6 +106,7 @@ function buildPersistable(data: QuotationData) {
       itemId: line.itemId,
       description: line.description,
       unit: line.unit,
+      materialSupply: line.materialSupply,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,

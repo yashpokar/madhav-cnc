@@ -40,6 +40,7 @@ export const quotationLineSchema = z.object({
     .transform((value) => (value ? value : null)),
   description: z.string().trim().min(1, 'Description is required').max(500),
   unit: z.enum(UnitOfMeasure),
+  materialSupply: z.enum(MaterialSupply).default('WITH_MATERIAL'),
   dimensionUnit: z
     .union([z.literal(''), z.null(), z.enum(DimensionUnit)])
     .optional()

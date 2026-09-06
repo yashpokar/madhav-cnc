@@ -17,13 +17,18 @@ import {
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
 import { derivedQuantity, lineTotals } from '@/lib/pricing'
 import type { ItemOption } from '@/lib/queries/quotations'
-import { DimensionUnit, UnitOfMeasure } from '@/generated/prisma/enums'
+import {
+  DimensionUnit,
+  MaterialSupply,
+  UnitOfMeasure,
+} from '@/generated/prisma/enums'
 
 export type EditorLine = {
   key: string
   itemId: string | null
   description: string
   unit: UnitOfMeasure
+  materialSupply: MaterialSupply
   dimensionUnit: DimensionUnit | null
   length: string
   width: string
@@ -36,12 +41,13 @@ export type EditorLine = {
   notes: string | null
 }
 
-export function emptyLine(): EditorLine {
+export function emptyLine(materialSupply: MaterialSupply = 'WITH_MATERIAL'): EditorLine {
   return {
     key: Math.random().toString(36).slice(2),
     itemId: null,
     description: '',
     unit: 'NOS',
+    materialSupply,
     dimensionUnit: null,
     length: '',
     width: '',
@@ -118,12 +124,13 @@ export function LineEditor({
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[64rem] text-left text-sm/6">
+        <table className="w-full min-w-[76rem] text-left text-sm/6">
           <thead className="text-zinc-500 dark:text-zinc-400">
             <tr>
               <th className="w-8 pb-2 font-medium">#</th>
               <th className="pb-2 pr-3 font-medium">Item / description</th>
               <th className="w-24 pb-2 pr-3 font-medium">Unit</th>
+              <th className="w-36 pb-2 pr-3 font-medium">Material</th>
               <th className="w-56 pb-2 pr-3 font-medium">Size × pcs</th>
               <th className="w-24 pb-2 pr-3 text-right font-medium">Qty</th>
               <th className="w-28 pb-2 pr-3 text-right font-medium">Rate</th>
@@ -204,6 +211,24 @@ export function LineEditor({
                           <ListboxLabel>{UNIT_SHORT[value]}</ListboxLabel>
                         </ListboxOption>
                       ))}
+                    </Listbox>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <Listbox
+                      aria-label={`Material supply for line ${index + 1}`}
+                      value={line.materialSupply}
+                      onChange={(value) =>
+                        update(index, {
+                          materialSupply: value as MaterialSupply,
+                        })
+                      }
+                    >
+                      <ListboxOption value="WITH_MATERIAL">
+                        <ListboxLabel>With material</ListboxLabel>
+                      </ListboxOption>
+                      <ListboxOption value="WITHOUT_MATERIAL">
+                        <ListboxLabel>Job work only</ListboxLabel>
+                      </ListboxOption>
                     </Listbox>
                   </td>
                   <td className="py-2 pr-3">

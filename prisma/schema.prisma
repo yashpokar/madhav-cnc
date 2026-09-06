@@ -47,6 +47,8 @@ model User {
   quotationsUpdated Quotation[] @relation("QuotationUpdatedBy")
   ordersCreated     Order[]     @relation("OrderCreatedBy")
   ordersUpdated     Order[]     @relation("OrderUpdatedBy")
+  productionTasksAssigned  ProductionTask[] @relation("ProductionTaskAssignee")
+  productionTasksCompleted ProductionTask[] @relation("ProductionTaskCompletedBy")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -401,6 +403,8 @@ model QuotationLine {
   description String
   unit        UnitOfMeasure
 
+  materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
+
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
   width         Decimal?       @db.Decimal(10, 3)
@@ -470,12 +474,16 @@ model Order {
   roundOff       Decimal @default(0) @map("round_off") @db.Decimal(6, 2)
   total          Decimal @default(0) @db.Decimal(14, 2)
 
+  transportCharge        Decimal @default(0) @map("transport_charge") @db.Decimal(12, 2)
+  transportTaxRatePercent Decimal @default(18) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
+
   advanceAmount Decimal @default(0) @map("advance_amount") @db.Decimal(14, 2)
 
   notes String?
   terms String?
 
-  lines OrderLine[]
+  lines           OrderLine[]
+  productionTasks ProductionTask[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -506,6 +514,8 @@ model OrderLine {
   description String
   unit        UnitOfMeasure
 
+  materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
+
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
   width         Decimal?       @db.Decimal(10, 3)
@@ -526,4 +536,60 @@ model OrderLine {
   @@index([orderId])
   @@index([itemId])
   @@map("order_lines")
+}
+
+enum ProductionTaskStatus {
+  PENDING
+  IN_PROGRESS
+  ON_HOLD
+  DONE
+  SKIPPED
+}
+
+model ProductionStage {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  tasks ProductionTask[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("production_stages")
+}
+
+model ProductionTask {
+  id String @id @default(cuid())
+
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  stageId String          @map("stage_id")
+  stage   ProductionStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  position Int
+  status   ProductionTaskStatus @default(PENDING)
+
+  assignedToId String? @map("assigned_to_id")
+  assignedTo   User?   @relation("ProductionTaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  completedById String? @map("completed_by_id")
+  completedBy   User?   @relation("ProductionTaskCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([orderId, stageId])
+  @@index([status])
+  @@index([stageId])
+  @@index([assignedToId])
+  @@map("production_tasks")
 }

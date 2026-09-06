@@ -75,13 +75,19 @@ export default async function QuotationDetailPage({
             <Badge color={QUOTATION_STATUS_COLORS[quotation.status]}>
               {QUOTATION_STATUS_LABELS[quotation.status]}
             </Badge>
-            <Badge
-              color={
-                quotation.materialSupply === 'WITH_MATERIAL' ? 'sky' : 'orange'
-              }
-            >
-              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
-            </Badge>
+            {quotation.lines.some(
+              (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+            ) ? (
+              <Badge color="orange">
+                {quotation.lines.every(
+                  (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+                )
+                  ? 'Without material'
+                  : 'Mixed material'}
+              </Badge>
+            ) : (
+              <Badge color="sky">With material</Badge>
+            )}
           </div>
           <Text>
             {quotation.customer.name}
@@ -202,7 +208,12 @@ export default async function QuotationDetailPage({
                   {line.position}
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium">{line.description}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{line.description}</span>
+                    {line.materialSupply === 'WITHOUT_MATERIAL' ? (
+                      <Badge color="orange">Job work</Badge>
+                    ) : null}
+                  </div>
                   {line.hsnCode ? (
                     <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">
                       HSN {line.hsnCode}

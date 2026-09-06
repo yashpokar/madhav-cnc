@@ -34,6 +34,7 @@ const TABS: { label: string; value: string; status?: OrderStatus }[] = [
   { label: 'In production', value: 'production', status: 'IN_PRODUCTION' },
   { label: 'Ready', value: 'ready', status: 'READY' },
   { label: 'Dispatched', value: 'dispatched', status: 'DISPATCHED' },
+  { label: 'Completed', value: 'completed', status: 'COMPLETED' },
 ]
 
 const currency = new Intl.NumberFormat('en-IN', {

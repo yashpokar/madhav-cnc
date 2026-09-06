@@ -22,6 +22,11 @@ export type DocumentTotals = {
   total: number
 }
 
+export type TransportInput = {
+  transportCharge?: number
+  transportTaxRatePercent?: number
+}
+
 export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
@@ -73,11 +78,13 @@ export function documentTotals({
   lines,
   discountType,
   discountValue,
+  transportCharge = 0,
+  transportTaxRatePercent = 0,
 }: {
   lines: LineInput[]
   discountType: 'NONE' | 'PERCENT' | 'AMOUNT'
   discountValue: number
-}): DocumentTotals {
+} & TransportInput): DocumentTotals {
   const computed = lines.map(lineTotals)
   const subtotal = round2(
     computed.reduce((sum, line) => sum + line.amount, 0),
@@ -91,15 +98,15 @@ export function documentTotals({
     discountAmount = round2(Math.min(discountValue, subtotal))
   }
 
-  const taxableAmount = round2(subtotal - discountAmount)
   const discountRatio = subtotal === 0 ? 0 : discountAmount / subtotal
+  const taxableAmount = round2(subtotal - discountAmount + transportCharge)
 
-  const taxAmount = round2(
-    computed.reduce(
-      (sum, line) => sum + line.taxAmount * (1 - discountRatio),
-      0,
-    ),
+  const lineTax = computed.reduce(
+    (sum, line) => sum + line.taxAmount * (1 - discountRatio),
+    0,
   )
+  const transportTax = transportCharge * (transportTaxRatePercent / 100)
+  const taxAmount = round2(lineTax + transportTax)
 
   const beforeRounding = round2(taxableAmount + taxAmount)
   const total = Math.round(beforeRounding)

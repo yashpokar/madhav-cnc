@@ -87,6 +87,8 @@ export async function getOrder(id: string) {
     roundOff: num(order.roundOff),
     total: num(order.total),
     advanceAmount: num(order.advanceAmount),
+    transportCharge: num(order.transportCharge),
+    transportTaxRatePercent: num(order.transportTaxRatePercent),
     lines: order.lines.map((line) => ({
       ...line,
       length: optionalNum(line.length),

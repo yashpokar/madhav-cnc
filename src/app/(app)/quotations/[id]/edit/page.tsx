@@ -78,6 +78,7 @@ export default async function EditQuotationPage({
             itemId: line.itemId,
             description: line.description,
             unit: line.unit,
+            materialSupply: line.materialSupply,
             dimensionUnit: line.dimensionUnit,
             length: line.length === null ? '' : String(line.length),
             width: line.width === null ? '' : String(line.width),

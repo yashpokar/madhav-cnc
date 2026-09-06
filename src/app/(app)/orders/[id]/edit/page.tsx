@@ -66,6 +66,8 @@ export default async function EditOrderPage({
           discountType: order.discountType,
           discountValue: order.discountValue,
           advanceAmount: order.advanceAmount,
+          transportCharge: order.transportCharge,
+          transportTaxRatePercent: order.transportTaxRatePercent,
           notes: order.notes,
           terms: order.terms,
           lines: order.lines.map((line) => ({
@@ -73,6 +75,7 @@ export default async function EditOrderPage({
             itemId: line.itemId,
             description: line.description,
             unit: line.unit,
+            materialSupply: line.materialSupply,
             dimensionUnit: line.dimensionUnit,
             length: line.length === null ? '' : String(line.length),
             width: line.width === null ? '' : String(line.width),

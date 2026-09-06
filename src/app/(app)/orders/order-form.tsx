@@ -50,6 +50,8 @@ export type OrderFormValues = {
   dueDate: string | null
   customerPoNumber: string | null
   advanceAmount: number
+  transportCharge: number
+  transportTaxRatePercent: number
   siteAddress: string | null
   siteCity: string | null
   sitePincode: string | null
@@ -111,8 +113,14 @@ export function OrderForm({
     values.discountType,
   )
   const [discountValue, setDiscountValue] = useState(String(values.discountValue))
+  const [transportCharge, setTransportCharge] = useState(
+    String(values.transportCharge),
+  )
+  const [transportTaxRate, setTransportTaxRate] = useState(
+    String(values.transportTaxRatePercent),
+  )
   const [lines, setLines] = useState<EditorLine[]>(
-    values.lines.length > 0 ? values.lines : [emptyLine()],
+    values.lines.length > 0 ? values.lines : [emptyLine(values.materialSupply)],
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
@@ -128,8 +136,10 @@ export function OrderForm({
         })),
         discountType,
         discountValue: num(discountValue),
+        transportCharge: num(transportCharge),
+        transportTaxRatePercent: num(transportTaxRate),
       }),
-    [lines, discountType, discountValue],
+    [lines, discountType, discountValue, transportCharge, transportTaxRate],
   )
 
   function pickCustomer(option: CustomerOption | null) {
@@ -150,6 +160,7 @@ export function OrderForm({
       itemId: line.itemId,
       description: line.description,
       unit: line.unit,
+      materialSupply: line.materialSupply,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,
@@ -259,7 +270,7 @@ export function OrderForm({
           </div>
 
           <Field>
-            <Label>Material</Label>
+            <Label>Default material supply</Label>
             <RadioGroup
               name="materialSupply"
               value={materialSupply}
@@ -276,6 +287,9 @@ export function OrderForm({
                 </RadioField>
               ))}
             </RadioGroup>
+            <Description className="mt-3">
+              Applied to new lines. Each line can be set individually below.
+            </Description>
           </Field>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -395,6 +409,32 @@ export function OrderForm({
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <Field>
+                <Label>Transport charge</Label>
+                <Input
+                  name="transportCharge"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={transportCharge}
+                  onChange={(event) => setTransportCharge(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <Label>Transport GST %</Label>
+                <Input
+                  name="transportTaxRatePercent"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={100}
+                  value={transportTaxRate}
+                  onChange={(event) => setTransportTaxRate(event.target.value)}
+                />
+                <Description>Set 0 if transport is not taxed.</Description>
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Field>
                 <Label>Advance received</Label>
                 <Input
                   name="advanceAmount"
@@ -426,6 +466,14 @@ export function OrderForm({
             <dd className="text-right tabular-nums">
               −{currency.format(totals.discountAmount)}
             </dd>
+            {num(transportCharge) > 0 ? (
+              <>
+                <dt className="text-zinc-500 dark:text-zinc-400">Transport</dt>
+                <dd className="text-right tabular-nums">
+                  {currency.format(num(transportCharge))}
+                </dd>
+              </>
+            ) : null}
             <dt className="text-zinc-500 dark:text-zinc-400">Taxable</dt>
             <dd className="text-right tabular-nums">
               {currency.format(totals.taxableAmount)}

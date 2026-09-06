@@ -49,6 +49,9 @@ model User {
   ordersUpdated     Order[]     @relation("OrderUpdatedBy")
   productionTasksAssigned  ProductionTask[] @relation("ProductionTaskAssignee")
   productionTasksCompleted ProductionTask[] @relation("ProductionTaskCompletedBy")
+  attachmentsUploaded QuotationAttachment[] @relation("AttachmentUploadedBy")
+  attachmentsRemoved  QuotationAttachment[] @relation("AttachmentRemovedBy")
+  companySettingsUpdated CompanySetting[] @relation("CompanySettingUpdatedBy")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -370,8 +373,9 @@ model Quotation {
   notes String?
   terms String?
 
-  lines  QuotationLine[]
-  orders Order[]
+  lines       QuotationLine[]
+  orders      Order[]
+  attachments QuotationAttachment[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -592,4 +596,65 @@ model ProductionTask {
   @@index([stageId])
   @@index([assignedToId])
   @@map("production_tasks")
+}
+
+model QuotationAttachment {
+  id String @id @default(cuid())
+
+  quotationId String    @map("quotation_id")
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  fileName   String  @map("file_name")
+  storedName String  @unique @map("stored_name")
+  mimeType   String  @map("mime_type")
+  sizeBytes  Int     @map("size_bytes")
+  comment    String?
+
+  uploadedById String? @map("uploaded_by_id")
+  uploadedBy   User?   @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  removedAt   DateTime? @map("removed_at")
+  removedById String?   @map("removed_by_id")
+  removedBy   User?     @relation("AttachmentRemovedBy", fields: [removedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([quotationId])
+  @@index([removedAt])
+  @@map("quotation_attachments")
+}
+
+model CompanySetting {
+  id String @id @default("default")
+
+  companyName String  @default("Madhav CNC") @map("company_name")
+  addressLine String? @map("address_line")
+  city        String?
+  state       String?
+  pincode     String?
+  phone       String?
+  email       String?
+  gstin       String?
+  pan         String?
+
+  bankAccountName String? @map("bank_account_name")
+  bankName        String? @map("bank_name")
+  bankBranch      String? @map("bank_branch")
+  accountNumber   String? @map("account_number")
+  ifscCode        String? @map("ifsc_code")
+
+  upiId          String? @map("upi_id")
+  upiQrStoredName String? @map("upi_qr_stored_name")
+  upiQrMimeType   String? @map("upi_qr_mime_type")
+
+  invoiceTerms String? @map("invoice_terms")
+
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("company_settings")
 }

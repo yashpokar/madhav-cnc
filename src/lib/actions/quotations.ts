@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextQuotationNumber } from '@/lib/codes'
+import { copyUpload } from '@/lib/storage'
 import { documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
 import type { QuotationData } from '@/lib/validation/quotations'
@@ -304,7 +305,10 @@ export async function createRevision(id: string): Promise<SimpleResult> {
 
   const source = await prisma.quotation.findUnique({
     where: { id },
-    include: { lines: { orderBy: { position: 'asc' } } },
+    include: {
+      lines: { orderBy: { position: 'asc' } },
+      attachments: { where: { removedAt: null }, orderBy: { createdAt: 'asc' } },
+    },
   })
 
   if (!source) {
@@ -318,6 +322,25 @@ export async function createRevision(id: string): Promise<SimpleResult> {
   })
 
   const revision = (latest?.revision ?? source.revision) + 1
+
+  const copiedAttachments = []
+
+  for (const attachment of source.attachments) {
+    try {
+      const storedName = await copyUpload(attachment.storedName)
+
+      copiedAttachments.push({
+        fileName: attachment.fileName,
+        storedName,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        comment: attachment.comment,
+        uploadedById: attachment.uploadedById,
+      })
+    } catch {
+      continue
+    }
+  }
 
   const created = await prisma.quotation.create({
     data: {
@@ -347,6 +370,7 @@ export async function createRevision(id: string): Promise<SimpleResult> {
       terms: source.terms,
       createdById: user.id,
       updatedById: user.id,
+      attachments: { create: copiedAttachments },
       lines: {
         create: source.lines.map((line) => ({
           position: line.position,

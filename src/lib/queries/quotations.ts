@@ -68,6 +68,20 @@ export async function getQuotation(id: string) {
       createdBy: { select: { name: true } },
       updatedBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
+      attachments: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          sizeBytes: true,
+          comment: true,
+          removedAt: true,
+          createdAt: true,
+          uploadedBy: { select: { name: true } },
+          removedBy: { select: { name: true } },
+        },
+      },
     },
   })
 
@@ -141,6 +155,8 @@ export async function listItemOptions() {
     taxRatePercent: item.taxRatePercent.toNumber(),
   }))
 }
+
+export type AttachmentItem = QuotationDetail['attachments'][number]
 
 export type QuotationListItem = Awaited<
   ReturnType<typeof listQuotations>

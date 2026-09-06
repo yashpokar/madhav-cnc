@@ -20,4 +20,9 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 
 export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/users', label: 'Users', capability: 'user:update' },
+  {
+    href: '/settings/company',
+    label: 'Company details',
+    capability: 'settings:update',
+  },
 ]

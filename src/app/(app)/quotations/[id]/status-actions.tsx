@@ -91,7 +91,7 @@ export function StatusActions({
             ),
           )}
 
-        {canCreateOrder && status === 'ACCEPTED' ? (
+        {canCreateOrder && (status === 'ACCEPTED' || status === 'CONVERTED') ? (
           <Button
             disabled={pending}
             onClick={() =>
@@ -101,7 +101,7 @@ export function StatusActions({
               )
             }
           >
-            Convert to order
+            {status === 'CONVERTED' ? 'Create another order' : 'Convert to order'}
           </Button>
         ) : null}
 

@@ -332,14 +332,10 @@ export async function convertQuotationToOrder(
     return { ok: false, error: 'Quotation not found' }
   }
 
-  if (quotation.status === 'CONVERTED') {
-    return { ok: false, error: 'This quotation has already been converted' }
-  }
-
-  if (quotation.status !== 'ACCEPTED') {
+  if (quotation.status !== 'ACCEPTED' && quotation.status !== 'CONVERTED') {
     return {
       ok: false,
-      error: 'Only an accepted quotation can be converted to an order',
+      error: 'Only an accepted quotation can be turned into an order',
     }
   }
 
@@ -397,10 +393,12 @@ export async function convertQuotationToOrder(
       },
     })
 
-    await tx.quotation.update({
-      where: { id: quotation.id },
-      data: { status: 'CONVERTED', updatedById: user.id },
-    })
+    if (quotation.status !== 'CONVERTED') {
+      await tx.quotation.update({
+        where: { id: quotation.id },
+        data: { status: 'CONVERTED', updatedById: user.id },
+      })
+    }
 
     return created
   })

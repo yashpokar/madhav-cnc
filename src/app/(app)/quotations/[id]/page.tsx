@@ -26,6 +26,7 @@ import {
   UNIT_SHORT,
 } from '@/lib/labels'
 import { StatusActions } from './status-actions'
+import { DesignReferences } from './design-references'
 
 export const metadata: Metadata = {
   title: 'Quotation',
@@ -184,6 +185,15 @@ export default async function QuotationDetailPage({
           </Text>
         </div>
       ) : null}
+
+      <Divider />
+
+      <DesignReferences
+        quotationId={quotation.id}
+        attachments={quotation.attachments}
+        canEdit={canUpdate}
+        locked={quotation.status === 'CONVERTED'}
+      />
 
       <Divider />
 

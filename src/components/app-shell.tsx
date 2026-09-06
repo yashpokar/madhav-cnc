@@ -5,6 +5,7 @@ import {
   ArrowRightStartOnRectangleIcon,
   BanknotesIcon,
   BuildingOffice2Icon,
+  BuildingStorefrontIcon,
   ChevronDownIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
@@ -56,6 +57,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/dispatch': TruckIcon,
   '/invoices': BanknotesIcon,
   '/admin/users': UsersIcon,
+  '/settings/company': BuildingStorefrontIcon,
 }
 
 function isCurrent(pathname: string, href: string) {

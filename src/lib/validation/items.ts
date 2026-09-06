@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
+import { DimensionUnit, ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
 
 const optionalText = (max: number) =>
   z
@@ -31,9 +31,10 @@ export const itemInputSchema = z.object({
   purchaseRate: optionalDecimal(99_999_999, 'Purchase rate'),
   brand: optionalText(100),
   shade: optionalText(100),
-  thicknessMm: optionalDecimal(999_999, 'Thickness'),
-  lengthMm: optionalDecimal(999_999, 'Length'),
-  widthMm: optionalDecimal(999_999, 'Width'),
+  dimensionUnit: z.enum(DimensionUnit).default('MM'),
+  thickness: optionalDecimal(999_999, 'Thickness'),
+  length: optionalDecimal(999_999, 'Length'),
+  width: optionalDecimal(999_999, 'Width'),
   hsnCode: z
     .union([
       z.literal(''),

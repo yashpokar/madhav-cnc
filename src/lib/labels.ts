@@ -1,4 +1,8 @@
-import type { ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
+import type {
+  DimensionUnit,
+  ItemType,
+  UnitOfMeasure,
+} from '@/generated/prisma/enums'
 
 export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   MATERIAL: 'Sheet material',
@@ -38,4 +42,16 @@ export const UNIT_SHORT: Record<UnitOfMeasure, string> = {
   KG: 'kg',
   LTR: 'ltr',
   HOUR: 'hr',
+}
+
+export const DIMENSION_UNIT_LABELS: Record<DimensionUnit, string> = {
+  MM: 'Millimetres (mm)',
+  INCH: 'Inches (in)',
+  FT: 'Feet (ft)',
+}
+
+export const DIMENSION_UNIT_SHORT: Record<DimensionUnit, string> = {
+  MM: 'mm',
+  INCH: 'in',
+  FT: 'ft',
 }

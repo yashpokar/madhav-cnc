@@ -212,6 +212,12 @@ enum ItemType {
   FINISHED_GOOD
 }
 
+enum DimensionUnit {
+  MM
+  INCH
+  FT
+}
+
 enum UnitOfMeasure {
   SQFT
   SQM
@@ -261,9 +267,10 @@ model Item {
   brand String?
   shade String?
 
-  thicknessMm Decimal? @map("thickness_mm") @db.Decimal(8, 2)
-  lengthMm    Decimal? @map("length_mm") @db.Decimal(8, 2)
-  widthMm     Decimal? @map("width_mm") @db.Decimal(8, 2)
+  dimensionUnit DimensionUnit @default(MM) @map("dimension_unit")
+  thickness     Decimal?      @db.Decimal(10, 3)
+  length        Decimal?      @db.Decimal(10, 3)
+  width         Decimal?      @db.Decimal(10, 3)
 
   hsnCode        String? @map("hsn_code")
   taxRatePercent Decimal @default(18) @map("tax_rate_percent") @db.Decimal(5, 2)

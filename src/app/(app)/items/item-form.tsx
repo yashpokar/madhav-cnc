@@ -24,10 +24,16 @@ import { Textarea } from '@/components/catalyst/textarea'
 import { Text } from '@/components/catalyst/text'
 import { CategoryCombobox } from '@/components/category-combobox'
 import { FormBanner } from '@/components/form-banner'
-import { ITEM_TYPE_LABELS, UNIT_LABELS, UNIT_SHORT } from '@/lib/labels'
+import {
+  DIMENSION_UNIT_LABELS,
+  DIMENSION_UNIT_SHORT,
+  ITEM_TYPE_LABELS,
+  UNIT_LABELS,
+  UNIT_SHORT,
+} from '@/lib/labels'
 import type { FormState } from '@/lib/actions/items'
 import type { ItemCategoryOption } from '@/lib/queries/items'
-import { ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
+import { DimensionUnit, ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
 
 export type ItemFormValues = {
   name: string
@@ -39,9 +45,10 @@ export type ItemFormValues = {
   purchaseRate: number | null
   brand: string | null
   shade: string | null
-  thicknessMm: number | null
-  lengthMm: number | null
-  widthMm: number | null
+  dimensionUnit: DimensionUnit
+  thickness: number | null
+  length: number | null
+  width: number | null
   hsnCode: string | null
   taxRatePercent: number
   isActive: boolean
@@ -66,6 +73,9 @@ export function ItemForm({
   const router = useRouter()
   const [type, setType] = useState<ItemType>(values.type)
   const [unit, setUnit] = useState<UnitOfMeasure>(values.unit)
+  const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>(
+    values.dimensionUnit,
+  )
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     { status: 'idle' },
@@ -109,8 +119,8 @@ export function ItemForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Field>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Field className="sm:col-span-2">
               <Label>Category</Label>
               <CategoryCombobox
                 name="categoryId"
@@ -235,34 +245,54 @@ export function ItemForm({
                 </Field>
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <Field className="sm:col-span-2">
+                  <Label>Measured in</Label>
+                  <Listbox
+                    name="dimensionUnit"
+                    value={dimensionUnit}
+                    onChange={setDimensionUnit}
+                  >
+                    {Object.values(DimensionUnit).map((value) => (
+                      <ListboxOption key={value} value={value}>
+                        <ListboxLabel>{DIMENSION_UNIT_LABELS[value]}</ListboxLabel>
+                      </ListboxOption>
+                    ))}
+                  </Listbox>
+                  <Description>
+                    Applies to thickness, length and width below.
+                  </Description>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
                 <Field>
-                  <Label>Thickness (mm)</Label>
+                  <Label>Thickness ({DIMENSION_UNIT_SHORT[dimensionUnit]})</Label>
                   <Input
-                    name="thicknessMm"
+                    name="thickness"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.thicknessMm)}
+                    defaultValue={numberValue(values.thickness)}
                   />
                 </Field>
                 <Field>
-                  <Label>Length (mm)</Label>
+                  <Label>Length ({DIMENSION_UNIT_SHORT[dimensionUnit]})</Label>
                   <Input
-                    name="lengthMm"
+                    name="length"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.lengthMm)}
+                    defaultValue={numberValue(values.length)}
                   />
                 </Field>
                 <Field>
-                  <Label>Width (mm)</Label>
+                  <Label>Width ({DIMENSION_UNIT_SHORT[dimensionUnit]})</Label>
                   <Input
-                    name="widthMm"
+                    name="width"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     min={0}
-                    defaultValue={numberValue(values.widthMm)}
+                    defaultValue={numberValue(values.width)}
                   />
                 </Field>
               </div>

@@ -18,7 +18,11 @@ import { listItems } from '@/lib/queries/items'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { ItemType } from '@/generated/prisma/enums'
-import { ITEM_TYPE_SHORT, UNIT_SHORT } from '@/lib/labels'
+import {
+  DIMENSION_UNIT_SHORT,
+  ITEM_TYPE_SHORT,
+  UNIT_SHORT,
+} from '@/lib/labels'
 
 export const metadata: Metadata = {
   title: 'Items',
@@ -133,11 +137,13 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
                 <TableCell className="font-mono text-xs">{item.code}</TableCell>
                 <TableCell>
                   <div className="font-medium">{item.name}</div>
-                  {item.brand || item.thicknessMm ? (
+                  {item.brand || item.thickness ? (
                     <div className="text-zinc-500 dark:text-zinc-400">
                       {[
                         item.brand,
-                        item.thicknessMm ? `${item.thicknessMm}mm` : null,
+                        item.thickness
+                          ? `${item.thickness}${DIMENSION_UNIT_SHORT[item.dimensionUnit]}`
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}

@@ -44,7 +44,8 @@ export async function listItems({
       rate: true,
       taxRatePercent: true,
       brand: true,
-      thicknessMm: true,
+      dimensionUnit: true,
+      thickness: true,
       isActive: true,
       category: { select: { id: true, name: true } },
     },
@@ -54,7 +55,7 @@ export async function listItems({
     ...item,
     rate: item.rate.toNumber(),
     taxRatePercent: item.taxRatePercent.toNumber(),
-    thicknessMm: toNumber(item.thicknessMm),
+    thickness: toNumber(item.thickness),
   }))
 }
 
@@ -76,9 +77,9 @@ export async function getItem(id: string) {
     rate: item.rate.toNumber(),
     purchaseRate: toNumber(item.purchaseRate),
     taxRatePercent: item.taxRatePercent.toNumber(),
-    thicknessMm: toNumber(item.thicknessMm),
-    lengthMm: toNumber(item.lengthMm),
-    widthMm: toNumber(item.widthMm),
+    thickness: toNumber(item.thickness),
+    length: toNumber(item.length),
+    width: toNumber(item.width),
   }
 }
 

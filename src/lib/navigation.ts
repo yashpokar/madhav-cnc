@@ -16,6 +16,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/production', label: 'Production', capability: 'production:read' },
   { href: '/dispatch', label: 'Dispatch', capability: 'dispatch:read' },
   { href: '/invoices', label: 'Invoices', capability: 'invoice:read' },
+  { href: '/payments', label: 'Payments', capability: 'payment:read' },
   { href: '/notes', label: 'Credit & debit notes', capability: 'note:read' },
   { href: '/expenses', label: 'Expenses', capability: 'expense:read' },
 ]

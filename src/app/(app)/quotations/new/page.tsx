@@ -41,6 +41,7 @@ export default async function NewQuotationPage() {
           customerId: null,
           architectId: null,
           carpenterId: null,
+          materialSupply: 'WITH_MATERIAL',
           subject: null,
           quotationDate: today,
           validUntil: null,

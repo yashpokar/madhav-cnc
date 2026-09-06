@@ -22,7 +22,7 @@ import {
 import { Switch, SwitchField } from '@/components/catalyst/switch'
 import { Textarea } from '@/components/catalyst/textarea'
 import { Text } from '@/components/catalyst/text'
-import { CategoryCombobox } from '@/components/category-combobox'
+import { MaterialCombobox } from '@/components/material-combobox'
 import { FormBanner } from '@/components/form-banner'
 import {
   DIMENSION_UNIT_LABELS,
@@ -32,14 +32,14 @@ import {
   UNIT_SHORT,
 } from '@/lib/labels'
 import type { FormState } from '@/lib/actions/items'
-import type { ItemCategoryOption } from '@/lib/queries/items'
+import type { MaterialOption } from '@/lib/queries/items'
 import { DimensionUnit, ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
 
 export type ItemFormValues = {
   name: string
   description: string | null
   type: ItemType
-  categoryId: string | null
+  materialId: string | null
   unit: UnitOfMeasure
   rate: number
   purchaseRate: number | null
@@ -63,12 +63,12 @@ export function ItemForm({
   action,
   values,
   submitLabel,
-  categories,
+  materials,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
   values: ItemFormValues
   submitLabel: string
-  categories: ItemCategoryOption[]
+  materials: MaterialOption[]
 }) {
   const router = useRouter()
   const [type, setType] = useState<ItemType>(values.type)
@@ -121,11 +121,11 @@ export function ItemForm({
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field className="sm:col-span-2">
-              <Label>Category</Label>
-              <CategoryCombobox
-                name="categoryId"
-                options={categories}
-                defaultValue={values.categoryId}
+              <Label>Material</Label>
+              <MaterialCombobox
+                name="materialId"
+                options={materials}
+                defaultValue={values.materialId}
               />
             </Field>
             <Field>

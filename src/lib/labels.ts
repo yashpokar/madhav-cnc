@@ -1,6 +1,7 @@
 import type {
   DimensionUnit,
   ItemType,
+  MaterialSupply,
   QuotationStatus,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
@@ -76,4 +77,14 @@ export const QUOTATION_STATUS_COLORS: Record<
   REJECTED: 'red',
   EXPIRED: 'amber',
   CONVERTED: 'purple',
+}
+
+export const MATERIAL_SUPPLY_LABELS: Record<MaterialSupply, string> = {
+  WITH_MATERIAL: 'With material',
+  WITHOUT_MATERIAL: 'Without material',
+}
+
+export const MATERIAL_SUPPLY_DESCRIPTIONS: Record<MaterialSupply, string> = {
+  WITH_MATERIAL: 'We supply the material and do the work.',
+  WITHOUT_MATERIAL: 'Customer brings the material; we charge job work only.',
 }

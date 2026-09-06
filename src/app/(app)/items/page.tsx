@@ -126,7 +126,7 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
               <TableHeader>Code</TableHeader>
               <TableHeader>Name</TableHeader>
               <TableHeader>Type</TableHeader>
-              <TableHeader>Category</TableHeader>
+              <TableHeader>Material</TableHeader>
               <TableHeader className="text-right">Rate</TableHeader>
               <TableHeader className="text-right">GST</TableHeader>
             </TableRow>
@@ -156,7 +156,7 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
-                  {item.category?.name ?? '—'}
+                  {item.material?.name ?? '—'}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {currency.format(item.rate)}

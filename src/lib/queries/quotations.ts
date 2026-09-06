@@ -40,6 +40,7 @@ export async function listQuotations({
       number: true,
       revision: true,
       status: true,
+      materialSupply: true,
       subject: true,
       quotationDate: true,
       validUntil: true,
@@ -130,7 +131,7 @@ export async function listItemOptions() {
       taxRatePercent: true,
       hsnCode: true,
       brand: true,
-      category: { select: { name: true } },
+      material: { select: { name: true } },
     },
   })
 

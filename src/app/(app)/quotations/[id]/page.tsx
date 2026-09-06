@@ -19,6 +19,8 @@ import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
   DIMENSION_UNIT_SHORT,
+  MATERIAL_SUPPLY_DESCRIPTIONS,
+  MATERIAL_SUPPLY_LABELS,
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
   UNIT_SHORT,
@@ -72,6 +74,13 @@ export default async function QuotationDetailPage({
             <Badge color={QUOTATION_STATUS_COLORS[quotation.status]}>
               {QUOTATION_STATUS_LABELS[quotation.status]}
             </Badge>
+            <Badge
+              color={
+                quotation.materialSupply === 'WITH_MATERIAL' ? 'sky' : 'orange'
+              }
+            >
+              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+            </Badge>
           </div>
           <Text>
             {quotation.customer.name}
@@ -98,7 +107,7 @@ export default async function QuotationDetailPage({
 
       <Divider />
 
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Subheading level={2}>Customer</Subheading>
           <div className="mt-2 text-sm/6">
@@ -122,6 +131,17 @@ export default async function QuotationDetailPage({
               <span className="text-zinc-500 dark:text-zinc-400">
                 {quotation.carpenter?.name ?? '—'}
               </span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <Subheading level={2}>Material</Subheading>
+          <div className="mt-2 text-sm/6">
+            <div className="font-medium">
+              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+            </div>
+            <div className="text-zinc-500 dark:text-zinc-400">
+              {MATERIAL_SUPPLY_DESCRIPTIONS[quotation.materialSupply]}
             </div>
           </div>
         </div>

@@ -1,0 +1,3 @@
+CREATE TYPE "MaterialSupply" AS ENUM ('WITH_MATERIAL', 'WITHOUT_MATERIAL');
+
+ALTER TABLE "quotations" ADD COLUMN "material_supply" "MaterialSupply" NOT NULL DEFAULT 'WITH_MATERIAL';

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { createItem } from '@/lib/actions/items'
-import { listItemCategories } from '@/lib/queries/items'
+import { listMaterials } from '@/lib/queries/items'
 import { requireCapability } from '@/lib/session'
 import { ItemForm } from '../item-form'
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function NewItemPage() {
   await requireCapability('item:create')
-  const categories = await listItemCategories()
+  const materials = await listMaterials()
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
@@ -24,12 +24,12 @@ export default async function NewItemPage() {
       <ItemForm
         action={createItem}
         submitLabel="Save item"
-        categories={categories}
+        materials={materials}
         values={{
           name: '',
           description: null,
           type: 'MATERIAL',
-          categoryId: null,
+          materialId: null,
           unit: 'SQFT',
           rate: 0,
           purchaseRate: null,

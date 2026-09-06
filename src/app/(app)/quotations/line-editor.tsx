@@ -163,7 +163,7 @@ export function LineEditor({
                             item.name,
                             item.code,
                             item.brand,
-                            item.category?.name,
+                            item.material?.name,
                           ]
                             .filter(Boolean)
                             .join(' ')

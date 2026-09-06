@@ -47,7 +47,7 @@ export async function listItems({
       dimensionUnit: true,
       thickness: true,
       isActive: true,
-      category: { select: { id: true, name: true } },
+      material: { select: { id: true, name: true } },
     },
   })
 
@@ -63,7 +63,7 @@ export async function getItem(id: string) {
   const item = await prisma.item.findUnique({
     where: { id },
     include: {
-      category: { select: { id: true, name: true } },
+      material: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
     },
   })
@@ -83,8 +83,8 @@ export async function getItem(id: string) {
   }
 }
 
-export async function listItemCategories() {
-  return prisma.itemCategory.findMany({
+export async function listMaterials() {
+  return prisma.material.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     select: { id: true, name: true },
@@ -92,6 +92,6 @@ export async function listItemCategories() {
 }
 
 export type ItemListItem = Awaited<ReturnType<typeof listItems>>[number]
-export type ItemCategoryOption = Awaited<
-  ReturnType<typeof listItemCategories>
+export type MaterialOption = Awaited<
+  ReturnType<typeof listMaterials>
 >[number]

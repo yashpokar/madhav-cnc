@@ -62,6 +62,7 @@ export default async function EditQuotationPage({
           customerId: quotation.customerId,
           architectId: quotation.architectId,
           carpenterId: quotation.carpenterId,
+          materialSupply: quotation.materialSupply,
           subject: quotation.subject,
           quotationDate: dateInput(quotation.quotationDate) ?? '',
           validUntil: dateInput(quotation.validUntil),

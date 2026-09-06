@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextItemCode } from '@/lib/codes'
-import { itemCategoryInputSchema, itemInputSchema } from '@/lib/validation/items'
+import { materialInputSchema, itemInputSchema } from '@/lib/validation/items'
 import type { FormState } from '@/lib/actions/partners'
 
 export type { FormState }
@@ -31,7 +31,7 @@ function parse(formData: FormData) {
     name: formData.get('name'),
     description: formData.get('description'),
     type: formData.get('type') ?? undefined,
-    categoryId: formData.get('categoryId'),
+    materialId: formData.get('materialId'),
     unit: formData.get('unit') ?? undefined,
     rate: formData.get('rate') || 0,
     purchaseRate: formData.get('purchaseRate'),
@@ -106,35 +106,35 @@ export async function updateItem(
   return { status: 'success', message: `${item.name} updated`, id: item.id }
 }
 
-export type QuickCategoryResult =
-  | { ok: true; category: { id: string; name: string } }
+export type QuickMaterialResult =
+  | { ok: true; material: { id: string; name: string } }
   | { ok: false; error: string }
 
-export async function quickCreateItemCategory(
+export async function quickCreateMaterial(
   name: string,
-): Promise<QuickCategoryResult> {
+): Promise<QuickMaterialResult> {
   const user = await requireCapability('item:create')
-  const parsed = itemCategoryInputSchema.safeParse({ name, sortOrder: 0 })
+  const parsed = materialInputSchema.safeParse({ name, sortOrder: 0 })
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
-  const existing = await prisma.itemCategory.findFirst({
+  const existing = await prisma.material.findFirst({
     where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
     select: { id: true, name: true },
   })
 
   if (existing) {
-    return { ok: true, category: existing }
+    return { ok: true, material: existing }
   }
 
-  const category = await prisma.itemCategory.create({
+  const material = await prisma.material.create({
     data: { ...parsed.data, createdById: user.id },
     select: { id: true, name: true },
   })
 
   revalidatePath('/items')
 
-  return { ok: true, category }
+  return { ok: true, material }
 }

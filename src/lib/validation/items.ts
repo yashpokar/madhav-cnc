@@ -19,7 +19,7 @@ export const itemInputSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   description: optionalText(1000),
   type: z.enum(ItemType).default('MATERIAL'),
-  categoryId: z
+  materialId: z
     .union([z.literal(''), z.string().trim().min(1)])
     .optional()
     .transform((value) => (value ? value : null)),
@@ -53,8 +53,8 @@ export const itemInputSchema = z.object({
   notes: optionalText(1000),
 })
 
-export const itemCategoryInputSchema = z.object({
-  name: z.string().trim().min(1, 'Category name is required').max(100),
+export const materialInputSchema = z.object({
+  name: z.string().trim().min(1, 'Material name is required').max(100),
   sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
 })
 

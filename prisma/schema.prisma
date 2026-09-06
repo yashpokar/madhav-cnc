@@ -42,7 +42,7 @@ model User {
   customersUpdated Customer[] @relation("CustomerUpdatedBy")
   itemsCreated     Item[]     @relation("ItemCreatedBy")
   itemsUpdated     Item[]     @relation("ItemUpdatedBy")
-  itemCategoriesCreated ItemCategory[] @relation("ItemCategoryCreatedBy")
+  materialsCreated Material[] @relation("MaterialCreatedBy")
   quotationsCreated Quotation[] @relation("QuotationCreatedBy")
   quotationsUpdated Quotation[] @relation("QuotationUpdatedBy")
 
@@ -237,7 +237,7 @@ enum UnitOfMeasure {
   HOUR
 }
 
-model ItemCategory {
+model Material {
   id        String  @id @default(cuid())
   name      String  @unique
   sortOrder Int     @default(0) @map("sort_order")
@@ -246,13 +246,13 @@ model ItemCategory {
   items Item[]
 
   createdById String? @map("created_by_id")
-  createdBy   User?   @relation("ItemCategoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?   @relation("MaterialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([isActive])
-  @@map("item_categories")
+  @@map("materials")
 }
 
 model Item {
@@ -262,8 +262,8 @@ model Item {
   description String?
   type        ItemType @default(MATERIAL)
 
-  categoryId String?       @map("category_id")
-  category   ItemCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  materialId String?   @map("material_id")
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
 
   unit UnitOfMeasure @default(NOS)
 
@@ -295,7 +295,7 @@ model Item {
   quotationLines QuotationLine[]
 
   @@index([type])
-  @@index([categoryId])
+  @@index([materialId])
   @@index([isActive])
   @@index([name])
   @@map("items")
@@ -308,6 +308,11 @@ enum QuotationStatus {
   REJECTED
   EXPIRED
   CONVERTED
+}
+
+enum MaterialSupply {
+  WITH_MATERIAL
+  WITHOUT_MATERIAL
 }
 
 enum DiscountType {
@@ -333,6 +338,8 @@ model Quotation {
   architect   Partner? @relation("QuotationArchitect", fields: [architectId], references: [id], onDelete: SetNull)
   carpenterId String?  @map("carpenter_id")
   carpenter   Partner? @relation("QuotationCarpenter", fields: [carpenterId], references: [id], onDelete: SetNull)
+
+  materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
 
   subject       String?
   quotationDate DateTime  @map("quotation_date") @db.Date

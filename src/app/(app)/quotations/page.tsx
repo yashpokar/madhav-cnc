@@ -18,6 +18,7 @@ import { listQuotations } from '@/lib/queries/quotations'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
+  MATERIAL_SUPPLY_LABELS,
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
 } from '@/lib/labels'
@@ -125,6 +126,7 @@ export default async function QuotationsPage({
               <TableHeader>Number</TableHeader>
               <TableHeader>Customer</TableHeader>
               <TableHeader>Subject</TableHeader>
+              <TableHeader>Material</TableHeader>
               <TableHeader>Date</TableHeader>
               <TableHeader className="text-right">Lines</TableHeader>
               <TableHeader className="text-right">Total</TableHeader>
@@ -153,6 +155,17 @@ export default async function QuotationsPage({
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
                   {quotation.subject ?? '—'}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    color={
+                      quotation.materialSupply === 'WITH_MATERIAL'
+                        ? 'sky'
+                        : 'orange'
+                    }
+                  >
+                    {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
                   {dateFormat.format(quotation.quotationDate)}

@@ -25,20 +25,26 @@ import {
   ComboboxLabel,
   ComboboxOption,
 } from '@/components/catalyst/combobox'
+import { Radio, RadioField, RadioGroup } from '@/components/catalyst/radio'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
 import { PartnerCombobox } from '@/components/partner-combobox'
+import {
+  MATERIAL_SUPPLY_DESCRIPTIONS,
+  MATERIAL_SUPPLY_LABELS,
+} from '@/lib/labels'
 import { documentTotals } from '@/lib/pricing'
 import type { FormState } from '@/lib/actions/quotations'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
-import { DiscountType } from '@/generated/prisma/enums'
+import { DiscountType, MaterialSupply } from '@/generated/prisma/enums'
 import { currency, emptyLine, LineEditor, type EditorLine } from './line-editor'
 
 export type QuotationFormValues = {
   customerId: string | null
   architectId: string | null
   carpenterId: string | null
+  materialSupply: MaterialSupply
   subject: string | null
   quotationDate: string
   validUntil: string | null
@@ -96,6 +102,9 @@ export function QuotationForm({
   const [siteCity, setSiteCity] = useState(values.siteCity ?? '')
   const [sitePincode, setSitePincode] = useState(values.sitePincode ?? '')
 
+  const [materialSupply, setMaterialSupply] = useState<MaterialSupply>(
+    values.materialSupply,
+  )
   const [discountType, setDiscountType] = useState<DiscountType>(
     values.discountType,
   )
@@ -246,6 +255,26 @@ export function QuotationForm({
               />
             </Field>
           </div>
+
+          <Field>
+            <Label>Material</Label>
+            <RadioGroup
+              name="materialSupply"
+              value={materialSupply}
+              onChange={(value) => setMaterialSupply(value as MaterialSupply)}
+              className="mt-2"
+            >
+              {Object.values(MaterialSupply).map((value) => (
+                <RadioField key={value}>
+                  <Radio value={value} />
+                  <Label>{MATERIAL_SUPPLY_LABELS[value]}</Label>
+                  <Description>
+                    {MATERIAL_SUPPLY_DESCRIPTIONS[value]}
+                  </Description>
+                </RadioField>
+              ))}
+            </RadioGroup>
+          </Field>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field key={`arch-${partnerKey}`}>

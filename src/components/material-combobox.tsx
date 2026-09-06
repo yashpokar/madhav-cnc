@@ -17,25 +17,25 @@ import {
 } from '@/components/catalyst/dialog'
 import { ErrorMessage, Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
-import { quickCreateItemCategory } from '@/lib/actions/items'
-import type { ItemCategoryOption } from '@/lib/queries/items'
+import { quickCreateMaterial } from '@/lib/actions/items'
+import type { MaterialOption } from '@/lib/queries/items'
 
 const NONE_ID = ''
 const CREATE_ID = '__create__'
 
-export function CategoryCombobox({
+export function MaterialCombobox({
   name,
   options,
   defaultValue,
 }: {
   name: string
-  options: ItemCategoryOption[]
+  options: MaterialOption[]
   defaultValue: string | null
 }) {
-  const none: ItemCategoryOption = { id: NONE_ID, name: 'Uncategorised' }
+  const none: MaterialOption = { id: NONE_ID, name: 'No material' }
 
   const [available, setAvailable] = useState(options)
-  const [selected, setSelected] = useState<ItemCategoryOption | null>(
+  const [selected, setSelected] = useState<MaterialOption | null>(
     options.find((option) => option.id === defaultValue) ?? null,
   )
   const [query, setQuery] = useState('')
@@ -50,18 +50,18 @@ export function CategoryCombobox({
     (option) => option.name.toLowerCase() === trimmedQuery.toLowerCase(),
   )
 
-  const createOption: ItemCategoryOption = {
+  const createOption: MaterialOption = {
     id: CREATE_ID,
-    name: trimmedQuery ? `Add “${trimmedQuery}”` : 'Add a new category',
+    name: trimmedQuery ? `Add “${trimmedQuery}”` : 'Add a new material',
   }
 
-  const choices: ItemCategoryOption[] = [
+  const choices: MaterialOption[] = [
     none,
     ...available,
     ...(hasExactMatch ? [] : [createOption]),
   ]
 
-  function handleChange(option: ItemCategoryOption | null) {
+  function handleChange(option: MaterialOption | null) {
     if (option?.id === CREATE_ID) {
       setDraftName(trimmedQuery)
       setError(null)
@@ -76,7 +76,7 @@ export function CategoryCombobox({
     setError(null)
 
     startTransition(async () => {
-      const result = await quickCreateItemCategory(draftName)
+      const result = await quickCreateMaterial(draftName)
 
       if (!result.ok) {
         setError(result.error)
@@ -84,11 +84,11 @@ export function CategoryCombobox({
       }
 
       setAvailable((current) =>
-        current.some((option) => option.id === result.category.id)
+        current.some((option) => option.id === result.material.id)
           ? current
-          : [...current, result.category],
+          : [...current, result.material],
       )
-      setSelected(result.category)
+      setSelected(result.material)
       setDialogOpen(false)
     })
   }
@@ -97,12 +97,12 @@ export function CategoryCombobox({
     <>
       <input type="hidden" name={name} value={selected?.id ?? ''} />
 
-      <Combobox<ItemCategoryOption | null>
+      <Combobox<MaterialOption | null>
         options={choices}
         value={selected}
         onChange={handleChange}
         onQueryChange={setQuery}
-        placeholder="Search categories…"
+        placeholder="Search materials…"
         displayValue={(option) =>
           option && option.id && option.id !== CREATE_ID ? option.name : ''
         }
@@ -129,14 +129,14 @@ export function CategoryCombobox({
       </Combobox>
 
       <Dialog open={dialogOpen} onClose={setDialogOpen}>
-        <DialogTitle>New category</DialogTitle>
+        <DialogTitle>New material</DialogTitle>
         <DialogDescription>
-          Categories group items on the list. Saved straight away and selected
-          here.
+          Groups items by material type, such as ACP, HDHMR, MDF or Acrylic.
+          Saved straight away and selected here.
         </DialogDescription>
         <DialogBody>
           <Field>
-            <Label>Category name</Label>
+            <Label>Material name</Label>
             <Input
               value={draftName}
               onChange={(event) => setDraftName(event.target.value)}
@@ -150,7 +150,7 @@ export function CategoryCombobox({
             Cancel
           </Button>
           <Button disabled={pending} onClick={save}>
-            {pending ? 'Saving…' : 'Save category'}
+            {pending ? 'Saving…' : 'Save material'}
           </Button>
         </DialogActions>
       </Dialog>

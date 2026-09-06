@@ -173,7 +173,7 @@ export default async function PaymentsPage() {
               </TableHead>
               <TableBody>
                 {data.byCustomer.map((row) => (
-                  <TableRow key={row.id} href={`/customers/${row.id}`}>
+                  <TableRow key={row.id} href={`/customers/${row.id}/statement`}>
                     <TableCell className="font-medium">
                       {row.name}
                       {row.phone ? (

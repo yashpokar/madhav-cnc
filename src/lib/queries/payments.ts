@@ -120,14 +120,21 @@ export async function customerAccount(customerId: string) {
         allocations: { select: { amount: true } },
       },
     }),
-    prisma.creditDebitNote.aggregate({
+    prisma.creditDebitNote.findMany({
       where: {
         customerId,
         status: 'ISSUED',
         partyType: 'CUSTOMER',
         kind: 'CREDIT',
       },
-      _sum: { total: true },
+      orderBy: { noteDate: 'desc' },
+      select: {
+        id: true,
+        number: true,
+        noteDate: true,
+        reason: true,
+        total: true,
+      },
     }),
   ])
 
@@ -146,7 +153,13 @@ export async function customerAccount(customerId: string) {
       return sum + Math.max(0, num(receipt.amount) - allocated)
     }, 0),
   )
-  const credit = credits._sum.total ? num(credits._sum.total) : 0
+  const creditNotes = credits.map((note) => ({
+    ...note,
+    total: num(note.total),
+  }))
+  const credit = round2(
+    creditNotes.reduce((sum, note) => sum + note.total, 0),
+  )
 
   return {
     customer,
@@ -154,6 +167,7 @@ export async function customerAccount(customerId: string) {
     due,
     onAccount,
     credit,
+    creditNotes,
     net: round2(due - onAccount - credit),
     receipts: receipts.map((receipt) => {
       const allocated = round2(

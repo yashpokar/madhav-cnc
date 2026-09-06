@@ -28,8 +28,10 @@ export function SharePanel({
   quotationId,
   share,
   canManage,
+  baseUrl,
 }: {
   quotationId: string
+  baseUrl: string | null
   share: {
     token: string
     decision: ShareDecision
@@ -47,12 +49,9 @@ export function SharePanel({
   const [copied, setCopied] = useState(false)
   const [token, setToken] = useState(share?.token ?? null)
 
-  const url =
-    token && typeof window !== 'undefined'
-      ? `${window.location.origin}/q/${token}`
-      : token
-        ? `/q/${token}`
-        : null
+  const origin =
+    baseUrl ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  const url = token ? `${origin}/q/${token}` : null
 
   function run(action: () => Promise<SimpleResult>, onToken?: (t: string) => void) {
     startTransition(async () => {

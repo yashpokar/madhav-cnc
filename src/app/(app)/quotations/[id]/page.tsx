@@ -193,6 +193,7 @@ export default async function QuotationDetailPage({
         quotationId={quotation.id}
         share={quotation.shares[0] ?? null}
         canManage={canUpdate}
+        baseUrl={process.env.PUBLIC_BASE_URL ?? null}
       />
 
       <Divider />

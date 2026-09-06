@@ -8,10 +8,23 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 const googleEnabled = Boolean(googleClientId && googleClientSecret)
 
+const trustedOrigins = [
+  process.env.BETTER_AUTH_URL,
+  process.env.PUBLIC_BASE_URL,
+  ...(process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) =>
+      origin.startsWith('http') ? origin : `https://${origin}`,
+    ),
+].filter((origin): origin is string => Boolean(origin))
+
 export const auth = betterAuth({
   appName: 'Madhav CNC',
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
+  trustedOrigins,
 
   database: prismaAdapter(prisma, {
     provider: 'postgresql',

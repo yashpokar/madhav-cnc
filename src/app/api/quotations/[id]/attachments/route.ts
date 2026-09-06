@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { can } from '@/lib/permissions'
+import { invalidateApproval } from '@/lib/reapproval'
 import {
   ALLOWED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
@@ -93,5 +94,10 @@ export async function POST(
     select: { id: true, fileName: true },
   })
 
-  return NextResponse.json({ ok: true, attachment })
+  const wasApproved = await invalidateApproval(
+    quotation.id,
+    'Design reference added',
+  )
+
+  return NextResponse.json({ ok: true, attachment, approvalCleared: wasApproved })
 }

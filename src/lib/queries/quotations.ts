@@ -97,6 +97,19 @@ export async function getQuotation(id: string) {
           respondedAt: true,
           respondedByName: true,
           responseNote: true,
+          amendedAt: true,
+          history: {
+            orderBy: { supersededAt: 'desc' },
+            select: {
+              id: true,
+              decision: true,
+              respondedByName: true,
+              responseNote: true,
+              respondedAt: true,
+              supersededAt: true,
+              supersededReason: true,
+            },
+          },
         },
       },
       comments: {

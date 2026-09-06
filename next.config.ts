@@ -1,22 +1,19 @@
 import type { NextConfig } from 'next'
 
-const tunnelOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+const extraOrigins = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
+
+const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS !== 'false'
 
 const nextConfig: NextConfig = {
   experimental: {
     authInterrupts: true,
     serverActions: {
-      allowedOrigins: [
-        'localhost:3000',
-        '*.ngrok-free.app',
-        '*.ngrok.app',
-        '*.ngrok.io',
-        '*.trycloudflare.com',
-        ...tunnelOrigins,
-      ],
+      allowedOrigins: allowAllOrigins
+        ? ['**.*', 'localhost:3000', ...extraOrigins]
+        : ['localhost:3000', ...extraOrigins],
     },
   },
 }

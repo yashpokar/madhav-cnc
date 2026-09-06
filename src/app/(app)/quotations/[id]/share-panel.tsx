@@ -40,6 +40,16 @@ export function SharePanel({
     respondedAt: Date | null
     respondedByName: string | null
     responseNote: string | null
+    amendedAt: Date | null
+    history: {
+      id: string
+      decision: ShareDecision
+      respondedByName: string | null
+      responseNote: string | null
+      respondedAt: Date
+      supersededAt: Date
+      supersededReason: string | null
+    }[]
   } | null
   canManage: boolean
 }) {
@@ -135,6 +145,34 @@ export function SharePanel({
                       : ''
                   }.`}
             </Text>
+          ) : null}
+
+          {share?.amendedAt && share.decision === 'PENDING' ? (
+            <FormBanner tone="error">
+              Amended on {timeFormat.format(share.amendedAt)}. The customer is
+              being asked to approve again.
+            </FormBanner>
+          ) : null}
+
+          {share && share.history.length > 0 ? (
+            <div className="rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+              <div className="text-sm/6 font-medium">Earlier responses</div>
+              <ul className="mt-2 grid grid-cols-1 gap-2">
+                {share.history.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="text-sm/6 text-zinc-600 dark:text-zinc-400"
+                  >
+                    {entry.decision === 'ACCEPTED' ? 'Approved' : 'Changes requested'}{' '}
+                    by {entry.respondedByName ?? 'customer'} on{' '}
+                    {timeFormat.format(entry.respondedAt)} · superseded{' '}
+                    {timeFormat.format(entry.supersededAt)}
+                    {entry.supersededReason ? ` (${entry.supersededReason})` : ''}
+                    {entry.responseNote ? ` — “${entry.responseNote}”` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
 
           {share?.respondedAt ? (

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import type { SimpleResult } from '@/lib/actions/quotations'
+import { invalidateApproval } from '@/lib/reapproval'
 
 export type { SimpleResult }
 
@@ -97,9 +98,19 @@ export async function removeAttachment(
     data: { removedAt: new Date(), removedById: user.id },
   })
 
+  const wasApproved = await invalidateApproval(
+    attachment.quotationId,
+    'Design reference removed',
+  )
+
   revalidatePath(`/quotations/${attachment.quotationId}`)
 
-  return { ok: true, message: `${attachment.fileName} removed from the current set` }
+  return {
+    ok: true,
+    message: wasApproved
+      ? `${attachment.fileName} removed. The customer approval was cleared.`
+      : `${attachment.fileName} removed from the current set`,
+  }
 }
 
 export async function restoreAttachment(

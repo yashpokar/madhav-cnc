@@ -8,7 +8,9 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 const googleEnabled = Boolean(googleClientId && googleClientSecret)
 
-const trustedOrigins = [
+const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS !== 'false'
+
+const configuredOrigins = [
   process.env.BETTER_AUTH_URL,
   process.env.PUBLIC_BASE_URL,
   ...(process.env.ALLOWED_ORIGINS ?? '')
@@ -19,6 +21,10 @@ const trustedOrigins = [
       origin.startsWith('http') ? origin : `https://${origin}`,
     ),
 ].filter((origin): origin is string => Boolean(origin))
+
+const trustedOrigins = allowAllOrigins
+  ? ['*', 'http://*', 'https://*', ...configuredOrigins]
+  : configuredOrigins
 
 export const auth = betterAuth({
   appName: 'Madhav CNC',

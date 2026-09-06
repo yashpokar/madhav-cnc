@@ -409,6 +409,14 @@ export default async function SharedQuotationPage({
         </section>
       ) : null}
 
+      {share.amendedAt && share.decision === 'PENDING' ? (
+        <div className="mt-10 rounded-lg bg-amber-50 p-4 text-sm/6 text-amber-900 ring-1 ring-amber-950/10 print:hidden">
+          This quotation was updated on{' '}
+          {timeFormat.format(share.amendedAt)}. Please review the changes and
+          confirm again.
+        </div>
+      ) : null}
+
       <section className="mt-10 print:hidden">
         <RespondPanel
           token={token}

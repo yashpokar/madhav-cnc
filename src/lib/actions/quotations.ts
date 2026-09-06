@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextQuotationNumber } from '@/lib/codes'
 import { copyUpload } from '@/lib/storage'
+import { invalidateApproval } from '@/lib/reapproval'
 import { documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
 import type { QuotationData } from '@/lib/validation/quotations'
@@ -235,10 +236,18 @@ export async function updateQuotation(
     }),
   ])
 
+  const wasApproved = await invalidateApproval(id, 'Quotation amended')
+
   revalidatePath('/quotations')
   revalidatePath(`/quotations/${id}`)
 
-  return { status: 'success', message: 'Quotation saved', id }
+  return {
+    status: 'success',
+    message: wasApproved
+      ? 'Quotation saved. The customer approval was cleared and the link now asks for approval again.'
+      : 'Quotation saved',
+    id,
+  }
 }
 
 export type SimpleResult =

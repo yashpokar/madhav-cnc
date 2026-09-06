@@ -713,6 +713,10 @@ model QuotationShare {
   respondedByName    String?       @map("responded_by_name")
   responseNote       String?       @map("response_note")
 
+  amendedAt DateTime? @map("amended_at")
+
+  history QuotationShareResponse[]
+
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("ShareCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
@@ -812,4 +816,24 @@ model DispatchLine {
   @@index([dispatchId])
   @@index([orderLineId])
   @@map("dispatch_lines")
+}
+
+model QuotationShareResponse {
+  id String @id @default(cuid())
+
+  shareId String         @map("share_id")
+  share   QuotationShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  decision        ShareDecision
+  respondedByName String?       @map("responded_by_name")
+  responseNote    String?       @map("response_note")
+  respondedAt     DateTime      @map("responded_at")
+
+  supersededAt     DateTime @map("superseded_at")
+  supersededReason String?  @map("superseded_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([shareId])
+  @@map("quotation_share_responses")
 }

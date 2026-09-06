@@ -26,6 +26,7 @@ export async function findShareByToken(token: string) {
       respondedAt: true,
       respondedByName: true,
       responseNote: true,
+      amendedAt: true,
       quotationId: true,
     },
   })

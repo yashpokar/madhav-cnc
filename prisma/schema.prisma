@@ -40,6 +40,9 @@ model User {
   partnersUpdated  Partner[]  @relation("PartnerUpdatedBy")
   customersCreated Customer[] @relation("CustomerCreatedBy")
   customersUpdated Customer[] @relation("CustomerUpdatedBy")
+  itemsCreated     Item[]     @relation("ItemCreatedBy")
+  itemsUpdated     Item[]     @relation("ItemUpdatedBy")
+  itemCategoriesCreated ItemCategory[] @relation("ItemCategoryCreatedBy")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -200,4 +203,85 @@ model Customer {
   @@index([preferredArchitectId])
   @@index([preferredCarpenterId])
   @@map("customers")
+}
+
+enum ItemType {
+  MATERIAL
+  HARDWARE
+  SERVICE
+  FINISHED_GOOD
+}
+
+enum UnitOfMeasure {
+  SQFT
+  SQM
+  RFT
+  RMT
+  NOS
+  SHEET
+  SET
+  KG
+  LTR
+  HOUR
+}
+
+model ItemCategory {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  items Item[]
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("ItemCategoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("item_categories")
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  type        ItemType @default(MATERIAL)
+
+  categoryId String?       @map("category_id")
+  category   ItemCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  unit UnitOfMeasure @default(NOS)
+
+  rate         Decimal  @default(0) @db.Decimal(12, 2)
+  purchaseRate Decimal? @map("purchase_rate") @db.Decimal(12, 2)
+
+  brand String?
+  shade String?
+
+  thicknessMm Decimal? @map("thickness_mm") @db.Decimal(8, 2)
+  lengthMm    Decimal? @map("length_mm") @db.Decimal(8, 2)
+  widthMm     Decimal? @map("width_mm") @db.Decimal(8, 2)
+
+  hsnCode        String? @map("hsn_code")
+  taxRatePercent Decimal @default(18) @map("tax_rate_percent") @db.Decimal(5, 2)
+
+  isActive Boolean @default(true) @map("is_active")
+  notes    String?
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("ItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("ItemUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([name])
+  @@map("items")
 }

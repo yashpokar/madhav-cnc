@@ -27,6 +27,7 @@ import {
 } from '@/lib/labels'
 import { StatusActions } from './status-actions'
 import { DesignReferences } from './design-references'
+import { SharePanel } from './share-panel'
 
 export const metadata: Metadata = {
   title: 'Quotation',
@@ -185,6 +186,14 @@ export default async function QuotationDetailPage({
           </Text>
         </div>
       ) : null}
+
+      <Divider />
+
+      <SharePanel
+        quotationId={quotation.id}
+        share={quotation.shares[0] ?? null}
+        canManage={canUpdate}
+      />
 
       <Divider />
 

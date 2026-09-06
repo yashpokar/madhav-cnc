@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
 
 const GUEST_ROUTES = ['/sign-in', '/sign-up']
-const OPEN_ROUTES = ['/pending']
+const OPEN_ROUTES = ['/pending', '/q']
 
 function matches(pathname: string, routes: readonly string[]) {
   return routes.some(

@@ -52,6 +52,8 @@ model User {
   attachmentsUploaded QuotationAttachment[] @relation("AttachmentUploadedBy")
   attachmentsRemoved  QuotationAttachment[] @relation("AttachmentRemovedBy")
   companySettingsUpdated CompanySetting[] @relation("CompanySettingUpdatedBy")
+  sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
+  commentsAuthored QuotationComment[] @relation("CommentAuthor")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -376,6 +378,8 @@ model Quotation {
   lines       QuotationLine[]
   orders      Order[]
   attachments QuotationAttachment[]
+  shares      QuotationShare[]
+  comments    QuotationComment[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -620,6 +624,8 @@ model QuotationAttachment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  comments QuotationComment[]
+
   @@index([quotationId])
   @@index([removedAt])
   @@map("quotation_attachments")
@@ -657,4 +663,68 @@ model CompanySetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("company_settings")
+}
+
+enum ShareDecision {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum CommentAuthorType {
+  STAFF
+  CUSTOMER
+}
+
+model QuotationShare {
+  id String @id @default(cuid())
+
+  quotationId String    @map("quotation_id")
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  token     String  @unique
+  isRevoked Boolean @default(false) @map("is_revoked")
+
+  expiresAt DateTime? @map("expires_at")
+
+  viewCount    Int       @default(0) @map("view_count")
+  lastViewedAt DateTime? @map("last_viewed_at")
+
+  decision           ShareDecision @default(PENDING)
+  respondedAt        DateTime?     @map("responded_at")
+  respondedByName    String?       @map("responded_by_name")
+  responseNote       String?       @map("response_note")
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("ShareCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([quotationId])
+  @@index([isRevoked])
+  @@map("quotation_shares")
+}
+
+model QuotationComment {
+  id String @id @default(cuid())
+
+  quotationId String    @map("quotation_id")
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  attachmentId String?              @map("attachment_id")
+  attachment   QuotationAttachment? @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  body       String
+  authorType CommentAuthorType @map("author_type")
+
+  authorUserId String? @map("author_user_id")
+  authorUser   User?   @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  authorName   String? @map("author_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([quotationId])
+  @@index([attachmentId])
+  @@map("quotation_comments")
 }

@@ -68,6 +68,32 @@ export async function getQuotation(id: string) {
       createdBy: { select: { name: true } },
       updatedBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
+      shares: {
+        where: { isRevoked: false },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          token: true,
+          decision: true,
+          viewCount: true,
+          lastViewedAt: true,
+          respondedAt: true,
+          respondedByName: true,
+          responseNote: true,
+        },
+      },
+      comments: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          attachmentId: true,
+          body: true,
+          authorType: true,
+          authorName: true,
+          createdAt: true,
+          authorUser: { select: { name: true } },
+        },
+      },
       attachments: {
         orderBy: { createdAt: 'asc' },
         select: {

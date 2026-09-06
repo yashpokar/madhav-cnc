@@ -3,3 +3,13 @@
 @theme inline {
   --font-sans: var(--font-inter);
 }
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
+  }
+}

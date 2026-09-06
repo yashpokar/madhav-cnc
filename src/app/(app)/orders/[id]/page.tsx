@@ -27,6 +27,9 @@ import {
   ORDER_STATUS_LABELS,
   UNIT_SHORT,
 } from '@/lib/labels'
+import { PrintButton } from '@/components/print-button'
+import { DocumentLetterhead } from '@/components/document-letterhead'
+import { getCompanySetting } from '@/lib/queries/company'
 import { OrderStatusActions } from './status-actions'
 import { ProductionPanel } from './production-panel'
 
@@ -55,7 +58,10 @@ export default async function QuotationDetailPage({
   const query = await searchParams
   const justCreated = query.created === '1'
 
-  const order = await getOrder(id)
+  const [order, company] = await Promise.all([
+    getOrder(id),
+    getCompanySetting(),
+  ])
 
   if (!order) {
     notFound()
@@ -70,7 +76,7 @@ export default async function QuotationDetailPage({
 
   return (
     <div className="grid grid-cols-1 gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div className="grid grid-cols-1 gap-2">
           <div className="flex items-center gap-3">
             <Heading>
@@ -101,6 +107,7 @@ export default async function QuotationDetailPage({
           ) : null}
         </div>
         <div className="flex gap-3">
+          <PrintButton label="Print" />
           {can(user.role, 'invoice:create') &&
           order.status !== 'DRAFT' &&
           order.status !== 'CANCELLED' ? (
@@ -127,13 +134,24 @@ export default async function QuotationDetailPage({
         </FormBanner>
       ) : null}
 
+      <DocumentLetterhead
+        company={company}
+        title="Work order"
+        reference={order.number}
+        date={order.orderDate}
+        secondaryLabel="Due"
+        secondaryDate={order.dueDate}
+      />
+
+      <div className="print:hidden">
       <OrderStatusActions
         id={order.id}
         status={order.status}
         canUpdate={canUpdate}
       />
+      </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
@@ -207,16 +225,18 @@ export default async function QuotationDetailPage({
         </div>
       ) : null}
 
-      <Divider />
+      <Divider className="print:hidden" />
 
+      <div className="print:hidden">
       <ProductionPanel
         orderId={order.id}
         orderStatus={order.status}
         tasks={tasks}
         canUpdate={canUpdateProduction}
       />
+      </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
       <div className="overflow-x-auto">
         <Table dense grid>
@@ -332,7 +352,7 @@ export default async function QuotationDetailPage({
 
       {order.notes || order.terms ? (
         <>
-          <Divider />
+          <Divider className="print:hidden" />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
             {order.notes ? (
               <div>

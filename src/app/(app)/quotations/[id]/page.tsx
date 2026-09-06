@@ -29,6 +29,8 @@ import { StatusActions } from './status-actions'
 import { DesignReferences } from './design-references'
 import { SharePanel } from './share-panel'
 import { PaymentTerms } from '@/components/payment-terms'
+import { PrintButton } from '@/components/print-button'
+import { DocumentLetterhead } from '@/components/document-letterhead'
 import { getCompanySetting } from '@/lib/queries/company'
 
 export const metadata: Metadata = {
@@ -73,7 +75,7 @@ export default async function QuotationDetailPage({
 
   return (
     <div className="grid grid-cols-1 gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div className="grid grid-cols-1 gap-2">
           <div className="flex items-center gap-3">
             <Heading>
@@ -92,9 +94,12 @@ export default async function QuotationDetailPage({
             {quotation.subject ? ` · ${quotation.subject}` : ''}
           </Text>
         </div>
-        {canUpdate && editable ? (
-          <Button href={`/quotations/${quotation.id}/edit`}>Edit</Button>
-        ) : null}
+        <div className="flex gap-3">
+          <PrintButton label="Print" />
+          {canUpdate && editable ? (
+            <Button href={`/quotations/${quotation.id}/edit`}>Edit</Button>
+          ) : null}
+        </div>
       </div>
 
       {justCreated ? (
@@ -103,6 +108,16 @@ export default async function QuotationDetailPage({
         </FormBanner>
       ) : null}
 
+      <DocumentLetterhead
+        company={company}
+        title="Quotation"
+        reference={`${quotation.number}${quotation.revision > 1 ? ` R${quotation.revision}` : ''}`}
+        date={quotation.quotationDate}
+        secondaryLabel="Valid until"
+        secondaryDate={quotation.validUntil}
+      />
+
+      <div className="print:hidden">
       <StatusActions
         id={quotation.id}
         status={quotation.status}
@@ -110,8 +125,9 @@ export default async function QuotationDetailPage({
         canCreate={canCreate}
         canCreateOrder={canCreateOrder}
       />
+      </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
@@ -187,25 +203,29 @@ export default async function QuotationDetailPage({
         </div>
       ) : null}
 
-      <Divider />
+      <Divider className="print:hidden" />
 
+      <div className="print:hidden">
       <SharePanel
         quotationId={quotation.id}
         share={quotation.shares[0] ?? null}
         canManage={canUpdate}
         baseUrl={process.env.PUBLIC_BASE_URL ?? null}
       />
+      </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
+      <div className="print:hidden">
       <DesignReferences
         quotationId={quotation.id}
         attachments={quotation.attachments}
         canEdit={canUpdate}
         locked={quotation.status === 'CONVERTED'}
       />
+      </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
       <div className="overflow-x-auto">
         <Table dense grid>
@@ -299,7 +319,7 @@ export default async function QuotationDetailPage({
         </dl>
       </div>
 
-      <Divider />
+      <Divider className="print:hidden" />
 
       <PaymentTerms
         total={quotation.total}
@@ -310,7 +330,7 @@ export default async function QuotationDetailPage({
 
       {quotation.notes || quotation.terms ? (
         <>
-          <Divider />
+          <Divider className="print:hidden" />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
             {quotation.notes ? (
               <div>

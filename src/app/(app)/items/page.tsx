@@ -71,7 +71,14 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
             quotations and orders.
           </Text>
         </div>
-        {canCreate ? <Button href="/items/new">Add item</Button> : null}
+        <div className="flex gap-3">
+          {can(user.role, 'item:update') ? (
+            <Button outline href="/items/materials">
+              Materials
+            </Button>
+          ) : null}
+          {canCreate ? <Button href="/items/new">Add item</Button> : null}
+        </div>
       </div>
 
       {created ? (

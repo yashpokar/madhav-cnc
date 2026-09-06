@@ -1,17 +1,24 @@
 import { z } from 'zod'
-import { DimensionUnit, ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
+import {
+  DimensionUnit,
+  ItemType,
+  SupplyType,
+  UnitOfMeasure,
+} from '@/generated/prisma/enums'
 
 const optionalText = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string().trim().max(max), z.null()])
     .optional()
     .transform((value) => (value ? value : null))
 
 const optionalDecimal = (max: number, label: string) =>
   z
-    .union([z.literal(''), z.coerce.number().min(0, `${label} cannot be negative`).max(max)])
+    .union([
+      z.literal(''),
+      z.null(),
+      z.coerce.number().min(0, `${label} cannot be negative`).max(max),
+    ])
     .optional()
     .transform((value) => (value === '' || value === undefined ? null : value))
 
@@ -19,8 +26,10 @@ export const itemInputSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   description: optionalText(1000),
   type: z.enum(ItemType).default('MATERIAL'),
+  supplyType: z.enum(SupplyType).default('GOODS'),
+  isFlatRate: z.boolean().default(false),
   materialId: z
-    .union([z.literal(''), z.string().trim().min(1)])
+    .union([z.literal(''), z.null(), z.string().trim().min(1)])
     .optional()
     .transform((value) => (value ? value : null)),
   unit: z.enum(UnitOfMeasure).default('NOS'),
@@ -38,6 +47,7 @@ export const itemInputSchema = z.object({
   hsnCode: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()

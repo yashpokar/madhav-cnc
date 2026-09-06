@@ -14,13 +14,13 @@ import {
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
-import { getQuotation } from '@/lib/queries/quotations'
+import { getQuotation, summariseMaterial } from '@/lib/queries/quotations'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
   DIMENSION_UNIT_SHORT,
-  MATERIAL_SUPPLY_DESCRIPTIONS,
-  MATERIAL_SUPPLY_LABELS,
+  MATERIAL_SUMMARY_COLORS,
+  MATERIAL_SUMMARY_LABELS,
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
   UNIT_SHORT,
@@ -65,6 +65,7 @@ export default async function QuotationDetailPage({
     notFound()
   }
 
+  const materialSummary = summariseMaterial(quotation.lines)
   const canUpdate = can(user.role, 'quotation:update')
   const canCreate = can(user.role, 'quotation:create')
   const canCreateOrder = can(user.role, 'order:create')
@@ -82,19 +83,9 @@ export default async function QuotationDetailPage({
             <Badge color={QUOTATION_STATUS_COLORS[quotation.status]}>
               {QUOTATION_STATUS_LABELS[quotation.status]}
             </Badge>
-            {quotation.lines.some(
-              (line) => line.materialSupply === 'WITHOUT_MATERIAL',
-            ) ? (
-              <Badge color="orange">
-                {quotation.lines.every(
-                  (line) => line.materialSupply === 'WITHOUT_MATERIAL',
-                )
-                  ? 'Without material'
-                  : 'Mixed material'}
-              </Badge>
-            ) : (
-              <Badge color="sky">With material</Badge>
-            )}
+            <Badge color={MATERIAL_SUMMARY_COLORS[materialSummary]}>
+              {MATERIAL_SUMMARY_LABELS[materialSummary]}
+            </Badge>
           </div>
           <Text>
             {quotation.customer.name}
@@ -153,10 +144,14 @@ export default async function QuotationDetailPage({
           <Subheading level={2}>Material</Subheading>
           <div className="mt-2 text-sm/6">
             <div className="font-medium">
-              {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+              {MATERIAL_SUMMARY_LABELS[materialSummary]}
             </div>
             <div className="text-zinc-500 dark:text-zinc-400">
-              {MATERIAL_SUPPLY_DESCRIPTIONS[quotation.materialSupply]}
+              {materialSummary === 'WITHOUT'
+                ? 'Customer supplies all material; job work only.'
+                : materialSummary === 'MIXED'
+                  ? 'Some lines use customer material, some ours.'
+                  : 'We supply the material and do the work.'}
             </div>
           </div>
         </div>

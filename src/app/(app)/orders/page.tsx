@@ -18,7 +18,8 @@ import { listOrders } from '@/lib/queries/orders'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
-  MATERIAL_SUPPLY_LABELS,
+  MATERIAL_SUMMARY_COLORS,
+  MATERIAL_SUMMARY_LABELS,
   ORDER_STATUS_COLORS,
   ORDER_STATUS_LABELS,
 } from '@/lib/labels'
@@ -158,14 +159,8 @@ export default async function OrdersPage({
                   {order.subject ?? '—'}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    color={
-                      order.materialSupply === 'WITH_MATERIAL'
-                        ? 'sky'
-                        : 'orange'
-                    }
-                  >
-                    {MATERIAL_SUPPLY_LABELS[order.materialSupply]}
+                  <Badge color={MATERIAL_SUMMARY_COLORS[order.materialSummary]}>
+                    {MATERIAL_SUMMARY_LABELS[order.materialSummary]}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">

@@ -28,17 +28,25 @@ import {
   DIMENSION_UNIT_LABELS,
   DIMENSION_UNIT_SHORT,
   ITEM_TYPE_LABELS,
+  SUPPLY_TYPE_LABELS,
   UNIT_LABELS,
   UNIT_SHORT,
 } from '@/lib/labels'
 import type { FormState } from '@/lib/actions/items'
 import type { MaterialOption } from '@/lib/queries/items'
-import { DimensionUnit, ItemType, UnitOfMeasure } from '@/generated/prisma/enums'
+import {
+  DimensionUnit,
+  ItemType,
+  SupplyType,
+  UnitOfMeasure,
+} from '@/generated/prisma/enums'
 
 export type ItemFormValues = {
   name: string
   description: string | null
   type: ItemType
+  supplyType: SupplyType
+  isFlatRate: boolean
   materialId: string | null
   unit: UnitOfMeasure
   rate: number
@@ -72,6 +80,27 @@ export function ItemForm({
 }) {
   const router = useRouter()
   const [type, setType] = useState<ItemType>(values.type)
+  const [supplyType, setSupplyTypeState] = useState<SupplyType>(
+    values.supplyType,
+  )
+
+  function setSupplyType(next: SupplyType) {
+    setSupplyTypeState(next)
+
+    if (next === 'SERVICE' && type !== 'SERVICE') {
+      setType('SERVICE')
+    }
+
+    if (next === 'GOODS' && type === 'SERVICE') {
+      setType('MATERIAL')
+    }
+  }
+
+  function setItemType(next: ItemType) {
+    setType(next)
+    setSupplyTypeState(next === 'SERVICE' ? 'SERVICE' : 'GOODS')
+  }
+  const [isFlatRate, setIsFlatRate] = useState(values.isFlatRate)
   const [unit, setUnit] = useState<UnitOfMeasure>(values.unit)
   const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>(
     values.dimensionUnit,
@@ -85,7 +114,7 @@ export function ItemForm({
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
   const keep = (name: string, fallback: string | number | null | undefined) =>
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
-  const isService = type === 'SERVICE'
+  const isService = supplyType === 'SERVICE'
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-8">
@@ -112,7 +141,7 @@ export function ItemForm({
             </Field>
             <Field>
               <Label>Type</Label>
-              <Listbox name="type" value={type} onChange={setType}>
+              <Listbox name="type" value={type} onChange={setItemType}>
                 {Object.values(ItemType).map((value) => (
                   <ListboxOption key={value} value={value}>
                     <ListboxLabel>{ITEM_TYPE_LABELS[value]}</ListboxLabel>
@@ -123,13 +152,30 @@ export function ItemForm({
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
+            <Field>
               <Label>Material</Label>
               <MaterialCombobox
                 name="materialId"
                 options={materials}
                 defaultValue={keep('materialId', values.materialId)}
               />
+            </Field>
+            <Field>
+              <Label>Goods or service</Label>
+              <Listbox
+                name="supplyType"
+                value={supplyType}
+                onChange={setSupplyType}
+              >
+                {Object.values(SupplyType).map((value) => (
+                  <ListboxOption key={value} value={value}>
+                    <ListboxLabel>{SUPPLY_TYPE_LABELS[value]}</ListboxLabel>
+                  </ListboxOption>
+                ))}
+              </Listbox>
+              <Description>
+                Decides whether an HSN or SAC code applies.
+              </Description>
             </Field>
             <Field>
               <Label>Unit</Label>
@@ -142,6 +188,20 @@ export function ItemForm({
               </Listbox>
             </Field>
           </div>
+
+          <SwitchField>
+            <Label>Flat charge</Label>
+            <Description>
+              A fixed amount per line, ignoring size and quantity. Use for
+              labour or handling charges that do not vary with the job.
+            </Description>
+            <Switch
+              name="isFlatRate"
+              checked={isFlatRate}
+              onChange={setIsFlatRate}
+              value="true"
+            />
+          </SwitchField>
 
           <Field>
             <Label>Description</Label>
@@ -161,7 +221,9 @@ export function ItemForm({
         <FieldGroup>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>
-              <Label>Rate per {UNIT_SHORT[unit]}</Label>
+              <Label>
+                {isFlatRate ? 'Amount' : `Rate per ${UNIT_SHORT[unit]}`}
+              </Label>
               <Input
                 name="rate"
                 type="number"
@@ -230,7 +292,7 @@ export function ItemForm({
         </FieldGroup>
       </Fieldset>
 
-      {isService ? null : (
+      {isService || isFlatRate ? null : (
         <>
           <Divider />
 

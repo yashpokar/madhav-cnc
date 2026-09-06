@@ -44,7 +44,7 @@ export async function listBoardTasks({ search }: { search?: string } = {}) {
           number: true,
           subject: true,
           dueDate: true,
-          materialSupply: true,
+          lines: { select: { materialSupply: true } },
           customer: { select: { name: true } },
         },
       },

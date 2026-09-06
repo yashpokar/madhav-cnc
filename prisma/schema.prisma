@@ -236,6 +236,11 @@ enum DimensionUnit {
   FT
 }
 
+enum SupplyType {
+  GOODS
+  SERVICE
+}
+
 enum UnitOfMeasure {
   SQFT
   SQM
@@ -272,7 +277,9 @@ model Item {
   code        String   @unique
   name        String
   description String?
-  type        ItemType @default(MATERIAL)
+  type        ItemType   @default(MATERIAL)
+  supplyType  SupplyType @default(GOODS) @map("supply_type")
+  isFlatRate  Boolean    @default(false) @map("is_flat_rate")
 
   materialId String?   @map("material_id")
   material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
@@ -352,8 +359,6 @@ model Quotation {
   carpenterId String?  @map("carpenter_id")
   carpenter   Partner? @relation("QuotationCarpenter", fields: [carpenterId], references: [id], onDelete: SetNull)
 
-  materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
-
   subject       String?
   quotationDate DateTime  @map("quotation_date") @db.Date
   validUntil    DateTime? @map("valid_until") @db.Date
@@ -414,6 +419,7 @@ model QuotationLine {
   unit        UnitOfMeasure
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
+  isFlatRate     Boolean        @default(false) @map("is_flat_rate")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
@@ -462,8 +468,6 @@ model Order {
   architect   Partner? @relation("OrderArchitect", fields: [architectId], references: [id], onDelete: SetNull)
   carpenterId String?  @map("carpenter_id")
   carpenter   Partner? @relation("OrderCarpenter", fields: [carpenterId], references: [id], onDelete: SetNull)
-
-  materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
 
   subject      String?
   orderDate    DateTime  @map("order_date") @db.Date
@@ -525,6 +529,7 @@ model OrderLine {
   unit        UnitOfMeasure
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
+  isFlatRate     Boolean        @default(false) @map("is_flat_rate")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)

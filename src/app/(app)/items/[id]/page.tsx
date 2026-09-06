@@ -41,6 +41,8 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
           name: item.name,
           description: item.description,
           type: item.type,
+          supplyType: item.supplyType,
+          isFlatRate: item.isFlatRate,
           materialId: item.materialId,
           unit: item.unit,
           rate: item.rate,

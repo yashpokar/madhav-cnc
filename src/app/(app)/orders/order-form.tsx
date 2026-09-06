@@ -25,26 +25,20 @@ import {
   ComboboxLabel,
   ComboboxOption,
 } from '@/components/catalyst/combobox'
-import { Radio, RadioField, RadioGroup } from '@/components/catalyst/radio'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
 import { PartnerCombobox } from '@/components/partner-combobox'
-import {
-  MATERIAL_SUPPLY_DESCRIPTIONS,
-  MATERIAL_SUPPLY_LABELS,
-} from '@/lib/labels'
 import { documentTotals } from '@/lib/pricing'
 import type { FormState } from '@/lib/actions/orders'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
-import { DiscountType, MaterialSupply } from '@/generated/prisma/enums'
+import { DiscountType } from '@/generated/prisma/enums'
 import { currency, emptyLine, LineEditor, type EditorLine } from '@/components/line-editor'
 
 export type OrderFormValues = {
   customerId: string | null
   architectId: string | null
   carpenterId: string | null
-  materialSupply: MaterialSupply
   subject: string | null
   orderDate: string
   dueDate: string | null
@@ -106,9 +100,6 @@ export function OrderForm({
   const [siteCity, setSiteCity] = useState(values.siteCity ?? '')
   const [sitePincode, setSitePincode] = useState(values.sitePincode ?? '')
 
-  const [materialSupply, setMaterialSupply] = useState<MaterialSupply>(
-    values.materialSupply,
-  )
   const [discountType, setDiscountType] = useState<DiscountType>(
     values.discountType,
   )
@@ -120,7 +111,7 @@ export function OrderForm({
     String(values.transportTaxRatePercent),
   )
   const [lines, setLines] = useState<EditorLine[]>(
-    values.lines.length > 0 ? values.lines : [emptyLine(values.materialSupply)],
+    values.lines.length > 0 ? values.lines : [emptyLine()],
   )
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
@@ -164,6 +155,7 @@ export function OrderForm({
       description: line.description,
       unit: line.unit,
       materialSupply: line.materialSupply,
+      isFlatRate: line.isFlatRate,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,
@@ -271,29 +263,6 @@ export function OrderForm({
               />
             </Field>
           </div>
-
-          <Field>
-            <Label>Default material supply</Label>
-            <RadioGroup
-              name="materialSupply"
-              value={materialSupply}
-              onChange={(value) => setMaterialSupply(value as MaterialSupply)}
-              className="mt-2"
-            >
-              {Object.values(MaterialSupply).map((value) => (
-                <RadioField key={value}>
-                  <Radio value={value} />
-                  <Label>{MATERIAL_SUPPLY_LABELS[value]}</Label>
-                  <Description>
-                    {MATERIAL_SUPPLY_DESCRIPTIONS[value]}
-                  </Description>
-                </RadioField>
-              ))}
-            </RadioGroup>
-            <Description className="mt-3">
-              Applied to new lines. Each line can be set individually below.
-            </Description>
-          </Field>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field key={`arch-${partnerKey}`}>

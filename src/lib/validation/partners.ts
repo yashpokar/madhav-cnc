@@ -3,9 +3,7 @@ import { PartnerType } from '@/generated/prisma/enums'
 
 const optionalText = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string().trim().max(max), z.null()])
     .optional()
     .transform((value) => (value ? value : null))
 
@@ -20,7 +18,11 @@ export const partnerInputSchema = z.object({
     .max(20, 'Phone number is too long'),
   altPhone: optionalText(20),
   email: z
-    .union([z.literal(''), z.string().trim().email('Enter a valid email')])
+    .union([
+      z.literal(''),
+      z.null(),
+      z.string().trim().email('Enter a valid email'),
+    ])
     .optional()
     .transform((value) => (value ? value : null)),
   address: optionalText(300),
@@ -29,6 +31,7 @@ export const partnerInputSchema = z.object({
   pincode: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()

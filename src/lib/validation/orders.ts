@@ -41,7 +41,6 @@ export const orderInputSchema = z.object({
     .union([z.literal(''), z.null(), z.string()])
     .optional()
     .transform((value) => (value ? value : null)),
-  materialSupply: z.enum(MaterialSupply).default('WITH_MATERIAL'),
   subject: optionalText(200),
   customerPoNumber: optionalText(60),
   orderDate: requiredDate,

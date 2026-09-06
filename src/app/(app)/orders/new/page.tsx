@@ -41,7 +41,6 @@ export default async function NewOrderPage() {
           customerId: null,
           architectId: null,
           carpenterId: null,
-          materialSupply: 'WITH_MATERIAL',
           subject: null,
           customerPoNumber: null,
           orderDate: today,

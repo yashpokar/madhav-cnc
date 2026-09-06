@@ -41,6 +41,7 @@ export const quotationLineSchema = z.object({
   description: z.string().trim().min(1, 'Description is required').max(500),
   unit: z.enum(UnitOfMeasure),
   materialSupply: z.enum(MaterialSupply).default('WITH_MATERIAL'),
+  isFlatRate: z.coerce.boolean().default(false),
   dimensionUnit: z
     .union([z.literal(''), z.null(), z.enum(DimensionUnit)])
     .optional()
@@ -69,7 +70,6 @@ export const quotationInputSchema = z.object({
     .union([z.literal(''), z.null(), z.string()])
     .optional()
     .transform((value) => (value ? value : null)),
-  materialSupply: z.enum(MaterialSupply).default('WITH_MATERIAL'),
   subject: optionalText(200),
   quotationDate: requiredDate,
   validUntil: optionalDate,

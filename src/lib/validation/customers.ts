@@ -3,19 +3,21 @@ import { CustomerStatus, CustomerType } from '@/generated/prisma/enums'
 
 const optionalText = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string().trim().max(max), z.null()])
     .optional()
     .transform((value) => (value ? value : null))
 
 const optionalDate = z
-  .union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')])
+  .union([
+    z.literal(''),
+    z.null(),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+  ])
   .optional()
   .transform((value) => (value ? new Date(`${value}T00:00:00Z`) : null))
 
 const optionalId = z
-  .union([z.literal(''), z.string().trim().min(1)])
+  .union([z.literal(''), z.null(), z.string().trim().min(1)])
   .optional()
   .transform((value) => (value ? value : null))
 
@@ -30,7 +32,11 @@ export const customerInputSchema = z.object({
     .max(20, 'Phone number is too long'),
   altPhone: optionalText(20),
   email: z
-    .union([z.literal(''), z.string().trim().email('Enter a valid email')])
+    .union([
+      z.literal(''),
+      z.null(),
+      z.string().trim().email('Enter a valid email'),
+    ])
     .optional()
     .transform((value) => (value ? value : null)),
   address: optionalText(300),
@@ -39,6 +45,7 @@ export const customerInputSchema = z.object({
   pincode: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()
@@ -49,6 +56,7 @@ export const customerInputSchema = z.object({
   gstin: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()
@@ -63,6 +71,7 @@ export const customerInputSchema = z.object({
   pan: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()

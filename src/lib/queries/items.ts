@@ -40,6 +40,8 @@ export async function listItems({
       code: true,
       name: true,
       type: true,
+      supplyType: true,
+      isFlatRate: true,
       unit: true,
       rate: true,
       taxRatePercent: true,

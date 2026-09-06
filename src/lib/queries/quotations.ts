@@ -11,6 +11,22 @@ function optionalNum(value: DecimalLike | null): number | null {
   return value === null ? null : value.toNumber()
 }
 
+export type MaterialSummary = 'WITH' | 'WITHOUT' | 'MIXED' | 'NONE'
+
+export function summariseMaterial(
+  lines: { materialSupply: 'WITH_MATERIAL' | 'WITHOUT_MATERIAL' }[],
+): MaterialSummary {
+  if (lines.length === 0) return 'NONE'
+
+  const withoutCount = lines.filter(
+    (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+  ).length
+
+  if (withoutCount === 0) return 'WITH'
+  if (withoutCount === lines.length) return 'WITHOUT'
+  return 'MIXED'
+}
+
 export async function listQuotations({
   search,
   status,
@@ -40,7 +56,6 @@ export async function listQuotations({
       number: true,
       revision: true,
       status: true,
-      materialSupply: true,
       subject: true,
       quotationDate: true,
       validUntil: true,
@@ -48,13 +63,15 @@ export async function listQuotations({
       customer: { select: { id: true, code: true, name: true } },
       architect: { select: { name: true } },
       carpenter: { select: { name: true } },
+      lines: { select: { materialSupply: true } },
       _count: { select: { lines: true } },
     },
   })
 
-  return quotations.map((quotation) => ({
+  return quotations.map(({ lines, ...quotation }) => ({
     ...quotation,
     total: num(quotation.total),
+    materialSummary: summariseMaterial(lines),
   }))
 }
 
@@ -172,6 +189,8 @@ export async function listItemOptions() {
       taxRatePercent: true,
       hsnCode: true,
       brand: true,
+      supplyType: true,
+      isFlatRate: true,
       material: { select: { name: true } },
     },
   })

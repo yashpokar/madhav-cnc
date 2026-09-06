@@ -29,6 +29,7 @@ export type EditorLine = {
   description: string
   unit: UnitOfMeasure
   materialSupply: MaterialSupply
+  isFlatRate: boolean
   dimensionUnit: DimensionUnit | null
   length: string
   width: string
@@ -48,6 +49,7 @@ export function emptyLine(materialSupply: MaterialSupply = 'WITH_MATERIAL'): Edi
     description: '',
     unit: 'NOS',
     materialSupply,
+    isFlatRate: false,
     dimensionUnit: null,
     length: '',
     width: '',
@@ -106,6 +108,16 @@ export function LineEditor({
       rate: String(item.rate),
       taxRatePercent: String(item.taxRatePercent),
       hsnCode: item.hsnCode,
+      isFlatRate: item.isFlatRate,
+      ...(item.isFlatRate
+        ? {
+            quantity: '1',
+            dimensionUnit: null,
+            length: '',
+            width: '',
+            pieces: '',
+          }
+        : {}),
     })
   }
 
@@ -232,6 +244,11 @@ export function LineEditor({
                     </Listbox>
                   </td>
                   <td className="py-2 pr-3">
+                    {line.isFlatRate ? (
+                      <span className="text-xs/5 text-zinc-500 dark:text-zinc-400">
+                        Flat charge
+                      </span>
+                    ) : (
                     <div className="grid grid-cols-1 gap-2">
                       <Listbox
                         aria-label={`Size unit for line ${index + 1}`}
@@ -300,6 +317,7 @@ export function LineEditor({
                         </div>
                       ) : null}
                     </div>
+                    )}
                   </td>
                   <td className="py-2 pr-3">
                     <Input
@@ -309,7 +327,7 @@ export function LineEditor({
                       min={0}
                       className="text-right"
                       value={line.quantity}
-                      disabled={Boolean(line.dimensionUnit)}
+                      disabled={Boolean(line.dimensionUnit) || line.isFlatRate}
                       onChange={(event) =>
                         update(index, { quantity: event.target.value })
                       }

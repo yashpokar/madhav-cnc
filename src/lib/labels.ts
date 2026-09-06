@@ -4,6 +4,7 @@ import type {
   MaterialSupply,
   OrderStatus,
   QuotationStatus,
+  SupplyType,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
 
@@ -19,6 +20,11 @@ export const ITEM_TYPE_SHORT: Record<ItemType, string> = {
   HARDWARE: 'Hardware',
   SERVICE: 'Service',
   FINISHED_GOOD: 'Finished',
+}
+
+export const SUPPLY_TYPE_LABELS: Record<SupplyType, string> = {
+  GOODS: 'Goods',
+  SERVICE: 'Service',
 }
 
 export const UNIT_LABELS: Record<UnitOfMeasure, string> = {
@@ -84,6 +90,20 @@ export const MATERIAL_SUPPLY_LABELS: Record<MaterialSupply, string> = {
   WITH_MATERIAL: 'With material',
   WITHOUT_MATERIAL: 'Without material',
 }
+
+export const MATERIAL_SUMMARY_LABELS = {
+  WITH: 'With material',
+  WITHOUT: 'Without material',
+  MIXED: 'Mixed material',
+  NONE: 'No lines',
+} as const
+
+export const MATERIAL_SUMMARY_COLORS = {
+  WITH: 'sky',
+  WITHOUT: 'orange',
+  MIXED: 'amber',
+  NONE: 'zinc',
+} as const
 
 export const MATERIAL_SUPPLY_DESCRIPTIONS: Record<MaterialSupply, string> = {
   WITH_MATERIAL: 'We supply the material and do the work.',

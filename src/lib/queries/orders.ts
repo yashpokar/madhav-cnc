@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import type { OrderStatus } from '@/generated/prisma/enums'
+import { summariseMaterial } from '@/lib/queries/quotations'
 
 type DecimalLike = { toNumber: () => number }
 
@@ -40,7 +41,6 @@ export async function listOrders({
       id: true,
       number: true,
       status: true,
-      materialSupply: true,
       subject: true,
       orderDate: true,
       dueDate: true,
@@ -49,14 +49,16 @@ export async function listOrders({
       customer: { select: { id: true, code: true, name: true } },
       architect: { select: { name: true } },
       quotation: { select: { id: true, number: true } },
+      lines: { select: { materialSupply: true } },
       _count: { select: { lines: true } },
     },
   })
 
-  return orders.map((order) => ({
+  return orders.map(({ lines, ...order }) => ({
     ...order,
     total: num(order.total),
     advanceAmount: num(order.advanceAmount),
+    materialSummary: summariseMaterial(lines),
   }))
 }
 

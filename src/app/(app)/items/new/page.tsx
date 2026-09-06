@@ -29,6 +29,8 @@ export default async function NewItemPage() {
           name: '',
           description: null,
           type: 'MATERIAL',
+          supplyType: 'GOODS',
+          isFlatRate: false,
           materialId: null,
           unit: 'SQFT',
           rate: 0,

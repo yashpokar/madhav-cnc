@@ -92,7 +92,9 @@ export function TaskCard({
         ) : (
           <span>No due date</span>
         )}
-        {task.order.materialSupply === 'WITHOUT_MATERIAL' ? (
+        {task.order.lines.some(
+          (line) => line.materialSupply === 'WITHOUT_MATERIAL',
+        ) ? (
           <Badge color="orange">Customer material</Badge>
         ) : null}
       </div>

@@ -15,6 +15,8 @@ function parse(formData: FormData) {
     name: formData.get('name'),
     description: formData.get('description'),
     type: formData.get('type') ?? undefined,
+    supplyType: formData.get('supplyType') ?? undefined,
+    isFlatRate: formData.get('isFlatRate') === 'true',
     materialId: formData.get('materialId'),
     unit: formData.get('unit') ?? undefined,
     rate: formData.get('rate') || 0,

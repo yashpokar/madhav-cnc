@@ -18,7 +18,8 @@ import { listQuotations } from '@/lib/queries/quotations'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
-  MATERIAL_SUPPLY_LABELS,
+  MATERIAL_SUMMARY_COLORS,
+  MATERIAL_SUMMARY_LABELS,
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
 } from '@/lib/labels'
@@ -157,14 +158,8 @@ export default async function QuotationsPage({
                   {quotation.subject ?? '—'}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    color={
-                      quotation.materialSupply === 'WITH_MATERIAL'
-                        ? 'sky'
-                        : 'orange'
-                    }
-                  >
-                    {MATERIAL_SUPPLY_LABELS[quotation.materialSupply]}
+                  <Badge color={MATERIAL_SUMMARY_COLORS[quotation.materialSummary]}>
+                    {MATERIAL_SUMMARY_LABELS[quotation.materialSummary]}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">

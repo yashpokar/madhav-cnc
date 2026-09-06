@@ -2,9 +2,7 @@ import { z } from 'zod'
 
 const optionalText = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string().trim().max(max), z.null()])
     .optional()
     .transform((value) => (value ? value : null))
 
@@ -16,18 +14,24 @@ export const companySettingSchema = z.object({
   pincode: z
     .union([
       z.literal(''),
+      z.null(),
       z.string().trim().regex(/^\d{6}$/, 'Pincode must be 6 digits'),
     ])
     .optional()
     .transform((value) => (value ? value : null)),
   phone: optionalText(20),
   email: z
-    .union([z.literal(''), z.string().trim().email('Enter a valid email')])
+    .union([
+      z.literal(''),
+      z.null(),
+      z.string().trim().email('Enter a valid email'),
+    ])
     .optional()
     .transform((value) => (value ? value : null)),
   gstin: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()
@@ -42,6 +46,7 @@ export const companySettingSchema = z.object({
   pan: z
     .union([
       z.literal(''),
+      z.null(),
       z.string().trim().toUpperCase().regex(/^[A-Z]{5}\d{4}[A-Z]$/, 'Enter a valid PAN'),
     ])
     .optional()
@@ -52,6 +57,7 @@ export const companySettingSchema = z.object({
   accountNumber: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()
@@ -62,6 +68,7 @@ export const companySettingSchema = z.object({
   ifscCode: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()
@@ -73,6 +80,7 @@ export const companySettingSchema = z.object({
   upiId: z
     .union([
       z.literal(''),
+      z.null(),
       z
         .string()
         .trim()

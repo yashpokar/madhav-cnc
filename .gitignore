@@ -44,5 +44,5 @@ next-env.d.ts
 # prisma generated client
 /src/generated
 
-# uploaded design references
+# uploaded design references (local dev only; production uses the S3 bucket)
 /storage

@@ -244,7 +244,7 @@ export function InvoiceForm({
         ) : null}
 
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[52rem] text-left text-sm/6">
+          <table className="stack-table w-full min-w-[52rem] text-left text-sm/6">
             <thead className="text-zinc-500 dark:text-zinc-400">
               <tr>
                 <th className="w-8 pb-2 font-medium">#</th>
@@ -259,10 +259,10 @@ export function InvoiceForm({
             <tbody>
               {lines.map((line, index) => (
                 <tr key={line.key} className="align-top">
-                  <td className="py-2 pr-2 tabular-nums text-zinc-500 dark:text-zinc-400">
+                  <td data-label="#" className="py-2 pr-2 tabular-nums text-zinc-500 dark:text-zinc-400">
                     {index + 1}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Description" className="py-2 pr-3">
                     <Input
                       aria-label={`Description for line ${index + 1}`}
                       value={line.description}
@@ -271,7 +271,7 @@ export function InvoiceForm({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="HSN" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`HSN for line ${index + 1}`}
                       value={line.hsnCode ?? ''}
@@ -280,7 +280,7 @@ export function InvoiceForm({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Qty" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`Quantity for line ${index + 1}`}
                       type="number"
@@ -292,7 +292,7 @@ export function InvoiceForm({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Rate" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`Rate for line ${index + 1}`}
                       type="number"
@@ -304,7 +304,7 @@ export function InvoiceForm({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="GST %" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`GST for line ${index + 1}`}
                       type="number"
@@ -317,7 +317,7 @@ export function InvoiceForm({
                       }
                     />
                   </td>
-                  <td className="py-2 pt-4 text-right tabular-nums">
+                  <td data-label="Amount" className="py-2 pt-4 text-right tabular-nums">
                     {currency.format(
                       Math.round(
                         num(line.quantity) *

@@ -136,7 +136,7 @@ export function LineEditor({
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[76rem] text-left text-sm/6">
+        <table className="stack-table w-full min-w-[76rem] text-left text-sm/6">
           <thead className="text-zinc-500 dark:text-zinc-400">
             <tr>
               <th className="w-8 pb-2 font-medium">#</th>
@@ -165,10 +165,10 @@ export function LineEditor({
 
               return (
                 <tr key={line.key} className="align-top">
-                  <td className="py-2 pr-2 text-zinc-500 tabular-nums dark:text-zinc-400">
+                  <td data-label="#" className="py-2 pr-2 text-zinc-500 tabular-nums dark:text-zinc-400">
                     {index + 1}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Item / description" className="py-2 pr-3">
                     <div className="grid grid-cols-1 gap-2">
                       <Combobox<ItemOption | null>
                         options={items}
@@ -210,7 +210,7 @@ export function LineEditor({
                       />
                     </div>
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Unit" data-half className="py-2 pr-3">
                     <Listbox
                       aria-label={`Unit for line ${index + 1}`}
                       value={line.unit}
@@ -225,7 +225,7 @@ export function LineEditor({
                       ))}
                     </Listbox>
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Material" className="py-2 pr-3">
                     <Listbox
                       aria-label={`Material supply for line ${index + 1}`}
                       value={line.materialSupply}
@@ -243,7 +243,7 @@ export function LineEditor({
                       </ListboxOption>
                     </Listbox>
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Size × pcs" className="py-2 pr-3">
                     {line.isFlatRate ? (
                       <span className="text-xs/5 text-zinc-500 dark:text-zinc-400">
                         Flat charge
@@ -319,7 +319,7 @@ export function LineEditor({
                     </div>
                     )}
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Qty" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`Quantity for line ${index + 1}`}
                       type="number"
@@ -333,7 +333,7 @@ export function LineEditor({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Rate" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`Rate for line ${index + 1}`}
                       type="number"
@@ -345,7 +345,7 @@ export function LineEditor({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="Disc %" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`Discount for line ${index + 1}`}
                       type="number"
@@ -358,7 +358,7 @@ export function LineEditor({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3">
+                  <td data-label="GST %" data-half className="py-2 pr-3">
                     <Input
                       aria-label={`GST for line ${index + 1}`}
                       type="number"
@@ -371,7 +371,7 @@ export function LineEditor({
                       }
                     />
                   </td>
-                  <td className="py-2 pr-3 pt-4 text-right tabular-nums">
+                  <td data-label="Amount" className="py-2 pr-3 pt-4 text-right tabular-nums">
                     <div className="font-medium">
                       {currency.format(totals.amount)}
                     </div>

@@ -15,3 +15,91 @@
     background: #fff;
   }
 }
+
+/*
+ * Line-item tables are too wide for a phone. Below the md breakpoint each row
+ * becomes a stacked card: headers are hidden and every cell shows its own
+ * data-label instead. Cells marked data-half sit two to a row.
+ */
+@media not all and (min-width: 48rem) {
+  table.stack-table {
+    min-width: 0;
+  }
+
+  .stack-table,
+  .stack-table tbody {
+    display: block;
+  }
+
+  .stack-table thead {
+    display: none;
+  }
+
+  .stack-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(9 9 11 / 0.1);
+  }
+
+  [data-theme='dark'] .stack-table tbody tr {
+    border-color: rgb(255 255 255 / 0.12);
+  }
+
+  .stack-table td {
+    display: block;
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .stack-table td[data-half] {
+    grid-column: auto;
+  }
+
+  .stack-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    color: rgb(113 113 122);
+  }
+
+  .stack-table td[data-label='#']::before {
+    content: 'Line';
+    display: inline;
+    margin-right: 0.25rem;
+  }
+
+  .stack-table td[data-label='#'] {
+    font-weight: 600;
+  }
+}
+
+/* Theme the calendar popover (react-day-picker) to match the app. */
+.date-picker {
+  --rdp-accent-color: var(--color-zinc-950);
+  --rdp-accent-background-color: var(--color-zinc-100);
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  --rdp-day_button-height: 2.25rem;
+  --rdp-day_button-width: 2.25rem;
+  font-size: 0.875rem;
+  color: var(--color-zinc-950);
+}
+
+[data-theme='dark'] .date-picker {
+  --rdp-accent-color: #fff;
+  --rdp-accent-background-color: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.date-picker select {
+  background: transparent;
+  color: inherit;
+}

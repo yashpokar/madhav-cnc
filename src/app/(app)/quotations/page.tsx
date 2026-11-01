@@ -76,7 +76,7 @@ export default async function QuotationsPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
           {TABS.map((tab) => {
             const isActive = tab.value === activeTab.value
             const query = new URLSearchParams()
@@ -94,8 +94,8 @@ export default async function QuotationsPage({
                 href={href}
                 className={
                   isActive
-                    ? 'rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
+                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
                 }
               >
                 {tab.label}

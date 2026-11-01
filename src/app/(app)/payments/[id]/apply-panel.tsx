@@ -111,7 +111,7 @@ export function ApplyPanel({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-left text-sm/6">
+            <table className="stack-table w-full min-w-[40rem] text-left text-sm/6">
               <thead className="text-zinc-500 dark:text-zinc-400">
                 <tr>
                   <th className="pb-2 pr-3 font-medium">Invoice</th>
@@ -125,18 +125,18 @@ export function ApplyPanel({
               <tbody>
                 {invoices.map((invoice) => (
                   <tr key={invoice.id} className="align-top">
-                    <td className="py-2 pr-3 pt-4 font-mono text-xs">
+                    <td data-label="Invoice" className="py-2 pr-3 pt-4 font-mono text-xs">
                       {invoice.number}
                     </td>
-                    <td className="py-2 pr-3 pt-4 text-zinc-500 dark:text-zinc-400">
+                    <td data-label="Due date" data-half className="py-2 pr-3 pt-4 text-zinc-500 dark:text-zinc-400">
                       {invoice.dueDate
                         ? dateFormat.format(invoice.dueDate)
                         : dateFormat.format(invoice.invoiceDate)}
                     </td>
-                    <td className="py-2 pr-3 pt-4 text-right font-medium tabular-nums">
+                    <td data-label="Outstanding" data-half className="py-2 pr-3 pt-4 text-right font-medium tabular-nums">
                       {currency.format(invoice.due)}
                     </td>
-                    <td className="py-2">
+                    <td data-label="Apply" className="py-2">
                       <Input
                         aria-label={`Amount applied to ${invoice.number}`}
                         type="number"

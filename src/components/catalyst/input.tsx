@@ -1,6 +1,7 @@
 import * as Headless from '@headlessui/react'
 import clsx from 'clsx'
 import React, { forwardRef } from 'react'
+import { DatePicker } from './date-picker'
 
 export function InputGroup({ children }: React.ComponentPropsWithoutRef<'span'>) {
   return (
@@ -32,6 +33,26 @@ export const Input = forwardRef(function Input(
   } & Omit<Headless.InputProps, 'as' | 'className'>,
   ref: React.ForwardedRef<HTMLInputElement>
 ) {
+  // Replace the browser's native date control with the themed calendar.
+  if (props.type === 'date') {
+    return (
+      <DatePicker
+        className={className}
+        name={props.name}
+        value={props.value as string | undefined}
+        defaultValue={props.defaultValue as string | undefined}
+        onChange={props.onChange as never}
+        required={props.required}
+        disabled={props.disabled}
+        invalid={props.invalid}
+        min={props.min as string | undefined}
+        max={props.max as string | undefined}
+        placeholder={props.placeholder}
+        aria-label={props['aria-label']}
+      />
+    )
+  }
+
   return (
     <span
       data-slot="control"

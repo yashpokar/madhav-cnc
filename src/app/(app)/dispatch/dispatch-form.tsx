@@ -98,7 +98,7 @@ export function DispatchForm({
         </Text>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-left text-sm/6">
+          <table className="stack-table w-full min-w-[40rem] text-left text-sm/6">
             <thead className="text-zinc-500 dark:text-zinc-400">
               <tr>
                 <th className="w-8 pb-2 font-medium">#</th>
@@ -112,20 +112,20 @@ export function DispatchForm({
             <tbody>
               {lines.map((line) => (
                 <tr key={line.id}>
-                  <td className="py-2 pr-2 tabular-nums text-zinc-500 dark:text-zinc-400">
+                  <td data-label="#" className="py-2 pr-2 tabular-nums text-zinc-500 dark:text-zinc-400">
                     {line.position}
                   </td>
-                  <td className="py-2 pr-3 font-medium">{line.description}</td>
-                  <td className="py-2 pr-3 text-right tabular-nums">
+                  <td data-label="Description" className="py-2 pr-3 font-medium">{line.description}</td>
+                  <td data-label="Ordered" data-half className="py-2 pr-3 text-right tabular-nums">
                     {line.ordered} {UNIT_SHORT[line.unit]}
                   </td>
-                  <td className="py-2 pr-3 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
+                  <td data-label="Sent" data-half className="py-2 pr-3 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                     {line.dispatched}
                   </td>
-                  <td className="py-2 pr-3 text-right tabular-nums font-medium">
+                  <td data-label="Pending" data-half className="py-2 pr-3 text-right tabular-nums font-medium">
                     {line.remaining}
                   </td>
-                  <td className="py-2">
+                  <td data-label="Dispatch now" className="py-2">
                     <Input
                       aria-label={`Dispatch quantity for ${line.description}`}
                       type="number"

@@ -1,68 +1,99 @@
-import * as Headless from '@headlessui/react'
-import clsx from 'clsx'
-import React, { forwardRef } from 'react'
+'use client'
 
+import React, { forwardRef } from 'react'
+import { Listbox, ListboxLabel, ListboxOption } from './listbox'
+
+type OptionItem = { value: string; label: string; disabled: boolean }
+
+function textOf(node: React.ReactNode): string {
+  return React.Children.toArray(node)
+    .map((child) =>
+      typeof child === 'string' || typeof child === 'number' ? String(child) : '',
+    )
+    .join('')
+}
+
+function collect(children: React.ReactNode, into: OptionItem[]) {
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return
+
+    const props = child.props as {
+      value?: string | number
+      disabled?: boolean
+      children?: React.ReactNode
+    }
+
+    if (child.type === 'option') {
+      const label = textOf(props.children)
+
+      into.push({
+        value: props.value === undefined ? label : String(props.value),
+        label,
+        disabled: Boolean(props.disabled),
+      })
+    } else if (props.children) {
+      // Fragments and <optgroup> just wrap more options.
+      collect(props.children, into)
+    }
+  })
+}
+
+type SelectChangeEvent = { target: { name: string; value: string } }
+
+/**
+ * Themed dropdown that replaces the browser's native <select>. It keeps the
+ * <select> call-site API: <option> children, name/value/defaultValue, and an
+ * onChange that receives an event-like object with target.value.
+ */
 export const Select = forwardRef(function Select(
-  { className, multiple, ...props }: { className?: string } & Omit<Headless.SelectProps, 'as' | 'className'>,
-  ref: React.ForwardedRef<HTMLSelectElement>
+  {
+    className,
+    name,
+    value,
+    defaultValue,
+    onChange,
+    disabled,
+    invalid,
+    children,
+    'aria-label': ariaLabel,
+  }: {
+    className?: string
+    name?: string
+    value?: string | number
+    defaultValue?: string | number
+    onChange?: (event: SelectChangeEvent) => void
+    disabled?: boolean
+    invalid?: boolean
+    required?: boolean
+    children?: React.ReactNode
+    'aria-label'?: string
+  },
+  // The themed control has no single underlying <select> to hand back.
+  _ref: React.ForwardedRef<HTMLSelectElement>,
 ) {
+  const options: OptionItem[] = []
+  collect(children, options)
+
+  const selection =
+    value !== undefined
+      ? { value: String(value) }
+      : { defaultValue: defaultValue !== undefined ? String(defaultValue) : options[0]?.value ?? '' }
+
   return (
-    <span
-      data-slot="control"
-      className={clsx([
-        className,
-        // Basic layout
-        'group relative block w-full',
-        // Background color + shadow applied to inset pseudo element, so shadow blends with border in light mode
-        'before:absolute before:inset-px before:rounded-[calc(var(--radius-lg)-1px)] before:bg-white before:shadow-sm',
-        // Background color is moved to control and shadow is removed in dark mode so hide `before` pseudo
-        'dark:before:hidden',
-        // Focus ring
-        'after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:ring-transparent after:ring-inset has-data-focus:after:ring-2 has-data-focus:after:ring-blue-500',
-        // Disabled state
-        'has-data-disabled:opacity-50 has-data-disabled:before:bg-zinc-950/5 has-data-disabled:before:shadow-none',
-      ])}
+    <Listbox<string>
+      className={className}
+      name={name}
+      disabled={disabled}
+      invalid={invalid}
+      aria-label={ariaLabel}
+      onChange={(next) => onChange?.({ target: { name: name ?? '', value: next } })}
+      {...selection}
     >
-      <Headless.Select
-        ref={ref}
-        multiple={multiple}
-        {...props}
-        className={clsx([
-          // Basic layout
-          'relative block w-full appearance-none rounded-lg py-[calc(--spacing(2.5)-1px)] sm:py-[calc(--spacing(1.5)-1px)]',
-          // Horizontal padding
-          multiple
-            ? 'px-[calc(--spacing(3.5)-1px)] sm:px-[calc(--spacing(3)-1px)]'
-            : 'pr-[calc(--spacing(10)-1px)] pl-[calc(--spacing(3.5)-1px)] sm:pr-[calc(--spacing(9)-1px)] sm:pl-[calc(--spacing(3)-1px)]',
-          // Options (multi-select)
-          '[&_optgroup]:font-semibold',
-          // Typography
-          'text-base/6 text-zinc-950 placeholder:text-zinc-500 sm:text-sm/6 dark:text-white dark:*:text-white',
-          // Border
-          'border border-zinc-950/10 data-hover:border-zinc-950/20 dark:border-white/10 dark:data-hover:border-white/20',
-          // Background color
-          'bg-transparent dark:bg-white/5 dark:*:bg-zinc-800',
-          // Hide default focus styles
-          'focus:outline-hidden',
-          // Invalid state
-          'data-invalid:border-red-500 data-invalid:data-hover:border-red-500 dark:data-invalid:border-red-600 dark:data-invalid:data-hover:border-red-600',
-          // Disabled state
-          'data-disabled:border-zinc-950/20 data-disabled:opacity-100 dark:data-disabled:border-white/15 dark:data-disabled:bg-white/2.5 dark:data-hover:data-disabled:border-white/15',
-        ])}
-      />
-      {!multiple && (
-        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-          <svg
-            className="size-5 stroke-zinc-500 group-has-data-disabled:stroke-zinc-600 sm:size-4 dark:stroke-zinc-400 forced-colors:stroke-[CanvasText]"
-            viewBox="0 0 16 16"
-            aria-hidden="true"
-            fill="none"
-          >
-            <path d="M5.75 10.75L8 13L10.25 10.75" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M10.25 5.25L8 3L5.75 5.25" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-      )}
-    </span>
+      {options.map((option) => (
+        <ListboxOption key={option.value} value={option.value} disabled={option.disabled}>
+          <ListboxLabel>{option.label}</ListboxLabel>
+        </ListboxOption>
+      ))}
+    </Listbox>
   )
 })

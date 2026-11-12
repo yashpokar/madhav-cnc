@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -198,6 +199,8 @@ export default async function ReceiptPage({
         Recorded {dateFormat.format(receipt.createdAt)}
         {receipt.recordedBy ? ` by ${receipt.recordedBy.name}` : ''}
       </div>
+
+      <ActivityTimeline entity="payment" id={receipt.id} />
     </div>
   )
 }

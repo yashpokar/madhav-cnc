@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -439,6 +440,8 @@ export default async function QuotationDetailPage({
       ) : null}
 
       <OrderRelated id={order.id} role={user.role} />
+
+      <ActivityTimeline entity="order" id={order.id} />
     </div>
   )
 }

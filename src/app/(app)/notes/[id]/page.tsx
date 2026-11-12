@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -289,6 +290,8 @@ export default async function NoteDetailPage({
           </div>
         </>
       ) : null}
+
+      <ActivityTimeline entity="note" id={note.id} />
     </div>
   )
 }

@@ -200,7 +200,15 @@ export async function getOrderForInvoice(orderId: string) {
           length: true,
           width: true,
           pieces: true,
-          item: { select: { material: { select: { name: true } } } },
+          item: {
+            select: {
+              brand: true,
+              shade: true,
+              thickness: true,
+              dimensionUnit: true,
+              material: { select: { name: true } },
+            },
+          },
           quantity: true,
           rate: true,
           discountPercent: true,

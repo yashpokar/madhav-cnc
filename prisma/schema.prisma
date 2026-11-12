@@ -62,6 +62,7 @@ model User {
   dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
   sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
   commentsAuthored QuotationComment[] @relation("CommentAuthor")
+  activities      ActivityLog[]      @relation("ActivityUser")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -949,6 +950,8 @@ model InvoiceLine {
   materialName   String?         @map("material_name")
   materialSupply MaterialSupply? @map("material_supply")
   sizeText       String?         @map("size_text")
+  // Brand, shade and thickness of the item, e.g. "Greenply · Shade 12 · 18 mm".
+  specText       String?         @map("spec_text")
 
   quantity        Decimal @db.Decimal(12, 3)
   rate            Decimal @db.Decimal(12, 2)
@@ -1163,4 +1166,25 @@ model CreditDebitNoteLine {
 
   @@index([noteId])
   @@map("credit_debit_note_lines")
+}
+
+// A readable trail of who did what to a record, shown on its page.
+model ActivityLog {
+  id String @id @default(cuid())
+
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id")
+  action     String
+  summary    String
+
+  userId   String? @map("user_id")
+  user     User?   @relation("ActivityUser", fields: [userId], references: [id], onDelete: SetNull)
+  // Kept as text so the trail still reads right if the user is removed, and so
+  // customer actions on shared links can be attributed to "Customer".
+  userName String? @map("user_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId, createdAt])
+  @@map("activity_logs")
 }

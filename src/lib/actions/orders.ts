@@ -11,6 +11,8 @@ import type { OrderData } from '@/lib/validation/orders'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { ensureTasksForOrder } from '@/lib/actions/production'
+import { logActivity } from '@/lib/activity'
+import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { OrderStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
@@ -176,6 +178,14 @@ export async function createOrder(
     },
   })
 
+  await logActivity({
+    entity: 'order',
+    id: order.id,
+    action: 'created',
+    summary: 'created the order',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/orders')
   redirect(`/orders/${order.id}?created=1`)
 }
@@ -251,6 +261,14 @@ export async function updateOrder(
     }),
   ])
 
+  await logActivity({
+    entity: 'order',
+    id,
+    action: 'updated',
+    summary: 'edited the order',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/orders')
   revalidatePath(`/orders/${id}`)
 
@@ -297,6 +315,14 @@ export async function setOrderStatus(
   if (status === 'IN_PRODUCTION') {
     await ensureTasksForOrder(id)
   }
+
+  await logActivity({
+    entity: 'order',
+    id,
+    action: 'status',
+    summary: `moved the order to ${ORDER_STATUS_LABELS[status].toLowerCase()}`,
+    actor: { id: user.id, name: user.name },
+  })
 
   revalidatePath('/orders')
   revalidatePath(`/orders/${id}`)
@@ -389,6 +415,23 @@ export async function convertQuotationToOrder(
     }
 
     return created
+  })
+
+  const actor = { id: user.id, name: user.name }
+
+  await logActivity({
+    entity: 'order',
+    id: order.id,
+    action: 'created',
+    summary: `created the order from quotation ${quotation.number}`,
+    actor,
+  })
+  await logActivity({
+    entity: 'quotation',
+    id: quotation.id,
+    action: 'converted',
+    summary: `converted to order ${order.number}`,
+    actor,
   })
 
   revalidatePath('/orders')

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { invalidateApproval } from '@/lib/reapproval'
 
@@ -103,6 +104,16 @@ export async function removeAttachment(
     'Design reference removed',
   )
 
+  await logActivity({
+    entity: 'quotation',
+    id: attachment.quotationId,
+    action: 'image',
+    summary: wasApproved
+      ? `removed the image ${attachment.fileName} (customer approval cleared)`
+      : `removed the image ${attachment.fileName}`,
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath(`/quotations/${attachment.quotationId}`)
 
   return {
@@ -116,11 +127,11 @@ export async function removeAttachment(
 export async function restoreAttachment(
   attachmentId: string,
 ): Promise<SimpleResult> {
-  await requireCapability('quotation:update')
+  const user = await requireCapability('quotation:update')
 
   const attachment = await prisma.quotationAttachment.findUnique({
     where: { id: attachmentId },
-    select: { id: true, quotationId: true, removedAt: true },
+    select: { id: true, quotationId: true, removedAt: true, fileName: true },
   })
 
   if (!attachment) {
@@ -140,6 +151,14 @@ export async function restoreAttachment(
   await prisma.quotationAttachment.update({
     where: { id: attachmentId },
     data: { removedAt: null, removedById: null },
+  })
+
+  await logActivity({
+    entity: 'quotation',
+    id: attachment.quotationId,
+    action: 'image',
+    summary: `restored the image ${attachment.fileName}`,
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath(`/quotations/${attachment.quotationId}`)

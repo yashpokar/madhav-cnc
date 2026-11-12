@@ -75,6 +75,7 @@ export default async function EditInvoicePage({
             materialName: line.materialName,
             materialSupply: line.materialSupply,
             sizeText: line.sizeText,
+            specText: line.specText,
             quantity: String(line.quantity),
             rate: String(line.rate),
             discountPercent: String(line.discountPercent),

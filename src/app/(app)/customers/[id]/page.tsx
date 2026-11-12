@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { CustomerRelated } from '@/components/related-sections'
@@ -123,6 +124,8 @@ export default async function EditCustomerPage({
           />
         </DangerZone>
       ) : null}
+
+      <ActivityTimeline entity="customer" id={customer.id} />
     </div>
   )
 }

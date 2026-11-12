@@ -9,10 +9,16 @@ import { nextDispatchNumber } from '@/lib/codes'
 import { dispatchInputSchema } from '@/lib/validation/dispatches'
 import type { DispatchData } from '@/lib/validation/dispatches'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
+import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { DispatchStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
+
+const actorOf = (user: { id: string; name: string }) => ({
+  id: user.id,
+  name: user.name,
+})
 
 const COUNTS_AS_SENT: DispatchStatus[] = ['DRAFT', 'DISPATCHED', 'DELIVERED']
 
@@ -102,7 +108,7 @@ export async function createDispatch(
 
   const order = await prisma.order.findUnique({
     where: { id: parsed.data.orderId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, number: true },
   })
 
   if (!order) {
@@ -153,6 +159,21 @@ export async function createDispatch(
     },
   })
 
+  await logActivity({
+    entity: 'dispatch',
+    id: dispatch.id,
+    action: 'created',
+    summary: `created the challan for order ${order.number}`,
+    actor: actorOf(user),
+  })
+  await logActivity({
+    entity: 'order',
+    id: order.id,
+    action: 'dispatch',
+    summary: `created challan ${dispatch.number}`,
+    actor: actorOf(user),
+  })
+
   revalidatePath('/dispatch')
   revalidatePath(`/orders/${parsed.data.orderId}`)
   redirect(`/dispatch/${dispatch.id}?created=1`)
@@ -177,7 +198,7 @@ export async function updateDispatch(
 
   const existing = await prisma.dispatch.findUnique({
     where: { id },
-    select: { id: true, status: true, orderId: true },
+    select: { id: true, status: true, orderId: true, number: true },
   })
 
   if (!existing) {
@@ -225,6 +246,14 @@ export async function updateDispatch(
       },
     }),
   ])
+
+  await logActivity({
+    entity: 'dispatch',
+    id,
+    action: 'updated',
+    summary: 'edited the challan',
+    actor: actorOf(user),
+  })
 
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
@@ -284,6 +313,33 @@ export async function setDispatchStatus(
     }
   }
 
+  const statusText =
+    status === 'DISPATCHED'
+      ? 'dispatched'
+      : status === 'DELIVERED'
+        ? 'delivered'
+        : status === 'CANCELLED'
+          ? 'cancelled'
+          : 'back to draft'
+
+  await logActivity({
+    entity: 'dispatch',
+    id,
+    action: 'status',
+    summary: `marked the challan as ${statusText}`,
+    actor: actorOf(user),
+  })
+
+  if (status === 'DISPATCHED' || status === 'DELIVERED') {
+    await logActivity({
+      entity: 'order',
+      id: existing.orderId,
+      action: 'dispatch',
+      summary: `challan ${existing.number} ${statusText}`,
+      actor: actorOf(user),
+    })
+  }
+
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
   revalidatePath(`/orders/${existing.orderId}`)
@@ -309,7 +365,7 @@ export async function recordReceipt(
 
   const existing = await prisma.dispatch.findUnique({
     where: { id },
-    select: { status: true, orderId: true },
+    select: { status: true, orderId: true, number: true },
   })
 
   if (!existing) {
@@ -365,6 +421,21 @@ export async function recordReceipt(
     }
   }
 
+  await logActivity({
+    entity: 'dispatch',
+    id,
+    action: 'status',
+    summary: `recorded delivery (received by ${parsed.data.receivedByName})`,
+    actor: actorOf(user),
+  })
+  await logActivity({
+    entity: 'order',
+    id: existing.orderId,
+    action: 'dispatch',
+    summary: `challan ${existing.number} delivered`,
+    actor: actorOf(user),
+  })
+
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
   revalidatePath(`/orders/${existing.orderId}`)
@@ -378,11 +449,11 @@ export async function recordReceipt(
 }
 
 export async function deleteDispatch(id: string): Promise<SimpleResult> {
-  await requireCapability('dispatch:delete')
+  const user = await requireCapability('dispatch:delete')
 
   const dispatch = await prisma.dispatch.findUnique({
     where: { id },
-    select: { number: true, status: true },
+    select: { number: true, status: true, orderId: true },
   })
 
   if (!dispatch) {
@@ -397,6 +468,14 @@ export async function deleteDispatch(id: string): Promise<SimpleResult> {
   }
 
   await prisma.dispatch.delete({ where: { id } })
+
+  await logActivity({
+    entity: 'order',
+    id: dispatch.orderId,
+    action: 'dispatch',
+    summary: `deleted challan ${dispatch.number}`,
+    actor: actorOf(user),
+  })
 
   revalidatePath('/dispatch')
 

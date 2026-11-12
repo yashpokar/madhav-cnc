@@ -11,12 +11,21 @@ import {
   paymentInputSchema,
 } from '@/lib/validation/invoices'
 import type { InvoiceData } from '@/lib/validation/invoices'
+import { logActivity } from '@/lib/activity'
+import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { InvoiceStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
+
+const inr = new Intl.NumberFormat('en-IN')
+
+const actorOf = (user: { id: string; name: string }) => ({
+  id: user.id,
+  name: user.name,
+})
 
 function parse(formData: FormData) {
   let lines: unknown = []
@@ -76,6 +85,7 @@ function buildPersistable(data: InvoiceData) {
       materialName: line.materialName,
       materialSupply: line.materialSupply,
       sizeText: line.sizeText,
+      specText: line.specText,
       quantity: line.quantity,
       rate: line.rate,
       discountPercent: line.discountPercent,
@@ -162,6 +172,14 @@ export async function createInvoice(
 
   const invoice = await persistInvoice(parsed.data, user.id)
 
+  await logActivity({
+    entity: 'invoice',
+    id: invoice.id,
+    action: 'created',
+    summary: 'created the invoice',
+    actor: actorOf(user),
+  })
+
   revalidatePath('/invoices')
   redirect(`/invoices/${invoice.id}?created=1`)
 }
@@ -232,6 +250,14 @@ export async function updateInvoice(
     }),
   ])
 
+  await logActivity({
+    entity: 'invoice',
+    id,
+    action: 'updated',
+    summary: 'edited the invoice',
+    actor: actorOf(user),
+  })
+
   revalidatePath('/invoices')
   revalidatePath(`/invoices/${id}`)
 
@@ -278,6 +304,19 @@ export async function setInvoiceStatus(
   await prisma.invoice.update({
     where: { id },
     data: { status, updatedById: user.id },
+  })
+
+  await logActivity({
+    entity: 'invoice',
+    id,
+    action: 'status',
+    summary:
+      status === 'ISSUED'
+        ? 'issued the invoice'
+        : status === 'CANCELLED'
+          ? 'cancelled the invoice'
+          : 'moved the invoice back to draft',
+    actor: actorOf(user),
   })
 
   revalidatePath('/invoices')
@@ -342,7 +381,7 @@ export async function recordPayment(
 
   const number = await nextPaymentNumber()
 
-  await prisma.payment.create({
+  const payment = await prisma.payment.create({
     data: {
       number,
       customerId: invoice.customerId,
@@ -358,6 +397,23 @@ export async function recordPayment(
     },
   })
 
+  const paidText = `₹${inr.format(parsed.data.amount)}`
+
+  await logActivity({
+    entity: 'invoice',
+    id: invoiceId,
+    action: 'payment',
+    summary: `recorded a payment of ${paidText} (${PAYMENT_MODE_LABELS[parsed.data.mode]})`,
+    actor: actorOf(user),
+  })
+  await logActivity({
+    entity: 'payment',
+    id: payment.id,
+    action: 'created',
+    summary: `recorded the receipt and applied ${paidText} to an invoice`,
+    actor: actorOf(user),
+  })
+
   revalidatePath('/invoices')
   revalidatePath(`/invoices/${invoiceId}`)
 
@@ -367,12 +423,13 @@ export async function recordPayment(
 export async function removeAllocation(
   allocationId: string,
 ): Promise<SimpleResult> {
-  await requireCapability('payment:delete')
+  const user = await requireCapability('payment:delete')
 
   const allocation = await prisma.paymentAllocation.findUnique({
     where: { id: allocationId },
     select: {
       invoiceId: true,
+      amount: true,
       payment: {
         select: { id: true, number: true, _count: { select: { allocations: true } } },
       },
@@ -390,6 +447,14 @@ export async function removeAllocation(
   } else {
     await prisma.paymentAllocation.delete({ where: { id: allocationId } })
   }
+
+  await logActivity({
+    entity: 'invoice',
+    id: allocation.invoiceId,
+    action: 'payment',
+    summary: `unapplied a payment of ₹${inr.format(allocation.amount.toNumber())}`,
+    actor: actorOf(user),
+  })
 
   revalidatePath('/invoices')
   revalidatePath('/payments')
@@ -468,6 +533,7 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
           materialName: line.materialName,
           materialSupply: line.materialSupply,
           sizeText: line.sizeText,
+          specText: line.specText,
           quantity: line.quantity,
           rate: line.rate,
           discountPercent: line.discountPercent,
@@ -482,6 +548,21 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
     },
   })
 
+  await logActivity({
+    entity: 'invoice',
+    id: created.id,
+    action: 'created',
+    summary: `duplicated this invoice from ${source.number}`,
+    actor: actorOf(user),
+  })
+  await logActivity({
+    entity: 'invoice',
+    id: source.id,
+    action: 'duplicated',
+    summary: `duplicated into ${created.number}`,
+    actor: actorOf(user),
+  })
+
   revalidatePath('/invoices')
 
   return {
@@ -492,12 +573,13 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
 }
 
 export async function deleteInvoice(id: string): Promise<SimpleResult> {
-  await requireCapability('invoice:delete')
+  const user = await requireCapability('invoice:delete')
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     select: {
       number: true,
+      orderId: true,
       status: true,
       _count: { select: { paymentAllocations: true, creditDebitNotes: true } },
     },
@@ -529,6 +611,16 @@ export async function deleteInvoice(id: string): Promise<SimpleResult> {
   }
 
   await prisma.invoice.delete({ where: { id } })
+
+  if (invoice.orderId) {
+    await logActivity({
+      entity: 'order',
+      id: invoice.orderId,
+      action: 'invoice',
+      summary: `deleted draft invoice ${invoice.number}`,
+      actor: actorOf(user),
+    })
+  }
 
   revalidatePath('/invoices')
 
@@ -580,7 +672,15 @@ export async function quickCreateInvoiceFromOrder(
           length: true,
           width: true,
           pieces: true,
-          item: { select: { material: { select: { name: true } } } },
+          item: {
+            select: {
+              brand: true,
+              shade: true,
+              thickness: true,
+              dimensionUnit: true,
+              material: { select: { name: true } },
+            },
+          },
           quantity: true,
           rate: true,
           discountPercent: true,
@@ -664,6 +764,21 @@ export async function quickCreateInvoiceFromOrder(
   }
 
   const invoice = await persistInvoice(parsed.data, user.id)
+
+  await logActivity({
+    entity: 'invoice',
+    id: invoice.id,
+    action: 'created',
+    summary: `created the invoice from order ${order.number} in one click`,
+    actor: actorOf(user),
+  })
+  await logActivity({
+    entity: 'order',
+    id: order.id,
+    action: 'invoice',
+    summary: `created invoice ${invoice.number}`,
+    actor: actorOf(user),
+  })
 
   revalidatePath('/invoices')
   revalidatePath(`/orders/${order.id}`)

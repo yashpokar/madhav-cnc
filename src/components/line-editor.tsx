@@ -15,6 +15,7 @@ import {
   ComboboxLabel,
   ComboboxOption,
 } from '@/components/catalyst/combobox'
+import { Switch } from '@/components/catalyst/switch'
 import { QuickItemDialog } from '@/components/quick-item-dialog'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
 import { billedSize, derivedQuantity, lineTotals } from '@/lib/pricing'
@@ -32,6 +33,8 @@ export type EditorLine = {
   unit: UnitOfMeasure
   materialSupply: MaterialSupply
   isFlatRate: boolean
+  /** Round sides up to 3 inch steps (auto) or bill them as entered (manual). */
+  autoSize: boolean
   dimensionUnit: DimensionUnit | null
   length: string
   width: string
@@ -52,6 +55,7 @@ export function emptyLine(materialSupply: MaterialSupply = 'WITH_MATERIAL'): Edi
     unit: 'NOS',
     materialSupply,
     isFlatRate: false,
+    autoSize: true,
     dimensionUnit: null,
     length: '',
     width: '',
@@ -150,9 +154,16 @@ export function LineEditor({
 
   function recomputeQuantity(index: number, patch: Partial<EditorLine>) {
     const line = { ...lines[index], ...patch }
+    const side = (raw: string) => {
+      const value = optNum(raw)
+
+      return value !== null && value > 0 && line.dimensionUnit && line.autoSize
+        ? billedSize(value, line.dimensionUnit)
+        : value
+    }
     const derived = derivedQuantity({
-      length: optNum(line.length),
-      width: optNum(line.width),
+      length: side(line.length),
+      width: side(line.width),
       pieces: optNum(line.pieces),
       dimensionUnit: line.dimensionUnit,
     })
@@ -165,7 +176,7 @@ export function LineEditor({
     const line = lines[index]
     const value = optNum(line[field])
 
-    if (!line.dimensionUnit || value === null || value <= 0) {
+    if (!line.autoSize || !line.dimensionUnit || value === null || value <= 0) {
       return
     }
 
@@ -174,6 +185,24 @@ export function LineEditor({
     if (billed !== value) {
       recomputeQuantity(index, { [field]: String(billed) })
     }
+  }
+
+  /** Switching to auto corrects the sizes already typed; manual leaves them. */
+  function setAutoSize(index: number, autoSize: boolean) {
+    const line = lines[index]
+    const patch: Partial<EditorLine> = { autoSize }
+
+    if (autoSize && line.dimensionUnit) {
+      for (const field of ['length', 'width'] as const) {
+        const value = optNum(line[field])
+
+        if (value !== null && value > 0) {
+          patch[field] = String(billedSize(value, line.dimensionUnit))
+        }
+      }
+    }
+
+    recomputeQuantity(index, patch)
   }
 
   return (
@@ -398,17 +427,31 @@ export function LineEditor({
                         const w = optNum(line.width)
                         const bl = l && l > 0 ? billedSize(l, line.dimensionUnit) : null
                         const bw = w && w > 0 ? billedSize(w, line.dimensionUnit) : null
-                        const changed = (bl !== null && bl !== l) || (bw !== null && bw !== w)
+                        const changed =
+                          line.autoSize &&
+                          ((bl !== null && bl !== l) || (bw !== null && bw !== w))
 
                         return (
-                          <p
-                            className="text-xs/5 text-zinc-500 dark:text-zinc-400"
-                            aria-live="polite"
-                          >
-                            {changed
-                              ? `Billed as ${bl ?? l} × ${bw ?? w} ${DIMENSION_UNIT_SHORT[line.dimensionUnit]}`
-                              : 'Sizes round up to the next 3 in'}
-                          </p>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p
+                              className="text-xs/5 text-zinc-500 dark:text-zinc-400"
+                              aria-live="polite"
+                            >
+                              {!line.autoSize
+                                ? 'Manual: billed exactly as entered'
+                                : changed
+                                  ? `Billed as ${bl ?? l} × ${bw ?? w} ${DIMENSION_UNIT_SHORT[line.dimensionUnit]}`
+                                  : 'Auto: sizes round up to the next 3 in'}
+                            </p>
+                            <label className="flex items-center gap-2 text-xs/5 text-zinc-600 dark:text-zinc-300">
+                              Auto
+                              <Switch
+                                aria-label={`Auto-correct size to 3 inch steps for line ${index + 1}`}
+                                checked={line.autoSize}
+                                onChange={(checked) => setAutoSize(index, checked)}
+                              />
+                            </label>
+                          </div>
                         )
                       })() : null}
                     </div>

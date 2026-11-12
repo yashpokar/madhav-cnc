@@ -151,6 +151,7 @@ export function OrderForm({
       unit: line.unit,
       materialSupply: line.materialSupply,
       isFlatRate: line.isFlatRate,
+      autoSize: line.autoSize,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,

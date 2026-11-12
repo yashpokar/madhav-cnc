@@ -42,6 +42,7 @@ export const quotationLineSchema = z.object({
   unit: z.enum(UnitOfMeasure),
   materialSupply: z.enum(MaterialSupply).default('WITH_MATERIAL'),
   isFlatRate: z.coerce.boolean().default(false),
+  autoSize: z.boolean().default(true),
   dimensionUnit: z
     .union([z.literal(''), z.null(), z.enum(DimensionUnit)])
     .optional()

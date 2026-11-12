@@ -131,6 +131,7 @@ export default async function InvoiceDetailPage({
           id={invoice.id}
           status={invoice.status}
           due={invoice.due}
+          total={invoice.total}
           contact={{
             name: invoice.customer.name,
             phone: invoice.customer.phone,

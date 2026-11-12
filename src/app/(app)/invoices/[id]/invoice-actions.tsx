@@ -36,6 +36,7 @@ export function InvoiceActions({
   id,
   status,
   due,
+  total,
   canUpdate,
   canTakePayment,
   canWriteOff,
@@ -46,6 +47,8 @@ export function InvoiceActions({
   contact: { name: string; phone: string | null; number: string }
   status: InvoiceStatus
   due: number
+  /** The full invoice amount, so the balance can be read against it. */
+  total: number
   canUpdate: boolean
   canTakePayment: boolean
   canWriteOff: boolean
@@ -244,9 +247,18 @@ export function InvoiceActions({
               Cancel
             </Button>
           </div>
-          <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
-            {currency.format(due)} outstanding
-          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm/6">
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Invoice amount</dt>
+              <dd className="font-medium tabular-nums">{currency.format(total)}</dd>
+            </div>
+            <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Remaining balance</dt>
+              <dd className="font-semibold text-red-600 tabular-nums dark:text-red-400">
+                {currency.format(due)}
+              </dd>
+            </div>
+          </dl>
         </div>
       ) : null}
 

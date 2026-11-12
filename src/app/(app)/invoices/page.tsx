@@ -195,6 +195,11 @@ export default async function InvoicesPage({
                   <Badge color={PAYMENT_STATE_COLORS[invoice.paymentState]}>
                     {PAYMENT_STATE_LABELS[invoice.paymentState]}
                   </Badge>
+                  {invoice.writtenOff > 0 ? (
+                    <div className="text-xs/5 text-rose-600 dark:text-rose-400">
+                      {currency.format(invoice.writtenOff)} not recoverable
+                    </div>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <Badge color={INVOICE_STATUS_COLORS[invoice.status]}>

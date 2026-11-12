@@ -53,14 +53,16 @@ function Tile({
   label: string
   value: string
   hint?: string
-  tone?: 'plain' | 'alert'
+  tone?: 'plain' | 'alert' | 'bad'
 }) {
   return (
     <div
       className={
         tone === 'alert'
           ? 'rounded-lg bg-amber-50 p-4 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:ring-amber-400/20'
-          : 'rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
+          : tone === 'bad'
+            ? 'rounded-lg bg-rose-50 p-4 ring-1 ring-rose-950/10 dark:bg-rose-400/10 dark:ring-rose-400/20'
+            : 'rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
       }
     >
       <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">{label}</div>
@@ -84,6 +86,9 @@ export default async function PaymentsPage({
   const [data, ledger] = await Promise.all([getReceivables(), getCustomerLedger()])
   const canSeeOrders = can(user.role, 'order:read')
   const canRecord = can(user.role, 'payment:create')
+
+  const defaultedTotal = ledger.reduce((sum, row) => sum + row.defaulted, 0)
+  const defaultedCount = ledger.filter((row) => row.defaulted > 0).length
 
   const byCustomerRows = data.byCustomer.filter((row) => matches(row.name))
   const ledgerRows = ledger.filter((row) => matches(row.name))
@@ -116,7 +121,7 @@ export default async function PaymentsPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Tile
           label="Yet to recover"
           value={currency.format(data.netReceivable)}
@@ -145,6 +150,16 @@ export default async function PaymentsPage({
           label="Collected (30 days)"
           value={currency.format(data.collected30)}
           hint={`${data.collected30Count} payment${data.collected30Count === 1 ? '' : 's'} received`}
+        />
+        <Tile
+          label="Not recoverable"
+          value={currency.format(defaultedTotal)}
+          hint={
+            defaultedCount > 0
+              ? `written off across ${defaultedCount} customer${defaultedCount === 1 ? '' : 's'}`
+              : 'nothing written off'
+          }
+          tone={defaultedTotal > 0 ? 'bad' : 'plain'}
         />
       </div>
 

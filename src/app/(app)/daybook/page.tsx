@@ -116,6 +116,7 @@ function Ledger({
   canDelete,
   canCheck,
   entry,
+  extras,
 }: {
   title: string
   caption: string
@@ -126,6 +127,8 @@ function Ledger({
   canCheck: boolean
   /** The typed-in row at the bottom; omitted when the book is read-only. */
   entry?: React.ReactNode
+  /** Credit and debit notes under the credit total, as on the sheet. */
+  extras?: { cn: number; dn: number }
 }) {
   const accent =
     tone === 'credit' ? 'text-lime-700 dark:text-lime-400' : 'text-red-600 dark:text-red-400'
@@ -243,6 +246,30 @@ function Ledger({
           {money.format(total)}
         </span>
       </div>
+      {extras ? (
+        <dl className="mt-2 grid gap-1 text-sm/6">
+          <div className="flex items-center justify-end gap-2">
+            <dt>CN (credit notes)</dt>
+            <dd className="min-w-36 px-2 py-0.5 text-right tabular-nums">
+              + {money.format(extras.cn)}
+            </dd>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <dt>DN (debit notes)</dt>
+            <dd className="min-w-36 px-2 py-0.5 text-right tabular-nums">
+              − {money.format(extras.dn)}
+            </dd>
+          </div>
+          <div className="flex items-center justify-end gap-2 font-semibold">
+            <dt>Grand TOTAL</dt>
+            <dd
+              className={`min-w-36 border border-zinc-400 px-2 py-1 text-right tabular-nums dark:border-white/30 ${accent}`}
+            >
+              {money.format(total + extras.cn - extras.dn)}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
     </div>
   )
 }
@@ -317,20 +344,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
         channel: { select: { name: true } },
       },
     }),
-    // Credit notes move no cash, so they are listed for reference only and are
-    // left out when the book is limited to cash.
+    // Credit (CN) and debit (DN) notes move no cash. They add to and take from
+    // the credit side's grand total, and are left out when limited to cash.
     canSeeNotes && !cashOnly
       ? prisma.creditDebitNote.findMany({
-          where: { kind: 'CREDIT', status: 'ISSUED', noteDate: inRange },
-          orderBy: [{ noteDate: 'asc' }, { createdAt: 'asc' }],
-          select: {
-            id: true,
-            number: true,
-            noteDate: true,
-            total: true,
-            vendorName: true,
-            customer: { select: { name: true } },
-          },
+          where: { status: 'ISSUED', noteDate: inRange },
+          select: { kind: true, noteDate: true, total: true },
         })
       : [],
     prisma.expense.aggregate({
@@ -361,9 +380,9 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
     (priorExpenses._sum.total?.toNumber() ?? 0)
 
   // Group by day so a month reads as a sequence of daily pages.
-  const days = new Map<string, { received: Line[]; spent: Line[] }>()
+  const days = new Map<string, { received: Line[]; spent: Line[]; cn: number; dn: number }>()
   const dayOf = (key: string) => {
-    const existing = days.get(key) ?? { received: [], spent: [] }
+    const existing = days.get(key) ?? { received: [], spent: [], cn: 0, dn: 0 }
     days.set(key, existing)
     return existing
   }
@@ -394,15 +413,10 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
     })
   }
   for (const n of notes) {
-    dayOf(iso(n.noteDate)).received.push({
-      id: `note-${n.id}`,
-      kind: 'note',
-      name: n.customer?.name ?? n.vendorName ?? n.number,
-      mode: null,
-      amount: n.total.toNumber(),
-      note: `${n.number} · not a cash movement`,
-      href: `/notes/${n.id}`,
-    })
+    const day = dayOf(iso(n.noteDate))
+
+    if (n.kind === 'CREDIT') day.cn += n.total.toNumber()
+    else day.dn += n.total.toNumber()
   }
   for (const e of expenses) {
     dayOf(iso(e.expenseDate)).spent.push({
@@ -432,6 +446,8 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       spent: Line[]
       receivedTotal: number
       spentTotal: number
+      cn: number
+      dn: number
       start: number
       end: number
     }[]
@@ -449,6 +465,8 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
         spent: day.spent,
         receivedTotal,
         spentTotal,
+        cn: day.cn,
+        dn: day.dn,
         start,
         end: start + receivedTotal - spentTotal,
       },
@@ -457,8 +475,13 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
 
   const totalReceived = pages.reduce((t, p) => t + p.receivedTotal, 0)
   const totalSpent = pages.reduce((t, p) => t + p.spentTotal, 0)
-  const net = totalReceived - totalSpent
-  const closing = opening + net
+  const totalCn = pages.reduce((t, p) => t + p.cn, 0)
+  const totalDn = pages.reduce((t, p) => t + p.dn, 0)
+  // Cash in hand moves only with money; notes change the gain, not the drawer.
+  const moneyNet = totalReceived - totalSpent
+  const net = moneyNet + totalCn - totalDn
+  const closing = opening + moneyNet
+  const showNotes = canSeeNotes && !cashOnly
 
   // The counting area belongs to one day, so it only exists in the day view.
   const tallyDay = range.view === 'day'
@@ -621,6 +644,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     tone="credit"
                     lines={day.received}
                     total={day.receivedTotal}
+                    extras={showNotes ? { cn: day.cn, dn: day.dn } : undefined}
                     canDelete={canDelete}
                     canCheck={canCheck}
                     entry={
@@ -701,7 +725,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
           Summary · {range.label}
           {cashOnly ? ' · cash only' : ''}
         </h2>
-        <dl className="grid grid-cols-2 gap-px bg-zinc-950/10 sm:grid-cols-5 dark:bg-white/10">
+        <dl className="grid grid-cols-2 gap-px bg-zinc-950/10 sm:grid-cols-4 dark:bg-white/10">
           {[
             { label: 'Brought forward', value: opening, tone: '' },
             {
@@ -709,6 +733,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
               value: totalReceived,
               tone: 'text-lime-700 dark:text-lime-400',
             },
+            ...(showNotes
+              ? [
+                  { label: 'Credit notes (CN) +', value: totalCn, tone: '' },
+                  { label: 'Debit notes (DN) −', value: totalDn, tone: '' },
+                ]
+              : []),
             { label: 'Total spent', value: totalSpent, tone: 'text-red-600 dark:text-red-400' },
             {
               label: net >= 0 ? 'Net gain' : 'Net loss',
@@ -731,8 +761,8 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
           ))}
         </dl>
         <p className="px-4 py-2.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Net gain is money received minus money spent in this period. Credit notes are listed for
-          reference and are not counted.
+          Net gain is money received, plus credit notes, minus debit notes, minus money spent in
+          this period. Balance in hand moves only with money, so notes do not change it.
         </p>
       </section>
     </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -70,9 +71,12 @@ export default async function QuotationsPage({
             {quotations.length} quotation{quotations.length === 1 ? '' : 's'}
           </Text>
         </div>
-        {canCreate ? (
-          <Button href="/quotations/new">New quotation</Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="quotations" search={search} status={activeTab.status} />
+          {canCreate ? (
+            <Button href="/quotations/new">New quotation</Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">

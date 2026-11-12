@@ -15,6 +15,7 @@ import {
   revokeShareLink,
   type SimpleResult,
 } from '@/lib/actions/share'
+import { whatsappLink } from '@/lib/whatsapp'
 import type { ShareDecision } from '@/generated/prisma/enums'
 
 const timeFormat = new Intl.DateTimeFormat('en-IN', {
@@ -30,8 +31,10 @@ export function SharePanel({
   share,
   canManage,
   baseUrl,
+  contact,
 }: {
   quotationId: string
+  contact: { name: string; phone: string | null; number: string }
   baseUrl: string | null
   share: {
     token: string
@@ -117,6 +120,17 @@ export function SharePanel({
             <Button outline onClick={copy}>
               <ClipboardIcon />
               {copied ? 'Copied' : 'Copy link'}
+            </Button>
+            <Button
+              outline
+              href={whatsappLink(
+                contact.phone,
+                `Hello ${contact.name}, here is your quotation ${contact.number} from Madhav CNC. You can view it and approve it here: ${url}`,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Send on WhatsApp
             </Button>
             {canManage ? (
               <ConfirmButton

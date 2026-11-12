@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -76,7 +77,10 @@ export default async function InvoicesPage({
               : 'Nothing outstanding'}
           </Text>
         </div>
-        {canCreate ? <Button href="/invoices/new">New invoice</Button> : null}
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="invoices" search={search} status={activeTab.status} />
+          {canCreate ? <Button href="/invoices/new">New invoice</Button> : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">

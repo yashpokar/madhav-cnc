@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -72,9 +73,12 @@ export default async function OrdersPage({
             {orders.length} order{orders.length === 1 ? '' : 's'}
           </Text>
         </div>
-        {canCreate ? (
-          <Button href="/orders/new">New order</Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="orders" search={search} status={activeTab.status} />
+          {canCreate ? (
+            <Button href="/orders/new">New order</Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">

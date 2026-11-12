@@ -7,7 +7,12 @@ import {
   BanknotesIcon,
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
+  ChartBarIcon,
   ChevronDownIcon,
+  MagnifyingGlassIcon,
+  MoonIcon,
+  SunIcon,
+  ComputerDesktopIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
   CreditCardIcon,
@@ -43,6 +48,9 @@ import {
 } from '@/components/catalyst/sidebar'
 import { SidebarLayout } from '@/components/catalyst/sidebar-layout'
 import { BrandLockup } from '@/components/brand-mark'
+import { CommandPalette, SearchTrigger } from '@/components/command-palette'
+import { setTheme } from '@/lib/theme'
+import Link from 'next/link'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import type { NavEntry } from '@/lib/navigation'
@@ -62,6 +70,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/payments': CurrencyRupeeIcon,
   '/notes': ArrowsRightLeftIcon,
   '/expenses': CreditCardIcon,
+  '/reports': ChartBarIcon,
   '/admin/users': UsersIcon,
   '/settings/company': BuildingStorefrontIcon,
 }
@@ -110,6 +119,19 @@ export function AppShell({
         </>
       ) : null}
       <DropdownDivider />
+      <DropdownItem onClick={() => setTheme('light')}>
+        <SunIcon />
+        <DropdownLabel>Light theme</DropdownLabel>
+      </DropdownItem>
+      <DropdownItem onClick={() => setTheme('dark')}>
+        <MoonIcon />
+        <DropdownLabel>Dark theme</DropdownLabel>
+      </DropdownItem>
+      <DropdownItem onClick={() => setTheme('system')}>
+        <ComputerDesktopIcon />
+        <DropdownLabel>Match device</DropdownLabel>
+      </DropdownItem>
+      <DropdownDivider />
       <DropdownItem onClick={signOut}>
         <ArrowRightStartOnRectangleIcon />
         <DropdownLabel>Sign out</DropdownLabel>
@@ -123,6 +145,7 @@ export function AppShell({
         <Navbar>
           <NavbarSpacer />
           <NavbarSection>
+            <SearchTrigger className="flex size-9 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-950/5 dark:text-zinc-300 dark:hover:bg-white/10" />
             <Dropdown>
               <DropdownButton as="button" className="cursor-pointer">
                 <Avatar
@@ -142,6 +165,15 @@ export function AppShell({
         <Sidebar>
           <SidebarHeader>
             <BrandLockup subtitle="Order management" />
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
+              className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm/6 text-zinc-500 ring-1 ring-zinc-950/10 hover:bg-zinc-950/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/5"
+            >
+              <MagnifyingGlassIcon className="size-4" aria-hidden="true" />
+              <span className="flex-1 text-left">Search…</span>
+              <kbd className="font-sans text-xs/5">⌘K</kbd>
+            </button>
           </SidebarHeader>
 
           <SidebarBody>
@@ -213,7 +245,9 @@ export function AppShell({
         </Sidebar>
       }
     >
+      <CommandPalette pages={[...nav, ...adminNav]} />
       {children}
+      <BottomNav nav={nav} pathname={pathname} />
     </SidebarLayout>
   )
 }
@@ -225,4 +259,56 @@ function initialsOf(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
+}
+
+const BOTTOM_PRIORITY = ['/', '/orders', '/production', '/quotations', '/invoices', '/dispatch', '/customers']
+
+function BottomNav({
+  nav,
+  pathname,
+}: {
+  nav: readonly NavEntry[]
+  pathname: string
+}) {
+  const entries = BOTTOM_PRIORITY.map((href) =>
+    nav.find((entry) => entry.href === href),
+  )
+    .filter((entry): entry is NavEntry => Boolean(entry))
+    .slice(0, 4)
+
+  if (entries.length < 2) {
+    return null
+  }
+
+  return (
+    <>
+      {/* Spacer so page content is never hidden behind the fixed bar. */}
+      <div aria-hidden="true" className="h-14 lg:hidden print:hidden" />
+      <nav
+        aria-label="Quick navigation"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-zinc-950/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden dark:border-white/10 dark:bg-zinc-900/95"
+      >
+        {entries.map((entry) => {
+          const Icon = ICONS[entry.href]
+          const current = isCurrent(pathname, entry.href)
+
+          return (
+            <Link
+              key={entry.href}
+              href={entry.href}
+              aria-current={current ? 'page' : undefined}
+              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]/4 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
+                current
+                  ? 'text-zinc-950 dark:text-white'
+                  : 'text-zinc-500 dark:text-zinc-400'
+              }`}
+            >
+              {Icon ? <Icon className="size-5" aria-hidden="true" /> : null}
+              <span className="truncate">{entry.label.split(' ')[0]}</span>
+            </Link>
+          )
+        })}
+      </nav>
+    </>
+  )
 }

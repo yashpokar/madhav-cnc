@@ -4,6 +4,7 @@ import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updatePartner } from '@/lib/actions/partners'
 import { getPartner } from '@/lib/queries/partners'
+import { PartnerRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { DangerZone } from '@/components/danger-zone'
 import { deletePartner } from '@/lib/actions/partners'
@@ -37,6 +38,10 @@ export default async function EditPartnerPage({
           {partner.type === 'ARCHITECT' ? 'Architect' : 'Carpenter'}
         </Text>
       </div>
+
+      <PartnerRelated id={partner.id} role={user.role} />
+
+      <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">Partner details</h2>
 
       <PartnerForm
         action={action}

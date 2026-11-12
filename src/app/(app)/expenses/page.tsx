@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
@@ -9,7 +10,6 @@ import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -124,34 +124,13 @@ export default async function ExpensesPage({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {[{ id: 'all', name: 'All' }, ...categories].map((category) => {
-            const isActive =
-              (categoryId ?? 'all') === (category.id === 'all' ? 'all' : category.id)
-            const query = new URLSearchParams()
-
-            if (category.id !== 'all') query.set('category', category.id)
-            if (search) query.set('q', search)
-
-            const href = query.toString()
-              ? `/expenses?${query.toString()}`
-              : '/expenses'
-
-            return (
-              <Link
-                key={category.id}
-                href={href}
-                className={
-                  isActive
-                    ? 'rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {category.name}
-              </Link>
-            )
-          })}
-        </div>
+        <FilterSelect
+          param="category"
+          label="Category"
+          allLabel="All categories"
+          value={categoryId}
+          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+        />
         <SearchField placeholder="Search payee, bill, note…" />
       </div>
 

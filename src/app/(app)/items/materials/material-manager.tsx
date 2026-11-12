@@ -15,9 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
+import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import {
   createMaterial,
+  deleteMaterial,
   moveMaterial,
   renameMaterial,
   setMaterialActive,
@@ -160,6 +162,15 @@ export function MaterialManager({ materials }: { materials: MaterialRow[] }) {
                   >
                     {material.isActive ? 'Retire' : 'Enable'}
                   </Button>
+                  {material._count.items === 0 ? (
+                    <ConfirmButton
+                      outline={false}
+                      label="Delete"
+                      title={`Delete ${material.name}?`}
+                      description="This material is not used anywhere yet, so it is removed permanently."
+                      action={deleteMaterial.bind(null, material.id)}
+                    />
+                  ) : null}
                 </div>
               </TableCell>
             </TableRow>

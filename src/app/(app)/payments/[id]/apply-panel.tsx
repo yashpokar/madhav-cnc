@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { Input } from '@/components/catalyst/input'
 import { FormBanner } from '@/components/form-banner'
 import { deleteReceipt, updateAllocations } from '@/lib/actions/payments'
@@ -184,23 +185,15 @@ export function ApplyPanel({
 
       {canDelete ? (
         <div>
-          <Button
-            plain
+          <ConfirmButton
+            outline={false}
+            label="Delete receipt"
+            title="Delete this receipt?"
+            description="Any amounts already applied to invoices will be released and those invoices will show as unpaid again. This cannot be undone."
+            redirectTo="/payments"
             disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const outcome = await deleteReceipt(paymentId)
-
-                if (outcome.ok) {
-                  router.push('/payments')
-                } else {
-                  setResult(outcome)
-                }
-              })
-            }
-          >
-            Delete receipt
-          </Button>
+            action={() => deleteReceipt(paymentId)}
+          />
         </div>
       ) : null}
     </div>

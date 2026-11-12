@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardIcon, LinkIcon } from '@heroicons/react/16/solid'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { Subheading } from '@/components/catalyst/heading'
 import { Input } from '@/components/catalyst/input'
 import { Text } from '@/components/catalyst/text'
@@ -118,15 +119,23 @@ export function SharePanel({
               {copied ? 'Copied' : 'Copy link'}
             </Button>
             {canManage ? (
-              <Button
-                plain
+              <ConfirmButton
+                outline={false}
+                label="Revoke"
+                title="Revoke the customer link?"
+                description="The current link stops working straight away. The customer will not be able to view or respond until you share a new link."
+                confirmLabel="Revoke link"
                 disabled={pending}
-                onClick={() =>
-                  run(() => revokeShareLink(quotationId), () => setToken(null))
-                }
-              >
-                Revoke
-              </Button>
+                action={async () => {
+                  const outcome = await revokeShareLink(quotationId)
+
+                  if (outcome.ok) {
+                    setToken(null)
+                  }
+
+                  return outcome
+                }}
+              />
             ) : null}
           </div>
 

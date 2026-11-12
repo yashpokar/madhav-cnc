@@ -4,6 +4,10 @@ import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updateItem } from '@/lib/actions/items'
 import { getItem, listMaterials } from '@/lib/queries/items'
+import { ConfirmButton } from '@/components/confirm-button'
+import { DangerZone } from '@/components/danger-zone'
+import { deleteItem } from '@/lib/actions/items'
+import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { ItemForm } from '../item-form'
 
@@ -12,7 +16,7 @@ export const metadata: Metadata = {
 }
 
 export default async function EditItemPage({ params }: PageProps<'/items/[id]'>) {
-  await requireCapability('item:update')
+  const user = await requireCapability('item:update')
   const { id } = await params
 
   const [item, materials] = await Promise.all([getItem(id), listMaterials()])
@@ -59,6 +63,22 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
           notes: item.notes,
         }}
       />
+
+      {can(user.role, 'item:delete') ? (
+        <DangerZone
+          title="Delete item"
+          description="Only possible while no quotation, order or invoice line uses it. Otherwise mark it inactive."
+        >
+          <ConfirmButton
+            label="Delete"
+            title={`Delete ${item.name}?`}
+            description="This permanently removes the item. This cannot be undone."
+            confirmLabel="Delete item"
+            redirectTo="/items"
+            action={deleteItem.bind(null, item.id)}
+          />
+        </DangerZone>
+      ) : null}
     </div>
   )
 }

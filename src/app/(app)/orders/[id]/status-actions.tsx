@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import { setOrderStatus } from '@/lib/actions/orders'
 import type { SimpleResult } from '@/lib/actions/orders'
@@ -71,6 +72,15 @@ export function OrderStatusActions({
               >
                 Move to {ORDER_STATUS_LABELS[action.status].toLowerCase()}
               </Button>
+            ) : action.status === 'CANCELLED' ? (
+              <ConfirmButton
+                key={action.status}
+                label="Cancel order"
+                title="Cancel this order?"
+                description="Production stops and the order is closed. Open production tasks stay on record but leave the board."
+                confirmLabel="Cancel order"
+                action={() => setOrderStatus(id, 'CANCELLED')}
+              />
             ) : (
               <Button
                 key={action.status}

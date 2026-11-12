@@ -147,3 +147,30 @@ export async function setMaterialActive(
 
   return { ok: true, message: isActive ? 'Material enabled' : 'Material retired' }
 }
+
+export async function deleteMaterial(id: string) {
+  await requireCapability('item:delete')
+
+  const material = await prisma.material.findUnique({
+    where: { id },
+    select: { name: true, _count: { select: { items: true } } },
+  })
+
+  if (!material) {
+    return { ok: false as const, error: 'Material not found' }
+  }
+
+  if (material._count.items > 0) {
+    return {
+      ok: false as const,
+      error: `${material.name} is used by ${material._count.items} item(s). Mark it inactive instead.`,
+    }
+  }
+
+  await prisma.material.delete({ where: { id } })
+
+  revalidatePath('/items/materials')
+  revalidatePath('/items')
+
+  return { ok: true as const, message: `${material.name} deleted` }
+}

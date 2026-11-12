@@ -16,6 +16,8 @@ import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { getDispatch } from '@/lib/queries/dispatches'
 import { getCompanySetting } from '@/lib/queries/company'
+import { ConfirmButton } from '@/components/confirm-button'
+import { deleteDispatch } from '@/lib/actions/dispatches'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -82,8 +84,18 @@ export default async function DispatchDetailPage({
             </TextLink>
           </Text>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <PrintButton label="Print challan" />
+          {can(user.role, 'dispatch:delete') && (dispatch.status === 'DRAFT' || dispatch.status === 'CANCELLED') ? (
+            <ConfirmButton
+              label="Delete"
+              title={`Delete challan ${dispatch.number}?`}
+              description="This permanently removes the delivery challan. This cannot be undone."
+              confirmLabel="Delete challan"
+              redirectTo="/dispatch"
+              action={deleteDispatch.bind(null, dispatch.id)}
+            />
+          ) : null}
           {canUpdate && editable ? (
             <Button href={`/dispatch/${dispatch.id}/edit`}>Edit</Button>
           ) : null}

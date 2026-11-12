@@ -103,3 +103,36 @@
   background: transparent;
   color: inherit;
 }
+
+/*
+ * Tailwind's preflight resets buttons to cursor: default. Interactive controls
+ * should signal that they are clickable; disabled ones should not.
+ */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+summary,
+select:not(:disabled),
+input[type='checkbox']:not(:disabled),
+input[type='radio']:not(:disabled),
+label[for]:has(+ input:not(:disabled)) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+/* Keyboard users always get a visible focus ring, mouse users do not. */
+:focus-visible {
+  outline-color: var(--color-blue-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

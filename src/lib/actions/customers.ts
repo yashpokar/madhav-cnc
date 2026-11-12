@@ -147,3 +147,47 @@ export async function updateCustomer(
     id: customer.id,
   }
 }
+
+export async function deleteCustomer(id: string) {
+  await requireCapability('customer:delete')
+
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    select: { name: true, code: true },
+  })
+
+  if (!customer) {
+    return { ok: false as const, error: 'Customer not found' }
+  }
+
+  const [quotations, orders, invoices, payments, notes] = await Promise.all([
+    prisma.quotation.count({ where: { customerId: id } }),
+    prisma.order.count({ where: { customerId: id } }),
+    prisma.invoice.count({ where: { customerId: id } }),
+    prisma.payment.count({ where: { customerId: id } }),
+    prisma.creditDebitNote.count({ where: { customerId: id } }),
+  ])
+
+  const linked = [
+    [quotations, 'quotation'],
+    [orders, 'order'],
+    [invoices, 'invoice'],
+    [payments, 'receipt'],
+    [notes, 'note'],
+  ]
+    .filter(([count]) => (count as number) > 0)
+    .map(([count, label]) => `${count} ${label}${count === 1 ? '' : 's'}`)
+
+  if (linked.length > 0) {
+    return {
+      ok: false as const,
+      error: `${customer.name} has ${linked.join(', ')}. Set the customer to Inactive instead to keep the history.`,
+    }
+  }
+
+  await prisma.customer.delete({ where: { id } })
+
+  revalidatePath('/customers')
+
+  return { ok: true as const, message: `${customer.name} deleted` }
+}

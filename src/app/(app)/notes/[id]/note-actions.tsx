@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import { deleteNote, setNoteStatus, type SimpleResult } from '@/lib/actions/notes'
 import type { NoteStatus } from '@/generated/prisma/enums'
@@ -58,9 +59,13 @@ export function NoteActions({
         ) : null}
 
         {canUpdate && status === 'ISSUED' ? (
-          <Button outline disabled={pending} onClick={() => move('CANCELLED')}>
-            Cancel note
-          </Button>
+          <ConfirmButton
+            label="Cancel note"
+            title="Cancel this issued note?"
+            description="It will stop adjusting the customer's or supplier's balance."
+            confirmLabel="Cancel note"
+            action={() => setNoteStatus(id, 'CANCELLED')}
+          />
         ) : null}
 
         {canUpdate && status === 'CANCELLED' ? (
@@ -70,23 +75,15 @@ export function NoteActions({
         ) : null}
 
         {canDelete && status !== 'ISSUED' ? (
-          <Button
-            plain
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const outcome = await deleteNote(id)
-
-                if (outcome.ok) {
-                  router.push('/notes')
-                } else {
-                  setResult(outcome)
-                }
-              })
-            }
-          >
-            Delete
-          </Button>
+          <ConfirmButton
+            outline={false}
+            label="Delete"
+            title="Delete this note?"
+            description="This permanently removes the note. This cannot be undone."
+            confirmLabel="Delete note"
+            redirectTo="/notes"
+            action={() => deleteNote(id)}
+          />
         ) : null}
       </div>
     </div>

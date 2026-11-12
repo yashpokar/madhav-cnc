@@ -182,3 +182,32 @@ export async function setStageActive(
 
   return { ok: true, message: isActive ? 'Stage enabled' : 'Stage retired' }
 }
+
+export async function deleteStage(id: string): Promise<SimpleResult> {
+  await requireCapability('settings:update')
+
+  const stage = await prisma.productionStage.findUnique({
+    where: { id },
+    select: { name: true },
+  })
+
+  if (!stage) {
+    return { ok: false, error: 'Stage not found' }
+  }
+
+  const tasks = await prisma.productionTask.count({ where: { stageId: id } })
+
+  if (tasks > 0) {
+    return {
+      ok: false,
+      error: `${stage.name} has ${tasks} production task(s) on record. Retire it instead.`,
+    }
+  }
+
+  await prisma.productionStage.delete({ where: { id } })
+
+  revalidatePath('/production')
+  revalidatePath('/production/stages')
+
+  return { ok: true, message: `${stage.name} deleted` }
+}

@@ -479,3 +479,47 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
     id: created.id,
   }
 }
+
+export async function deleteInvoice(id: string): Promise<SimpleResult> {
+  await requireCapability('invoice:delete')
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: {
+      number: true,
+      status: true,
+      _count: { select: { paymentAllocations: true, creditDebitNotes: true } },
+    },
+  })
+
+  if (!invoice) {
+    return { ok: false, error: 'Invoice not found' }
+  }
+
+  if (invoice.status === 'ISSUED') {
+    return {
+      ok: false,
+      error: 'Issued invoices are part of your books. Cancel it instead of deleting.',
+    }
+  }
+
+  if (invoice._count.paymentAllocations > 0) {
+    return {
+      ok: false,
+      error: 'Payments are applied to this invoice. Unapply them first.',
+    }
+  }
+
+  if (invoice._count.creditDebitNotes > 0) {
+    return {
+      ok: false,
+      error: 'Credit or debit notes refer to this invoice. Delete those first.',
+    }
+  }
+
+  await prisma.invoice.delete({ where: { id } })
+
+  revalidatePath('/invoices')
+
+  return { ok: true, message: `${invoice.number} deleted` }
+}

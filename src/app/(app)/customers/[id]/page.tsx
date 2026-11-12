@@ -5,6 +5,10 @@ import { Text } from '@/components/catalyst/text'
 import { updateCustomer } from '@/lib/actions/customers'
 import { getCustomer } from '@/lib/queries/customers'
 import { listPartnerOptions } from '@/lib/queries/partners'
+import { ConfirmButton } from '@/components/confirm-button'
+import { DangerZone } from '@/components/danger-zone'
+import { deleteCustomer } from '@/lib/actions/customers'
+import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { CustomerForm } from '../customer-form'
 
@@ -19,7 +23,7 @@ function toDateInput(value: Date | null) {
 export default async function EditCustomerPage({
   params,
 }: PageProps<'/customers/[id]'>) {
-  await requireCapability('customer:update')
+  const user = await requireCapability('customer:update')
   const { id } = await params
 
   const [customer, architects, carpenters] = await Promise.all([
@@ -70,6 +74,22 @@ export default async function EditCustomerPage({
           notes: customer.notes,
         }}
       />
+
+      {can(user.role, 'customer:delete') ? (
+        <DangerZone
+          title="Delete customer"
+          description="Only possible while there are no quotations, orders, invoices or receipts. Otherwise set the status to Inactive."
+        >
+          <ConfirmButton
+            label="Delete"
+            title={`Delete ${customer.name}?`}
+            description="This permanently removes the customer. This cannot be undone."
+            confirmLabel="Delete customer"
+            redirectTo="/customers"
+            action={deleteCustomer.bind(null, customer.id)}
+          />
+        </DangerZone>
+      ) : null}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import { FormBanner } from '@/components/form-banner'
@@ -61,13 +62,13 @@ export function DispatchActions({
             >
               Mark dispatched
             </Button>
-            <Button
-              outline
-              disabled={pending}
-              onClick={() => run(() => setDispatchStatus(id, 'CANCELLED'))}
-            >
-              Cancel challan
-            </Button>
+            <ConfirmButton
+              label="Cancel challan"
+              title="Cancel this challan?"
+              description="Nothing will be marked as sent. You can delete a cancelled challan afterwards."
+              confirmLabel="Cancel challan"
+              action={() => setDispatchStatus(id, 'CANCELLED')}
+            />
           </>
         ) : null}
 

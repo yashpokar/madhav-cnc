@@ -15,6 +15,8 @@ import {
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { getQuotation, summariseMaterial } from '@/lib/queries/quotations'
+import { ConfirmButton } from '@/components/confirm-button'
+import { deleteQuotation } from '@/lib/actions/quotations'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -94,8 +96,18 @@ export default async function QuotationDetailPage({
             {quotation.subject ? ` · ${quotation.subject}` : ''}
           </Text>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <PrintButton label="Print" />
+          {can(user.role, 'quotation:delete') && ['DRAFT', 'REJECTED', 'EXPIRED'].includes(quotation.status) ? (
+            <ConfirmButton
+              label="Delete"
+              title={`Delete quotation ${quotation.number}?`}
+              description="This permanently removes the quotation, its lines and its design images. This cannot be undone."
+              confirmLabel="Delete quotation"
+              redirectTo="/quotations"
+              action={deleteQuotation.bind(null, quotation.id)}
+            />
+          ) : null}
           {canUpdate && editable ? (
             <Button href={`/quotations/${quotation.id}/edit`}>Edit</Button>
           ) : null}

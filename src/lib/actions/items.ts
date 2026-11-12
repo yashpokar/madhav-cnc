@@ -126,3 +126,35 @@ export async function quickCreateMaterial(
 
   return { ok: true, material }
 }
+
+export async function deleteItem(id: string) {
+  await requireCapability('item:delete')
+
+  const item = await prisma.item.findUnique({
+    where: { id },
+    select: { name: true },
+  })
+
+  if (!item) {
+    return { ok: false as const, error: 'Item not found' }
+  }
+
+  const [quotationLines, orderLines, invoiceLines] = await Promise.all([
+    prisma.quotationLine.count({ where: { itemId: id } }),
+    prisma.orderLine.count({ where: { itemId: id } }),
+    prisma.invoiceLine.count({ where: { itemId: id } }),
+  ])
+
+  if (quotationLines + orderLines + invoiceLines > 0) {
+    return {
+      ok: false as const,
+      error: `${item.name} is used on ${quotationLines + orderLines + invoiceLines} document line(s). Mark it inactive instead so it stops appearing in new documents.`,
+    }
+  }
+
+  await prisma.item.delete({ where: { id } })
+
+  revalidatePath('/items')
+
+  return { ok: true as const, message: `${item.name} deleted` }
+}

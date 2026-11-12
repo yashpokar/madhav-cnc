@@ -393,3 +393,59 @@ export async function convertQuotationToOrder(
 
   return { ok: true, message: `Order ${order.number} created`, id: order.id }
 }
+
+export async function deleteOrder(id: string): Promise<SimpleResult> {
+  await requireCapability('order:delete')
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    select: { number: true, status: true, quotationId: true },
+  })
+
+  if (!order) {
+    return { ok: false, error: 'Order not found' }
+  }
+
+  if (order.status !== 'DRAFT' && order.status !== 'CANCELLED') {
+    return {
+      ok: false,
+      error: 'Only draft or cancelled orders can be deleted. Cancel the order first.',
+    }
+  }
+
+  const [dispatches, invoices] = await Promise.all([
+    prisma.dispatch.count({ where: { orderId: id } }),
+    prisma.invoice.count({ where: { orderId: id } }),
+  ])
+
+  if (dispatches > 0 || invoices > 0) {
+    return {
+      ok: false,
+      error: `This order has ${dispatches} dispatch(es) and ${invoices} invoice(s). Remove those first, or keep the order as cancelled.`,
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.delete({ where: { id } })
+
+    // A converted quotation goes back to accepted when its last order goes.
+    if (order.quotationId) {
+      const remaining = await tx.order.count({
+        where: { quotationId: order.quotationId },
+      })
+
+      if (remaining === 0) {
+        await tx.quotation.updateMany({
+          where: { id: order.quotationId, status: 'CONVERTED' },
+          data: { status: 'ACCEPTED' },
+        })
+      }
+    }
+  })
+
+  revalidatePath('/orders')
+  revalidatePath('/production')
+  revalidatePath('/quotations')
+
+  return { ok: true, message: `${order.number} deleted` }
+}

@@ -376,3 +376,29 @@ export async function recordReceipt(
       : 'Receipt recorded',
   }
 }
+
+export async function deleteDispatch(id: string): Promise<SimpleResult> {
+  await requireCapability('dispatch:delete')
+
+  const dispatch = await prisma.dispatch.findUnique({
+    where: { id },
+    select: { number: true, status: true },
+  })
+
+  if (!dispatch) {
+    return { ok: false, error: 'Dispatch not found' }
+  }
+
+  if (dispatch.status !== 'DRAFT' && dispatch.status !== 'CANCELLED') {
+    return {
+      ok: false,
+      error: 'Goods have already left. Cancel the dispatch before deleting it.',
+    }
+  }
+
+  await prisma.dispatch.delete({ where: { id } })
+
+  revalidatePath('/dispatch')
+
+  return { ok: true, message: `${dispatch.number} deleted` }
+}

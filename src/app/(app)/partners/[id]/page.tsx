@@ -4,6 +4,10 @@ import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updatePartner } from '@/lib/actions/partners'
 import { getPartner } from '@/lib/queries/partners'
+import { ConfirmButton } from '@/components/confirm-button'
+import { DangerZone } from '@/components/danger-zone'
+import { deletePartner } from '@/lib/actions/partners'
+import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { PartnerForm } from '../partner-form'
 
@@ -14,7 +18,7 @@ export const metadata: Metadata = {
 export default async function EditPartnerPage({
   params,
 }: PageProps<'/partners/[id]'>) {
-  await requireCapability('partner:update')
+  const user = await requireCapability('partner:update')
   const { id } = await params
   const partner = await getPartner(id)
 
@@ -54,6 +58,22 @@ export default async function EditPartnerPage({
           notes: partner.notes,
         }}
       />
+
+      {can(user.role, 'partner:delete') ? (
+        <DangerZone
+          title="Delete partner"
+          description="Only possible while no customer, quotation or order refers to them. Otherwise mark them inactive."
+        >
+          <ConfirmButton
+            label="Delete"
+            title={`Delete ${partner.name}?`}
+            description="This permanently removes the partner. This cannot be undone."
+            confirmLabel="Delete partner"
+            redirectTo="/partners"
+            action={deletePartner.bind(null, partner.id)}
+          />
+        </DangerZone>
+      ) : null}
     </div>
   )
 }

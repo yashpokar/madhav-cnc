@@ -17,6 +17,8 @@ import { FormBanner } from '@/components/form-banner'
 import { getOrder } from '@/lib/queries/orders'
 import { summariseMaterial } from '@/lib/queries/quotations'
 import { listTasksForOrder } from '@/lib/queries/production'
+import { ConfirmButton } from '@/components/confirm-button'
+import { deleteOrder } from '@/lib/actions/orders'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -106,7 +108,7 @@ export default async function QuotationDetailPage({
             </Text>
           ) : null}
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <PrintButton label="Print" />
           {can(user.role, 'invoice:create') &&
           order.status !== 'DRAFT' &&
@@ -124,6 +126,16 @@ export default async function QuotationDetailPage({
           ) : null}
           {canUpdate && editable ? (
             <Button href={`/orders/${order.id}/edit`}>Edit</Button>
+          ) : null}
+          {can(user.role, 'order:delete') && (order.status === 'DRAFT' || order.status === 'CANCELLED') ? (
+            <ConfirmButton
+              label="Delete"
+              title={`Delete order ${order.number}?`}
+              description="This permanently removes the order and its production tasks. If it came from a quotation, that quotation returns to accepted. This cannot be undone."
+              confirmLabel="Delete order"
+              redirectTo="/orders"
+              action={deleteOrder.bind(null, order.id)}
+            />
           ) : null}
         </div>
       </div>

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextQuotationNumber } from '@/lib/codes'
-import { copyUpload } from '@/lib/storage'
+import { copyUpload, deleteUpload } from '@/lib/storage'
 import { invalidateApproval } from '@/lib/reapproval'
 import { documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
@@ -398,4 +398,56 @@ export async function createRevision(id: string): Promise<SimpleResult> {
     message: `Revision ${revision} created`,
     id: created.id,
   }
+}
+
+const DELETABLE_QUOTATION_STATUSES: QuotationStatus[] = [
+  'DRAFT',
+  'REJECTED',
+  'EXPIRED',
+]
+
+export async function deleteQuotation(id: string): Promise<SimpleResult> {
+  await requireCapability('quotation:delete')
+
+  const quotation = await prisma.quotation.findUnique({
+    where: { id },
+    select: {
+      number: true,
+      status: true,
+      attachments: { select: { storedName: true } },
+    },
+  })
+
+  if (!quotation) {
+    return { ok: false, error: 'Quotation not found' }
+  }
+
+  if (!DELETABLE_QUOTATION_STATUSES.includes(quotation.status)) {
+    return {
+      ok: false,
+      error: `A ${quotation.status.toLowerCase()} quotation has been shared with the customer or turned into work and cannot be deleted.`,
+    }
+  }
+
+  const [orders, revisions] = await Promise.all([
+    prisma.order.count({ where: { quotationId: id } }),
+    prisma.quotation.count({ where: { parentId: id } }),
+  ])
+
+  if (orders > 0 || revisions > 0) {
+    return {
+      ok: false,
+      error: 'This quotation has orders or later revisions linked to it.',
+    }
+  }
+
+  await prisma.quotation.delete({ where: { id } })
+
+  await Promise.all(
+    quotation.attachments.map((file) => deleteUpload(file.storedName)),
+  )
+
+  revalidatePath('/quotations')
+
+  return { ok: true, message: `${quotation.number} deleted` }
 }

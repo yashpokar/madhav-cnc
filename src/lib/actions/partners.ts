@@ -154,3 +154,43 @@ export async function quickCreatePartner(input: {
 
   return { ok: true, partner }
 }
+
+export async function deletePartner(id: string) {
+  await requireCapability('partner:delete')
+
+  const partner = await prisma.partner.findUnique({
+    where: { id },
+    select: { name: true },
+  })
+
+  if (!partner) {
+    return { ok: false as const, error: 'Partner not found' }
+  }
+
+  const [customers, quotations, orders] = await Promise.all([
+    prisma.customer.count({
+      where: {
+        OR: [{ preferredArchitectId: id }, { preferredCarpenterId: id }],
+      },
+    }),
+    prisma.quotation.count({
+      where: { OR: [{ architectId: id }, { carpenterId: id }] },
+    }),
+    prisma.order.count({
+      where: { OR: [{ architectId: id }, { carpenterId: id }] },
+    }),
+  ])
+
+  if (customers + quotations + orders > 0) {
+    return {
+      ok: false as const,
+      error: `${partner.name} is referenced by ${customers} customer(s), ${quotations} quotation(s) and ${orders} order(s). Mark the partner inactive instead.`,
+    }
+  }
+
+  await prisma.partner.delete({ where: { id } })
+
+  revalidatePath('/partners')
+
+  return { ok: true as const, message: `${partner.name} deleted` }
+}

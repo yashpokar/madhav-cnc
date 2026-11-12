@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
+import { ConfirmButton } from '@/components/confirm-button'
 import { Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import {
@@ -75,19 +76,24 @@ export function InvoiceActions({
       <div className="flex flex-wrap gap-3">
         {canUpdate && status === 'DRAFT' ? (
           <>
-            <Button
-              disabled={pending}
-              onClick={() => run(() => setInvoiceStatus(id, 'ISSUED'))}
+            <ConfirmButton
+              outline={false}
+              tone="neutral"
+              label="Issue invoice"
+              title="Issue this invoice?"
+              description="It will count towards the customer's balance and can no longer be edited unless you move it back to draft."
+              confirmLabel="Issue"
+              action={() => setInvoiceStatus(id, 'ISSUED')}
             >
               Issue invoice
-            </Button>
-            <Button
-              outline
-              disabled={pending}
-              onClick={() => run(() => setInvoiceStatus(id, 'CANCELLED'))}
-            >
-              Cancel
-            </Button>
+            </ConfirmButton>
+            <ConfirmButton
+              label="Cancel invoice"
+              title="Cancel this invoice?"
+              description="The invoice stays on record as cancelled and stops counting towards the customer's balance."
+              confirmLabel="Cancel invoice"
+              action={() => setInvoiceStatus(id, 'CANCELLED')}
+            />
           </>
         ) : null}
 
@@ -98,13 +104,13 @@ export function InvoiceActions({
         ) : null}
 
         {canUpdate && status === 'ISSUED' ? (
-          <Button
-            outline
-            disabled={pending}
-            onClick={() => run(() => setInvoiceStatus(id, 'DRAFT'))}
-          >
-            Back to draft
-          </Button>
+          <ConfirmButton
+            tone="neutral"
+            label="Back to draft"
+            title="Move this invoice back to draft?"
+            description="It will leave the customer's balance until it is issued again. Payments already applied stay linked."
+            action={() => setInvoiceStatus(id, 'DRAFT')}
+          />
         ) : null}
 
         {canCreate ? (
@@ -212,26 +218,21 @@ export function RemovePaymentButton({
   allocationId: string
   canDelete: boolean
 }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-
   if (!canDelete) {
     return null
   }
 
   return (
-    <Button
-      plain
-      aria-label="Unapply payment"
-      disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          await removeAllocation(allocationId)
-          router.refresh()
-        })
-      }
+    <ConfirmButton
+      outline={false}
+      label="Unapply payment"
+      title="Unapply this payment?"
+      description="The amount goes back to the customer's unapplied balance and this invoice's due amount increases."
+      confirmLabel="Unapply"
+      action={() => removeAllocation(allocationId)}
     >
-      <TrashIcon />
-    </Button>
+      <TrashIcon className="size-4" aria-hidden="true" />
+      <span className="sr-only">Unapply payment</span>
+    </ConfirmButton>
   )
 }

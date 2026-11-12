@@ -20,12 +20,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
+import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import {
   createStage,
   moveStage,
   renameStage,
   setStageActive,
+  deleteStage,
   setStageStatus,
 } from '@/lib/actions/stages'
 import type { SimpleResult } from '@/lib/actions/stages'
@@ -196,6 +198,15 @@ export function StageManager({ stages }: { stages: StageRow[] }) {
                   >
                     {stage.isActive ? 'Retire' : 'Enable'}
                   </Button>
+                  {stage._count.tasks === 0 ? (
+                    <ConfirmButton
+                      outline={false}
+                      label="Delete"
+                      title={`Delete ${stage.name}?`}
+                      description="This stage is not used anywhere yet, so it is removed permanently."
+                      action={deleteStage.bind(null, stage.id)}
+                    />
+                  ) : null}
                 </div>
               </TableCell>
             </TableRow>

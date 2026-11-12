@@ -18,6 +18,8 @@ import { PrintButton } from '@/components/print-button'
 import { PaymentTerms } from '@/components/payment-terms'
 import { getInvoice } from '@/lib/queries/invoices'
 import { getCompanySetting } from '@/lib/queries/company'
+import { ConfirmButton } from '@/components/confirm-button'
+import { deleteInvoice } from '@/lib/actions/invoices'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -93,8 +95,18 @@ export default async function InvoiceDetailPage({
             ) : null}
           </Text>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <PrintButton label="Print invoice" />
+          {can(user.role, 'invoice:delete') && invoice.status === 'DRAFT' ? (
+            <ConfirmButton
+              label="Delete"
+              title={`Delete invoice ${invoice.number}?`}
+              description="This permanently removes the draft invoice. Issued invoices cannot be deleted, only cancelled. This cannot be undone."
+              confirmLabel="Delete invoice"
+              redirectTo="/invoices"
+              action={deleteInvoice.bind(null, invoice.id)}
+            />
+          ) : null}
           {canUpdate && invoice.status === 'DRAFT' ? (
             <Button href={`/invoices/${invoice.id}/edit`}>Edit</Button>
           ) : null}

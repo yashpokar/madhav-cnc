@@ -16,9 +16,9 @@ html[data-theme='dark'] {
  * text colour in the app follows the brand without touching each component.
  */
 @theme {
-  --color-zinc-50: #f6f7fb;
-  --color-zinc-100: #eceef5;
-  --color-zinc-200: #dcdfeb;
+  --color-zinc-50: #f9fafc;
+  --color-zinc-100: #f3f4f8;
+  --color-zinc-200: #e3e6ef;
   --color-zinc-300: #bfc5d8;
   --color-zinc-400: #8b94b0;
   --color-zinc-500: #646e8c;

@@ -223,6 +223,15 @@ export default async function DashboardPage({
               hint={`${inr.format(receivables.overdue)} overdue`}
               tone={receivables.overdue > 0 ? 'warn' : 'default'}
             />
+            {ledger ? (
+              <StatTile
+                href="/?outstanding=defaulted"
+                label="Not recoverable"
+                value={inr.format(ledger.reduce((sum, r) => sum + r.defaulted, 0))}
+                hint={`${ledger.filter((r) => r.defaulted > 0).length} customer(s) with write-offs`}
+                tone={ledger.some((r) => r.defaulted > 0) ? 'warn' : 'default'}
+              />
+            ) : null}
             <StatTile
               href="/payments"
               label="Collected this month"

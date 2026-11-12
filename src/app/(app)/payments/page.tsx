@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { SearchField } from '@/components/search-field'
+import { paginate } from '@/lib/pagination'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -14,7 +17,7 @@ import {
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
 import { EmptyState } from '@/components/form-banner'
-import { getReceivables } from '@/lib/queries/receivables'
+import { getCustomerLedger, getReceivables } from '@/lib/queries/receivables'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { PAYMENT_MODE_LABELS, ORDER_STATUS_LABELS } from '@/lib/labels'
@@ -71,11 +74,23 @@ function Tile({
   )
 }
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: PageProps<'/payments'>) {
   const user = await requireCapability('payment:read')
-  const data = await getReceivables()
+  const params = await searchParams
+  const q = (typeof params.q === 'string' ? params.q : '').trim().toLowerCase()
+  const matches = (name: string) => !q || name.toLowerCase().includes(q)
+  const [data, ledger] = await Promise.all([getReceivables(), getCustomerLedger()])
   const canSeeOrders = can(user.role, 'order:read')
   const canRecord = can(user.role, 'payment:create')
+
+  const byCustomerRows = data.byCustomer.filter((row) => matches(row.name))
+  const ledgerRows = ledger.filter((row) => matches(row.name))
+  const openRows = data.invoices.filter((row) => matches(row.customer.name))
+  const byCustomerPaged = paginate(byCustomerRows, params, { pageKey: 'cp', sizeKey: 'cs' })
+  const ledgerPaged = paginate(ledgerRows, params, { pageKey: 'lp', sizeKey: 'ls' })
+  const openPaged = paginate(openRows, params, { pageKey: 'ip', sizeKey: 'is' })
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -84,8 +99,14 @@ export default async function PaymentsPage() {
           <Heading>Payments</Heading>
           <Text>What is still to be recovered, and what has come in.</Text>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchField placeholder="Search customer…" />
           <ExportButton kind="payments" />
+          {can(user.role, 'expense:read') ? (
+            <Button outline href="/cashbook">
+              Cash book
+            </Button>
+          ) : null}
           <Button outline href="/invoices?tab=issued">
             Issued invoices
           </Button>
@@ -154,12 +175,13 @@ export default async function PaymentsPage() {
       <div>
         <Subheading level={2}>Outstanding by customer</Subheading>
         <div className="mt-4">
-          {data.byCustomer.length === 0 ? (
+          {byCustomerRows.length === 0 ? (
             <EmptyState
               title="Nothing outstanding"
               description="Every issued invoice is fully settled."
             />
           ) : (
+<>
             <Table dense grid striped>
               <TableHead>
                 <TableRow>
@@ -174,7 +196,7 @@ export default async function PaymentsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.byCustomer.map((row) => (
+                {byCustomerPaged.rows.map((row) => (
                   <TableRow key={row.id} href={`/customers/${row.id}/statement`}>
                     <TableCell className="font-medium">
                       {row.name}
@@ -215,6 +237,74 @@ export default async function PaymentsPage() {
                 ))}
               </TableBody>
             </Table>
+<Pagination paged={byCustomerPaged} params={params} pathname="/payments" pageKey="cp" sizeKey="cs" />
+</>
+          )}
+        </div>
+      </div>
+
+      <Divider />
+
+      <div>
+        <Subheading level={2}>Payments by customer</Subheading>
+        <div className="mt-4">
+          {ledgerRows.length === 0 ? (
+            <EmptyState
+              title="No customer activity yet"
+              description="Billed, received and due amounts appear here once invoices are issued."
+            />
+          ) : (
+<>
+            <Table dense grid striped>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>Customer</TableHeader>
+                  <TableHeader className="text-right">Billed</TableHeader>
+                  <TableHeader className="text-right">Received</TableHeader>
+                  <TableHeader className="text-right">Due</TableHeader>
+                  <TableHeader className="text-right">Defaulted</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {ledgerPaged.rows.map((row) => (
+                  <TableRow key={row.id} href={`/customers/${row.id}/statement`}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {exact.format(row.billed)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {exact.format(row.received)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.due > 0 ? (
+                        <span
+                          className={
+                            row.overdue > 0
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : undefined
+                          }
+                        >
+                          {exact.format(row.due)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.defaulted > 0 ? (
+                        <span className="font-medium text-rose-600 dark:text-rose-400">
+                          {exact.format(row.defaulted)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+<Pagination paged={ledgerPaged} params={params} pathname="/payments" pageKey="lp" sizeKey="ls" />
+</>
           )}
         </div>
       </div>
@@ -238,7 +328,7 @@ export default async function PaymentsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.invoices.map((invoice) => (
+                  {openPaged.rows.map((invoice) => (
                     <TableRow
                       key={invoice.id}
                       href={`/invoices/${invoice.id}`}
@@ -286,6 +376,7 @@ export default async function PaymentsPage() {
                   ))}
                 </TableBody>
               </Table>
+<Pagination paged={openPaged} params={params} pathname="/payments" pageKey="ip" sizeKey="is" />
             </div>
           </div>
         </>

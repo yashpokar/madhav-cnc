@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { RowActions } from '@/components/row-actions'
+import { deleteCustomer } from '@/lib/actions/customers'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
@@ -13,6 +17,7 @@ import {
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
 import { EmptyState, FormBanner } from '@/components/form-banner'
+import { Link } from '@/components/catalyst/link'
 import { SearchField } from '@/components/search-field'
 import { listCustomers } from '@/lib/queries/customers'
 import { can } from '@/lib/permissions'
@@ -43,8 +48,20 @@ export default async function CustomersPage({
   const search = typeof params.q === 'string' ? params.q : undefined
   const created = typeof params.created === 'string' ? params.created : undefined
 
-  const customers = await listCustomers({ search })
+  const status =
+    typeof params.status === 'string' &&
+    ['ACTIVE', 'INACTIVE', 'ON_HOLD'].includes(params.status)
+      ? (params.status as CustomerStatus)
+      : undefined
+  const everyone = await listCustomers({ search })
+  const customers = status
+    ? everyone.filter((customer) => customer.status === status)
+    : everyone
   const canCreate = can(user.role, 'customer:create')
+  const canEdit = can(user.role, 'customer:update')
+  const canDelete = can(user.role, 'customer:delete')
+
+  const paged = paginate(customers, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -63,7 +80,34 @@ export default async function CustomersPage({
         <FormBanner tone="success">Customer {created} saved</FormBanner>
       ) : null}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
+          {[
+            { value: undefined, label: 'All' },
+            { value: 'ACTIVE', label: 'Active' },
+            { value: 'ON_HOLD', label: 'On hold' },
+            { value: 'INACTIVE', label: 'Inactive' },
+          ].map((tab) => {
+            const query = new URLSearchParams()
+            if (tab.value) query.set('status', tab.value)
+            if (search) query.set('q', search)
+            const href = query.toString() ? `/customers?${query}` : '/customers'
+
+            return (
+              <Link
+                key={tab.label}
+                href={href}
+                className={
+                  tab.value === status
+                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
+                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+                }
+              >
+                {tab.label}
+              </Link>
+            )
+          })}
+        </div>
         <SearchField placeholder="Search name, phone, city…" />
       </div>
 
@@ -82,6 +126,7 @@ export default async function CustomersPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -92,10 +137,11 @@ export default async function CustomersPage({
               <TableHeader>Architect</TableHeader>
               <TableHeader>Carpenter</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {customers.map((customer) => (
+            {paged.rows.map((customer) => (
               <TableRow key={customer.id} href={`/customers/${customer.id}`}>
                 <TableCell className="font-mono text-xs">
                   {customer.code}
@@ -123,10 +169,25 @@ export default async function CustomersPage({
                     {STATUS_LABELS[customer.status]}
                   </Badge>
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={customer.name}
+                    
+                    editHref={canEdit && (true) ? `/customers/${customer.id}` : undefined}
+                    deleteAction={
+                      canDelete && (true)
+                        ? deleteCustomer.bind(null, customer.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${customer.name}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/customers" />
+</>
       )}
     </div>
   )

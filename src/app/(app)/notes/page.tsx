@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { RowActions } from '@/components/row-actions'
+import { deleteNote } from '@/lib/actions/notes'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
@@ -58,6 +62,8 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
 
   const notes = await listNotes({ kind: activeTab.kind, search })
   const canCreate = can(user.role, 'note:create')
+  const canEdit = can(user.role, 'note:update')
+  const canDelete = can(user.role, 'note:delete')
 
   const issued = notes.filter((note) => note.status === 'ISSUED')
   const credit = issued
@@ -66,6 +72,8 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
   const debit = issued
     .filter((note) => note.kind === 'DEBIT')
     .reduce((sum, note) => sum + note.total, 0)
+
+  const paged = paginate(notes, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -135,6 +143,7 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -145,10 +154,11 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
               <TableHeader>Date</TableHeader>
               <TableHeader className="text-right">Total</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {notes.map((note) => (
+            {paged.rows.map((note) => (
               <TableRow key={note.id} href={`/notes/${note.id}`}>
                 <TableCell className="font-mono text-xs">
                   {note.number}
@@ -180,10 +190,25 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
                     {NOTE_STATUS_LABELS[note.status]}
                   </Badge>
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={note.number}
+                    viewHref={`/notes/${note.id}`}
+                    editHref={canEdit && (note.status === 'DRAFT') ? `/notes/${note.id}/edit` : undefined}
+                    deleteAction={
+                      canDelete && (note.status !== 'ISSUED')
+                        ? deleteNote.bind(null, note.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${note.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/notes" />
+</>
       )}
     </div>
   )

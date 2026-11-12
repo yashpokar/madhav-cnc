@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { ListControls } from '@/components/list-controls'
+import { applyListControls } from '@/lib/list-controls'
+import { RowActions } from '@/components/row-actions'
+import { deleteInvoice } from '@/lib/actions/invoices'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
@@ -61,10 +67,19 @@ export default async function InvoicesPage({
 
   const invoices = await listInvoices({ status: activeTab.status, search })
   const canCreate = can(user.role, 'invoice:create')
+  const canEdit = can(user.role, 'invoice:update')
+  const canDelete = can(user.role, 'invoice:delete')
 
   const outstanding = invoices
     .filter((invoice) => invoice.status === 'ISSUED')
     .reduce((sum, invoice) => sum + invoice.due, 0)
+
+  const sorted = applyListControls(invoices, params, {
+    date: (row) => row.invoiceDate,
+    amount: (row) => row.total,
+    due: (row) => row.due,
+  })
+  const paged = paginate(sorted, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -114,7 +129,14 @@ export default async function InvoicesPage({
         <SearchField placeholder="Search invoice, customer, order…" />
       </div>
 
-      {invoices.length === 0 ? (
+      <ListControls params={params} pathname="/invoices" amountLabel="Total" withDue />
+
+      {invoices.length > 0 && sorted.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          description="Nothing falls in this amount range. Widen it or clear the filter."
+        />
+      ) : invoices.length === 0 ? (
         <EmptyState
           title={search ? 'No matches' : 'No invoices yet'}
           description={
@@ -129,6 +151,7 @@ export default async function InvoicesPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -139,10 +162,11 @@ export default async function InvoicesPage({
               <TableHeader className="text-right">Due</TableHeader>
               <TableHeader>Payment</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {invoices.map((invoice) => (
+            {paged.rows.map((invoice) => (
               <TableRow key={invoice.id} href={`/invoices/${invoice.id}`}>
                 <TableCell className="font-mono text-xs">
                   {invoice.number}
@@ -182,10 +206,25 @@ export default async function InvoicesPage({
                     </div>
                   ) : null}
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={invoice.number}
+                    viewHref={`/invoices/${invoice.id}`}
+                    editHref={canEdit && (invoice.status === 'DRAFT') ? `/invoices/${invoice.id}/edit` : undefined}
+                    deleteAction={
+                      canDelete && (invoice.status === 'DRAFT')
+                        ? deleteInvoice.bind(null, invoice.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${invoice.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/invoices" />
+</>
       )}
     </div>
   )

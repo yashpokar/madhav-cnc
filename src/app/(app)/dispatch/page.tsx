@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { RowActions } from '@/components/row-actions'
+import { deleteDispatch } from '@/lib/actions/dispatches'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
@@ -49,6 +53,10 @@ export default async function DispatchPage({
 
   const dispatches = await listDispatches({ status: activeTab.status, search })
   const canCreate = can(user.role, 'dispatch:create')
+  const canEdit = can(user.role, 'dispatch:update')
+  const canDelete = can(user.role, 'dispatch:delete')
+
+  const paged = paginate(dispatches, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -108,6 +116,7 @@ export default async function DispatchPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -118,10 +127,11 @@ export default async function DispatchPage({
               <TableHeader>Vehicle</TableHeader>
               <TableHeader className="text-right">Lines</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {dispatches.map((dispatch) => (
+            {paged.rows.map((dispatch) => (
               <TableRow key={dispatch.id} href={`/dispatch/${dispatch.id}`}>
                 <TableCell className="font-mono text-xs">
                   {dispatch.number}
@@ -151,10 +161,25 @@ export default async function DispatchPage({
                     </div>
                   ) : null}
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={dispatch.number}
+                    viewHref={`/dispatch/${dispatch.id}`}
+                    editHref={canEdit && (dispatch.status === 'DRAFT' || dispatch.status === 'DISPATCHED') ? `/dispatch/${dispatch.id}/edit` : undefined}
+                    deleteAction={
+                      canDelete && (dispatch.status === 'DRAFT' || dispatch.status === 'CANCELLED')
+                        ? deleteDispatch.bind(null, dispatch.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${dispatch.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/dispatch" />
+</>
       )}
     </div>
   )

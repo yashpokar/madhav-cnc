@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { RowActions } from '@/components/row-actions'
+import { deleteItem } from '@/lib/actions/items'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
@@ -60,6 +64,10 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
 
   const items = await listItems({ type: activeTab.type, search })
   const canCreate = can(user.role, 'item:create')
+  const canEdit = can(user.role, 'item:update')
+  const canDelete = can(user.role, 'item:delete')
+
+  const paged = paginate(items, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -127,6 +135,7 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -136,10 +145,11 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
               <TableHeader>Material</TableHeader>
               <TableHeader className="text-right">Rate</TableHeader>
               <TableHeader className="text-right">GST</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((item) => (
+            {paged.rows.map((item) => (
               <TableRow key={item.id} href={`/items/${item.id}`}>
                 <TableCell className="font-mono text-xs">{item.code}</TableCell>
                 <TableCell>
@@ -175,10 +185,25 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
                 <TableCell className="text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                   {item.taxRatePercent}%
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={item.name}
+                    
+                    editHref={canEdit && (true) ? `/items/${item.id}` : undefined}
+                    deleteAction={
+                      canDelete && (true)
+                        ? deleteItem.bind(null, item.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${item.name}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/items" />
+</>
       )}
     </div>
   )

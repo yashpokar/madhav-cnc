@@ -18,9 +18,8 @@ export default async function NewCreditPage() {
       <div className="grid grid-cols-1 gap-2">
         <Heading>Add credit</Heading>
         <Text>
-          Money received that is not a customer receipt, such as owner capital, a
-          vendor refund or other income. Customer payments are recorded under
-          Payments.
+          Money received that is not a customer receipt, such as owner capital, a vendor refund or
+          other income. Customer payments are recorded under Payments.
         </Text>
       </div>
       <CreditForm sources={sources} today={new Date().toISOString().slice(0, 10)} />

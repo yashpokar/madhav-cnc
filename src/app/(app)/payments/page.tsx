@@ -108,8 +108,8 @@ export default async function PaymentsPage({
           <SearchField placeholder="Search customer…" />
           <ExportButton kind="payments" />
           {can(user.role, 'expense:read') ? (
-            <Button outline href="/cashbook">
-              Cash book
+            <Button outline href="/daybook">
+              Day book
             </Button>
           ) : null}
           <Button outline href="/invoices?tab=issued">

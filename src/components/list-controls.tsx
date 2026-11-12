@@ -1,49 +1,41 @@
-import { Button } from "@/components/catalyst/button";
-import { Input } from "@/components/catalyst/input";
-import { Select } from "@/components/catalyst/select";
-import { LIST_SORTS, readListControls } from "@/lib/list-controls";
+import { Button } from '@/components/catalyst/button'
+import { Input } from '@/components/catalyst/input'
+import { Select } from '@/components/catalyst/select'
+import { LIST_SORTS, readListControls } from '@/lib/list-controls'
 
-type Params = Record<string, string | string[] | undefined>;
+type Params = Record<string, string | string[] | undefined>
 
 /** Sort and amount-range controls. Other filters (tab, search) are kept. */
 export function ListControls({
   params,
   pathname,
-  amountLabel = "Amount",
+  amountLabel = 'Amount',
   withDue = false,
 }: {
-  params: Params;
-  pathname: string;
-  amountLabel?: string;
+  params: Params
+  pathname: string
+  amountLabel?: string
   /** Offer sorting by the amount still owed (invoices). */
-  withDue?: boolean;
+  withDue?: boolean
 }) {
-  const { sort, min, max } = readListControls(params);
-  const active = sort !== undefined || min !== undefined || max !== undefined;
+  const { sort, min, max } = readListControls(params)
+  const active = sort !== undefined || min !== undefined || max !== undefined
   const keep = Object.entries(params).filter(
-    ([key, value]) =>
-      !["sort", "min", "max", "page"].includes(key) &&
-      typeof value === "string",
-  ) as [string, string][];
-  const clear = new URLSearchParams(
-    keep.filter(([key]) => key !== "size"),
-  ).toString();
+    ([key, value]) => !['sort', 'min', 'max', 'page'].includes(key) && typeof value === 'string',
+  ) as [string, string][]
+  const clear = new URLSearchParams(keep.filter(([key]) => key !== 'size')).toString()
 
   return (
-    <form
-      method="get"
-      action={pathname}
-      className="flex flex-wrap items-end gap-3 print:hidden"
-    >
+    <form method="get" action={pathname} className="flex flex-wrap items-end gap-3 print:hidden">
       {keep.map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={value} />
       ))}
       <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
         Sort by
-        <Select name="sort" defaultValue={sort ?? ""} className="min-w-44">
+        <Select name="sort" defaultValue={sort ?? ''} className="min-w-44">
           <option value="">Default order</option>
           {Object.entries(LIST_SORTS)
-            .filter(([value]) => withDue || !value.startsWith("due_"))
+            .filter(([value]) => withDue || !value.startsWith('due_'))
             .map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -61,7 +53,7 @@ export function ListControls({
             min={0}
             placeholder="Min"
             aria-label={`Minimum ${amountLabel.toLowerCase()}`}
-            defaultValue={min ?? ""}
+            defaultValue={min ?? ''}
             className="w-28"
           />
           <span aria-hidden="true">–</span>
@@ -72,7 +64,7 @@ export function ListControls({
             min={0}
             placeholder="Max"
             aria-label={`Maximum ${amountLabel.toLowerCase()}`}
-            defaultValue={max ?? ""}
+            defaultValue={max ?? ''}
             className="w-28"
           />
         </div>
@@ -86,5 +78,5 @@ export function ListControls({
         </Button>
       ) : null}
     </form>
-  );
+  )
 }

@@ -20,7 +20,7 @@ const ALL_NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/payments', label: 'Payments', capability: 'payment:read' },
   { href: '/notes', label: 'Credit & debit notes', capability: 'note:read' },
   { href: '/expenses', label: 'Expenses', capability: 'expense:read' },
-  { href: '/cashbook', label: 'Cash book', capability: 'expense:read' },
+  { href: '/daybook', label: 'Day book', capability: 'expense:read' },
   { href: '/reports', label: 'Reports', capability: 'invoice:read' },
 ]
 

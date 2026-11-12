@@ -34,6 +34,25 @@ const SPECS: Record<string, Spec> = {
   Item: { entity: 'item', label: 'item', ops: all, name: (r) => text(r.name, r.code) },
   Material: { entity: 'material', label: 'material', ops: all, name: (r) => text(r.name) },
   Partner: { entity: 'partner', label: 'partner', ops: all, name: (r) => text(r.name, r.code) },
+  PaymentChannel: {
+    entity: 'payment-channel',
+    label: 'payment mode',
+    ops: all,
+    name: (r) => text(r.name),
+  },
+  DayClose: {
+    entity: 'day-close',
+    label: 'day-end check',
+    ops: ['create', 'delete'],
+    name: (r) => (r.closeDate instanceof Date ? r.closeDate.toISOString().slice(0, 10) : null),
+  },
+  BankAccount: { entity: 'bank-account', label: 'bank account', ops: all, name: (r) => text(r.name) },
+  CashDenomination: {
+    entity: 'denomination',
+    label: 'note denomination',
+    ops: all,
+    name: (r) => (typeof r.value === 'number' ? `₹${r.value}` : null),
+  },
   ProductionStage: { entity: 'stage', label: 'production stage', ops: all, name: (r) => text(r.name) },
   CompanySetting: { entity: 'company', label: 'company settings', ops: all, name: () => null },
   User: {

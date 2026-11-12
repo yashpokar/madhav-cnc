@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { TrashIcon, PlusIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
 import { Input } from '@/components/catalyst/input'
@@ -14,6 +15,7 @@ import {
   ComboboxLabel,
   ComboboxOption,
 } from '@/components/catalyst/combobox'
+import { QuickItemDialog } from '@/components/quick-item-dialog'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
 import { billedSize, derivedQuantity, lineTotals } from '@/lib/pricing'
 import type { ItemOption } from '@/lib/queries/quotations'
@@ -74,6 +76,20 @@ const optNum = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const CREATE_ITEM: ItemOption = {
+  id: '__create__',
+  code: '',
+  name: 'Add a new item',
+  unit: 'NOS',
+  rate: 0,
+  taxRatePercent: 0,
+  hsnCode: null,
+  brand: null,
+  supplyType: 'GOODS',
+  isFlatRate: false,
+  material: null,
+}
+
 /** Item name with its material in brackets, e.g. "Louvers (Teak)". */
 function itemLabel(item: ItemOption) {
   return item.material?.name ? `${item.name} (${item.material.name})` : item.name
@@ -88,12 +104,18 @@ export const currency = new Intl.NumberFormat('en-IN', {
 export function LineEditor({
   lines,
   onChange,
-  items,
+  items: catalogue,
 }: {
   lines: EditorLine[]
   onChange: (lines: EditorLine[]) => void
   items: ItemOption[]
 }) {
+  // Items added on the spot join the picker without a page reload.
+  const [created, setCreated] = useState<ItemOption[]>([])
+  const items = [...catalogue, ...created]
+  const [creating, setCreating] = useState<{ index: number; name: string } | null>(null)
+  const [search, setSearch] = useState({ index: -1, text: '' })
+
   function update(index: number, patch: Partial<EditorLine>) {
     onChange(
       lines.map((line, i) => (i === index ? { ...line, ...patch } : line)),
@@ -192,13 +214,36 @@ export function LineEditor({
                   <td data-label="Item / description" className="py-2 pr-3">
                     <div className="grid grid-cols-1 gap-2">
                       <Combobox<ItemOption | null>
-                        options={items}
+                        options={[
+                          ...items,
+                          ...(search.index === index &&
+                          search.text.trim() &&
+                          !items.some(
+                            (item) =>
+                              item.name.toLowerCase() === search.text.trim().toLowerCase(),
+                          )
+                            ? [{ ...CREATE_ITEM, name: `Add “${search.text.trim()}” as a new item` }]
+                            : [{ ...CREATE_ITEM, name: 'Add a new item' }]),
+                        ]}
                         value={selectedItem}
-                        onChange={(item) => applyItem(index, item)}
+                        onChange={(item) => {
+                          if (item?.id === CREATE_ITEM.id) {
+                            setCreating({
+                              index,
+                              name: search.index === index ? search.text.trim() : '',
+                            })
+                            return
+                          }
+
+                          applyItem(index, item)
+                        }}
+                        onQueryChange={(text) => setSearch({ index, text })}
                         placeholder="Pick an item…"
-                        displayValue={(item) => (item ? itemLabel(item) : '')}
+                        displayValue={(item) =>
+                          item && item.id !== CREATE_ITEM.id ? itemLabel(item) : ''
+                        }
                         filter={(item, query) => {
-                          if (!item) return true
+                          if (!item || item.id === CREATE_ITEM.id) return true
                           const haystack = [
                             item.name,
                             item.code,
@@ -213,11 +258,20 @@ export function LineEditor({
                       >
                         {(item) => (
                           <ComboboxOption value={item}>
-                            <ComboboxLabel>{itemLabel(item)}</ComboboxLabel>
-                            <ComboboxDescription>
-                              {item.code} · {currency.format(item.rate)} /{' '}
-                              {UNIT_SHORT[item.unit]}
-                            </ComboboxDescription>
+                            {item.id === CREATE_ITEM.id ? (
+                              <>
+                                <PlusIcon />
+                                <ComboboxLabel>{item.name}</ComboboxLabel>
+                              </>
+                            ) : (
+                              <>
+                                <ComboboxLabel>{itemLabel(item)}</ComboboxLabel>
+                                <ComboboxDescription>
+                                  {item.code} · {currency.format(item.rate)} /{' '}
+                                  {UNIT_SHORT[item.unit]}
+                                </ComboboxDescription>
+                              </>
+                            )}
                           </ComboboxOption>
                         )}
                       </Combobox>
@@ -445,6 +499,19 @@ export function LineEditor({
           Add line
         </Button>
       </div>
+
+      <QuickItemDialog
+        open={creating !== null}
+        onClose={() => setCreating(null)}
+        initialName={creating?.name ?? ''}
+        onCreated={(item) => {
+          setCreated((current) => [...current, item])
+
+          if (creating) {
+            applyItem(creating.index, item)
+          }
+        }}
+      />
     </div>
   )
 }

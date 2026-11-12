@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { QuickCustomerDialog } from '@/components/quick-customer-dialog'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
 import {
@@ -44,7 +45,7 @@ const num = (value: string) => {
 const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
 
 export function ReceiptForm({
-  customers,
+  customers: initialCustomers,
   initialCustomerId,
   initialInvoices,
 }: {
@@ -59,6 +60,9 @@ export function ReceiptForm({
   )
 
   const [customerId, setCustomerId] = useState(initialCustomerId)
+  const [created, setCreated] = useState<{ id: string; name: string; phone: string }[]>([])
+  const [newCustomerOpen, setNewCustomerOpen] = useState(false)
+  const customers = [...initialCustomers, ...created]
   const [invoices, setInvoices] = useState<OpenInvoice[]>(initialInvoices)
   const [loading, startLoading] = useTransition()
   const [amount, setAmount] = useState('')
@@ -141,6 +145,17 @@ export function ReceiptForm({
                   </option>
                 ))}
               </Select>
+              <Button type="button" plain onClick={() => setNewCustomerOpen(true)}>
+                + New customer
+              </Button>
+              <QuickCustomerDialog
+                open={newCustomerOpen}
+                onClose={() => setNewCustomerOpen(false)}
+                onCreated={(customer) => {
+                  setCreated((current) => [...current, customer])
+                  pickCustomer(customer.id)
+                }}
+              />
               {errors.customerId ? (
                 <ErrorMessage>{errors.customerId}</ErrorMessage>
               ) : null}

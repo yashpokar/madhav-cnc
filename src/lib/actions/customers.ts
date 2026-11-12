@@ -191,3 +191,79 @@ export async function deleteCustomer(id: string) {
 
   return { ok: true as const, message: `${customer.name} deleted` }
 }
+
+export type QuickCustomerResult =
+  | {
+      ok: true
+      customer: {
+        id: string
+        code: string
+        name: string
+        phone: string
+        city: string | null
+        address: string | null
+        pincode: string | null
+        preferredArchitectId: string | null
+        preferredCarpenterId: string | null
+      }
+    }
+  | { ok: false; error: string }
+
+/** Creates a customer from just a name and phone, from inside another form. */
+export async function quickCreateCustomer(input: {
+  name: string
+  phone: string
+  city?: string
+  email?: string
+}): Promise<QuickCustomerResult> {
+  const user = await requireCapability('customer:create')
+
+  const parsed = customerInputSchema.safeParse({
+    name: input.name,
+    phone: input.phone,
+    city: input.city ?? '',
+    email: input.email ?? '',
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const duplicate = await prisma.customer.findFirst({
+    where: { phone: parsed.data.phone },
+    select: { name: true, code: true },
+  })
+
+  if (duplicate) {
+    return {
+      ok: false,
+      error: `${duplicate.name} (${duplicate.code}) already uses that phone number. Search for them instead.`,
+    }
+  }
+
+  const code = await nextCustomerCode()
+
+  const customer = await prisma.customer.create({
+    data: {
+      ...parsed.data,
+      code,
+      createdById: user.id,
+      updatedById: user.id,
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      phone: true,
+      city: true,
+      address: true,
+      pincode: true,
+      preferredArchitectId: true,
+      preferredCarpenterId: true,
+    },
+  })
+
+  revalidatePath('/customers')
+
+  return { ok: true, customer }
+}

@@ -17,6 +17,7 @@ import { FormBanner } from '@/components/form-banner'
 import { getOrder } from '@/lib/queries/orders'
 import { summariseMaterial } from '@/lib/queries/quotations'
 import { listTasksForOrder } from '@/lib/queries/production'
+import { OrderRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteOrder } from '@/lib/actions/orders'
 import { can } from '@/lib/permissions'
@@ -399,6 +400,8 @@ export default async function QuotationDetailPage({
           </div>
         </>
       ) : null}
+
+      <OrderRelated id={order.id} role={user.role} />
     </div>
   )
 }

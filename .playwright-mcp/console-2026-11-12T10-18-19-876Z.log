@@ -1,0 +1,9 @@
+[   50271ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3111/sign-in?_rsc=NOcf6VOLIfPu00vz:1
+[   50271ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3111/manifest.webmanifest:1
+[   52262ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3111/sign-in?_rsc=kg4AtpRHsUNBMDpA:1
+[   52263ms] [ERROR] Failed to fetch RSC payload for http://localhost:3111/sign-in. Falling back to browser navigation. TypeError: Failed to fetch
+    at n (http://localhost:3111/_next/static/chunks/38j93__jkxiyy.js:2:34889)
+    at w (http://localhost:3111/_next/static/chunks/38j93__jkxiyy.js:1:22191)
+    at async S (http://localhost:3111/_next/static/chunks/38j93__jkxiyy.js:1:20150)
+    at async H (http://localhost:3111/_next/static/chunks/38j93__jkxiyy.js:1:31992) @ http://localhost:3111/_next/static/chunks/38j93__jkxiyy.js:1
+[   52265ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3111/sign-in?_rsc=n4HnGKIS6qAv4XlC:1

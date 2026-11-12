@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { CustomerRelated } from '@/components/related-sections'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
@@ -75,6 +76,10 @@ export default async function EditCustomerPage({
           ) : null}
         </nav>
       </div>
+
+      <CustomerRelated id={customer.id} name={customer.name} role={user.role} />
+
+      <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">Customer details</h2>
 
       <CustomerForm
         action={action}

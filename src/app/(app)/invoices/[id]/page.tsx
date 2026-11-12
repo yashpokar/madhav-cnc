@@ -18,6 +18,7 @@ import { PrintButton } from '@/components/print-button'
 import { PaymentTerms } from '@/components/payment-terms'
 import { getInvoice } from '@/lib/queries/invoices'
 import { getCompanySetting } from '@/lib/queries/company'
+import { InvoiceRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteInvoice } from '@/lib/actions/invoices'
 import { can } from '@/lib/permissions'
@@ -424,6 +425,8 @@ export default async function InvoiceDetailPage({
           </div>
         </>
       ) : null}
+
+      <InvoiceRelated id={invoice.id} role={user.role} />
     </div>
   )
 }

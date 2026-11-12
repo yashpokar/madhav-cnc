@@ -4,6 +4,7 @@ import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updateItem } from '@/lib/actions/items'
 import { getItem, listMaterials } from '@/lib/queries/items'
+import { ItemRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { DangerZone } from '@/components/danger-zone'
 import { deleteItem } from '@/lib/actions/items'
@@ -36,6 +37,10 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
           {item.createdBy ? ` · added by ${item.createdBy.name}` : ''}
         </Text>
       </div>
+
+      <ItemRelated id={item.id} role={user.role} />
+
+      <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">Item details</h2>
 
       <ItemForm
         action={action}

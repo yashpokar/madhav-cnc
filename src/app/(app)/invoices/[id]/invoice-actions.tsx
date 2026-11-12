@@ -21,6 +21,7 @@ import {
   type SimpleResult,
 } from '@/lib/actions/invoices'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { whatsappLink } from '@/lib/whatsapp'
 import { InvoiceStatus, PaymentMode } from '@/generated/prisma/enums'
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -36,8 +37,10 @@ export function InvoiceActions({
   canUpdate,
   canTakePayment,
   canCreate,
+  contact,
 }: {
   id: string
+  contact: { name: string; phone: string | null; number: string }
   status: InvoiceStatus
   due: number
   canUpdate: boolean
@@ -100,6 +103,20 @@ export function InvoiceActions({
         {canTakePayment && status === 'ISSUED' && due > 0 ? (
           <Button disabled={pending} onClick={() => setPayOpen(true)}>
             Record payment
+          </Button>
+        ) : null}
+
+        {status === 'ISSUED' && due > 0 ? (
+          <Button
+            outline
+            href={whatsappLink(
+              contact.phone,
+              `Hello ${contact.name}, a gentle reminder from Madhav CNC: invoice ${contact.number} has ${currency.format(due)} outstanding. Kindly arrange the payment. Thank you!`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Remind on WhatsApp
           </Button>
         ) : null}
 

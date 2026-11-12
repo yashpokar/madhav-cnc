@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
 import {
   Table,
@@ -52,7 +53,10 @@ export default async function CustomersPage({
           <Heading>Customers</Heading>
           <Text>{customers.length} record{customers.length === 1 ? '' : 's'}</Text>
         </div>
-        {canCreate ? <Button href="/customers/new">Add customer</Button> : null}
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="customers" search={search} />
+          {canCreate ? <Button href="/customers/new">Add customer</Button> : null}
+        </div>
       </div>
 
       {created ? (

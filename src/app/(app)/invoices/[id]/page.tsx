@@ -122,6 +122,11 @@ export default async function InvoiceDetailPage({
           id={invoice.id}
           status={invoice.status}
           due={invoice.due}
+          contact={{
+            name: invoice.customer.name,
+            phone: invoice.customer.phone,
+            number: invoice.number,
+          }}
           canUpdate={canUpdate}
           canTakePayment={canTakePayment}
           canCreate={can(user.role, 'invoice:create')}

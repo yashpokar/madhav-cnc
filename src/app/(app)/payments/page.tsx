@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
+import { ExportButton } from '@/components/export-button'
 import { Heading, Subheading } from '@/components/catalyst/heading'
 import {
   Table,
@@ -83,7 +84,8 @@ export default async function PaymentsPage() {
           <Heading>Payments</Heading>
           <Text>What is still to be recovered, and what has come in.</Text>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="payments" />
           <Button outline href="/invoices?tab=issued">
             Issued invoices
           </Button>

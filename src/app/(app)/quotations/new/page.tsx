@@ -12,8 +12,11 @@ export const metadata: Metadata = {
   title: 'New quotation',
 }
 
-export default async function NewQuotationPage() {
+export default async function NewQuotationPage({
+  searchParams,
+}: PageProps<'/quotations/new'>) {
   await requireCapability('quotation:create')
+  const params = await searchParams
 
   const [customers, items, architects, carpenters, advancePercent] =
     await Promise.all([
@@ -23,6 +26,12 @@ export default async function NewQuotationPage() {
       listPartnerOptions('CARPENTER'),
       getDefaultAdvancePercent(),
     ])
+
+  const preselected =
+    typeof params.customer === 'string' &&
+    customers.some((customer) => customer.id === params.customer)
+      ? params.customer
+      : null
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -41,7 +50,7 @@ export default async function NewQuotationPage() {
         architects={architects}
         carpenters={carpenters}
         values={{
-          customerId: null,
+          customerId: preselected,
           architectId: null,
           carpenterId: null,
           subject: null,

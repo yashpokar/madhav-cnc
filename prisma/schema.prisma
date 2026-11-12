@@ -470,6 +470,9 @@ model Order {
   number String      @unique
   status OrderStatus @default(DRAFT)
 
+  /// Public, revocable token for the customer-facing tracking page.
+  trackingToken String? @unique @map("tracking_token")
+
   quotationId String?    @map("quotation_id")
   quotation   Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
 

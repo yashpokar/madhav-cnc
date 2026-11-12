@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updateCustomer } from '@/lib/actions/customers'
@@ -46,6 +47,33 @@ export default async function EditCustomerPage({
           {customer.code}
           {customer.createdBy ? ` · added by ${customer.createdBy.name}` : ''}
         </Text>
+        <nav aria-label="Customer records" className="flex flex-wrap gap-2 pt-1">
+          {can(user.role, 'invoice:read') ? (
+            <Button outline href={`/customers/${customer.id}/statement`}>
+              Statement
+            </Button>
+          ) : null}
+          {can(user.role, 'quotation:read') ? (
+            <Button outline href={`/quotations?q=${encodeURIComponent(customer.name)}`}>
+              Quotations
+            </Button>
+          ) : null}
+          {can(user.role, 'order:read') ? (
+            <Button outline href={`/orders?q=${encodeURIComponent(customer.name)}`}>
+              Orders
+            </Button>
+          ) : null}
+          {can(user.role, 'invoice:read') ? (
+            <Button outline href={`/invoices?q=${encodeURIComponent(customer.name)}`}>
+              Invoices
+            </Button>
+          ) : null}
+          {can(user.role, 'quotation:create') ? (
+            <Button href={`/quotations/new?customer=${customer.id}`}>
+              New quotation
+            </Button>
+          ) : null}
+        </nav>
       </div>
 
       <CustomerForm

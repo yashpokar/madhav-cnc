@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -75,7 +76,8 @@ export default async function ExpensesPage({
               : ''}
           </Text>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
+          <ExportButton kind="expenses" search={search} />
           <Button outline href="/expenses/categories">
             Categories
           </Button>

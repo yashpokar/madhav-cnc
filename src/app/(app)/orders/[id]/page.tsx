@@ -33,6 +33,7 @@ import { PrintButton } from '@/components/print-button'
 import { DocumentLetterhead } from '@/components/document-letterhead'
 import { getCompanySetting } from '@/lib/queries/company'
 import { OrderStatusActions } from './status-actions'
+import { TrackingPanel } from './tracking-panel'
 import { ProductionPanel } from './production-panel'
 
 export const metadata: Metadata = {
@@ -162,6 +163,19 @@ export default async function QuotationDetailPage({
         canUpdate={canUpdate}
       />
       </div>
+
+      {canUpdate && order.status !== 'CANCELLED' && order.status !== 'DRAFT' ? (
+        <div className="print:hidden">
+          <TrackingPanel
+            orderId={order.id}
+            orderNumber={order.number}
+            token={order.trackingToken}
+            customerName={order.customer.name}
+            customerPhone={order.customer.phone}
+            baseUrl={process.env.PUBLIC_BASE_URL ?? null}
+          />
+        </div>
+      ) : null}
 
       <Divider className="print:hidden" />
 

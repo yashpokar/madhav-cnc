@@ -127,7 +127,114 @@ export async function createLiteExpense(
   })
 
   revalidatePath('/expenses')
-  redirect(`/cashbook?saved=${expense.number}`)
+  redirect(`/daybook?saved=${expense.number}`)
+}
+
+/**
+ * One row typed straight into the day book. Saves without leaving the page, so
+ * the next row can be typed straight away.
+ */
+export async function quickAddExpense(input: {
+  payeeName: string
+  amount: string
+  mode: string
+  date: string
+}): Promise<SimpleResult> {
+  const user = await requireCapability('expense:create')
+
+  const parsed = expenseInputSchema.safeParse({
+    expenseDate: input.date,
+    payeeName: input.payeeName,
+    amount: input.amount || 0,
+    paymentMode: input.mode,
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const known = await prisma.expense.findFirst({
+    where: { payeeName: { equals: parsed.data.payeeName, mode: 'insensitive' } },
+    select: { payeeName: true },
+  })
+
+  const expense = await prisma.expense.create({
+    data: {
+      number: await nextExpenseNumber(),
+      expenseDate: parsed.data.expenseDate,
+      payeeName: known?.payeeName ?? parsed.data.payeeName,
+      amount: parsed.data.amount,
+      paymentMode: parsed.data.paymentMode,
+      ...amounts(parsed.data),
+      createdById: user.id,
+    },
+  })
+
+  revalidatePath('/daybook')
+  revalidatePath('/expenses')
+
+  return { ok: true, message: `${expense.number} saved`, id: expense.id }
+}
+
+/** Ticks or unticks an entry in the day book's check column. */
+export async function setEntryChecked(
+  kind: 'expense' | 'credit' | 'receipt',
+  id: string,
+  checked: boolean,
+): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+
+  const data = { isChecked: checked }
+
+  try {
+    if (kind === 'expense') await prisma.expense.update({ where: { id }, data })
+    else if (kind === 'credit') await prisma.cashCredit.update({ where: { id }, data })
+    else await prisma.payment.update({ where: { id }, data })
+  } catch {
+    return { ok: false, error: 'Entry not found' }
+  }
+
+  revalidatePath('/daybook')
+
+  return { ok: true, message: checked ? 'Checked' : 'Unchecked' }
+}
+
+/** The same for money received that is not a customer receipt. */
+export async function quickAddCredit(input: {
+  sourceName: string
+  amount: string
+  mode: string
+  date: string
+}): Promise<SimpleResult> {
+  const user = await requireCapability('expense:create')
+
+  const parsed = cashCreditSchema.safeParse({
+    entryDate: input.date,
+    sourceName: input.sourceName,
+    amount: input.amount || 0,
+    mode: input.mode,
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const known = await prisma.cashCredit.findFirst({
+    where: { sourceName: { equals: parsed.data.sourceName, mode: 'insensitive' } },
+    select: { sourceName: true },
+  })
+
+  const credit = await prisma.cashCredit.create({
+    data: {
+      ...parsed.data,
+      sourceName: known?.sourceName ?? parsed.data.sourceName,
+      recordedById: user.id,
+    },
+  })
+
+  revalidatePath('/daybook')
+
+  return { ok: true, message: 'Saved', id: credit.id }
 }
 
 /** Money in that is not a customer receipt; shows on the cash book's CREDIT side. */
@@ -168,8 +275,8 @@ export async function createCashCredit(
     },
   })
 
-  revalidatePath('/cashbook')
-  redirect('/cashbook?savedCredit=1')
+  revalidatePath('/daybook')
+  redirect('/daybook?savedCredit=1')
 }
 
 export async function deleteCashCredit(id: string): Promise<SimpleResult> {
@@ -182,7 +289,7 @@ export async function deleteCashCredit(id: string): Promise<SimpleResult> {
   }
 
   await prisma.cashCredit.delete({ where: { id } })
-  revalidatePath('/cashbook')
+  revalidatePath('/daybook')
 
   return { ok: true, message: 'Credit entry deleted' }
 }

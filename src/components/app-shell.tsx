@@ -72,7 +72,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/payments': CurrencyRupeeIcon,
   '/notes': ArrowsRightLeftIcon,
   '/expenses': CreditCardIcon,
-  '/cashbook': BookOpenIcon,
+  '/daybook': BookOpenIcon,
   '/reports': ChartBarIcon,
   '/admin/users': UsersIcon,
   '/admin/activity': ClockIcon,

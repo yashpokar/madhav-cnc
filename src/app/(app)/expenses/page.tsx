@@ -92,8 +92,8 @@ export default async function ExpensesPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <ExportButton kind="expenses" search={search} />
-          <Button outline href="/cashbook">
-            Cash book
+          <Button outline href="/daybook">
+            Day book
           </Button>
           <Button outline href="/expenses/categories">
             Categories

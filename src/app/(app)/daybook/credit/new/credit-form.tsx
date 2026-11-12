@@ -14,18 +14,15 @@ import { PaymentMode } from '@/generated/prisma/enums'
 
 export function CreditForm({ sources, today }: { sources: string[]; today: string }) {
   const router = useRouter()
-  const [state, formAction, pending] = useActionState<FormState, FormData>(
-    createCashCredit,
-    { status: 'idle' },
-  )
+  const [state, formAction, pending] = useActionState<FormState, FormData>(createCashCredit, {
+    status: 'idle',
+  })
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-8">
-      {state.status === 'error' ? (
-        <FormBanner tone="error">{state.message}</FormBanner>
-      ) : null}
+      {state.status === 'error' ? <FormBanner tone="error">{state.message}</FormBanner> : null}
 
       <FieldGroup>
         <Field>
@@ -80,7 +77,11 @@ export function CreditForm({ sources, today }: { sources: string[]; today: strin
 
         <Field>
           <Label>Note (optional)</Label>
-          <Input name="notes" defaultValue={submitted.notes ?? ''} placeholder="What this was for" />
+          <Input
+            name="notes"
+            defaultValue={submitted.notes ?? ''}
+            placeholder="What this was for"
+          />
         </Field>
       </FieldGroup>
 

@@ -109,7 +109,7 @@ export default async function DashboardPage({
     { href: '/invoices/new', label: 'New invoice', cap: 'invoice:create' },
     { href: '/payments/new', label: 'Record receipt', cap: 'payment:create' },
     { href: '/dispatch/new', label: 'New challan', cap: 'dispatch:create' },
-    { href: '/cashbook', label: 'Cash book', cap: 'expense:read' },
+    { href: '/daybook', label: 'Day book', cap: 'expense:read' },
   ].filter((action) => can(role, action.cap as never))
 
   return (

@@ -65,6 +65,8 @@ export function billedSize(value: number, unit: DimensionUnit): number {
 
 type SizedLine = {
   isFlatRate?: boolean
+  /** false = bill the size exactly as entered. Defaults to true. */
+  autoSize?: boolean
   dimensionUnit: DimensionUnit | null
   length: number | null
   width: number | null
@@ -79,6 +81,7 @@ type SizedLine = {
 export function applySizeRule<T extends SizedLine>(line: T): T {
   if (
     line.isFlatRate ||
+    line.autoSize === false ||
     line.dimensionUnit === null ||
     line.length === null ||
     line.width === null

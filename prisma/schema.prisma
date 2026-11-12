@@ -432,6 +432,7 @@ model QuotationLine {
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
   isFlatRate     Boolean        @default(false) @map("is_flat_rate")
+  autoSize       Boolean        @default(true) @map("auto_size")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
@@ -548,6 +549,7 @@ model OrderLine {
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
   isFlatRate     Boolean        @default(false) @map("is_flat_rate")
+  autoSize       Boolean        @default(true) @map("auto_size")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)

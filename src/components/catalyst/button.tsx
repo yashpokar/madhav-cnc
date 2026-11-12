@@ -59,8 +59,8 @@ const styles = {
   colors: {
     'dark/zinc': [
       'text-white [--btn-bg:var(--color-zinc-900)] [--btn-border:var(--color-zinc-950)]/90 [--btn-hover-overlay:var(--color-white)]/10',
-      'dark:text-white dark:[--btn-bg:var(--color-zinc-600)] dark:[--btn-hover-overlay:var(--color-white)]/5',
-      '[--btn-icon:var(--color-zinc-400)] data-active:[--btn-icon:var(--color-zinc-300)] data-hover:[--btn-icon:var(--color-zinc-300)]',
+      'dark:text-zinc-950 dark:[--btn-bg:var(--color-gold-400)] dark:[--btn-hover-overlay:var(--color-white)]/20',
+      '[--btn-icon:var(--color-gold-300)] data-active:[--btn-icon:var(--color-gold-200)] data-hover:[--btn-icon:var(--color-gold-200)] dark:[--btn-icon:var(--color-zinc-900)]',
     ],
     light: [
       'text-zinc-950 [--btn-bg:white] [--btn-border:var(--color-zinc-950)]/10 [--btn-hover-overlay:var(--color-zinc-950)]/2.5 data-active:[--btn-border:var(--color-zinc-950)]/15 data-hover:[--btn-border:var(--color-zinc-950)]/15',

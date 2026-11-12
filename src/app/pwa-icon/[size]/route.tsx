@@ -26,18 +26,18 @@ export async function GET(
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#18181b',
+          background: '#1b2350',
         }}
       >
         <svg width={mark} height={mark} viewBox="0 0 32 32" fill="none">
           <path
             d="M8.5 22V10.5l4.2 6.2 4.2-6.2V22"
-            stroke="#fff"
+            stroke="#d6a842"
             strokeWidth="2.1"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle cx="22.5" cy="19.5" r="2.6" stroke="#fff" strokeWidth="2.1" />
+          <circle cx="22.5" cy="19.5" r="2.6" stroke="#d6a842" strokeWidth="2.1" />
         </svg>
       </div>
     ),

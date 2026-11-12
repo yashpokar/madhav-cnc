@@ -10,6 +10,39 @@ html[data-theme='dark'] {
   color-scheme: dark;
 }
 
+/*
+ * Brand palette taken from the Madhav CNC logo: deep navy, antique gold and
+ * white. The neutral (zinc) scale is re-tinted navy so every surface, border and
+ * text colour in the app follows the brand without touching each component.
+ */
+@theme {
+  --color-zinc-50: #f6f7fb;
+  --color-zinc-100: #eceef5;
+  --color-zinc-200: #dcdfeb;
+  --color-zinc-300: #bfc5d8;
+  --color-zinc-400: #8b94b0;
+  --color-zinc-500: #646e8c;
+  --color-zinc-600: #4b5472;
+  --color-zinc-700: #394161;
+  --color-zinc-800: #252c4b;
+  --color-zinc-900: #1b2350;
+  --color-zinc-950: #0f1536;
+
+  --color-gold-50: #fbf6e9;
+  --color-gold-100: #f5e9c6;
+  --color-gold-200: #ecd48f;
+  --color-gold-300: #e2bd5f;
+  --color-gold-400: #d6a842;
+  --color-gold-500: #c9962b;
+  --color-gold-600: #a77a1e;
+  --color-gold-700: #82601a;
+}
+
+::selection {
+  background: var(--color-gold-200);
+  color: var(--color-zinc-950);
+}
+
 @theme inline {
   --font-sans: var(--font-inter);
 }

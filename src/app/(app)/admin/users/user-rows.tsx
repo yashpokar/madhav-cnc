@@ -1,5 +1,6 @@
 'use client'
 
+import { LocalTime } from '@/components/local-time'
 import { EllipsisHorizontalIcon } from '@heroicons/react/16/solid'
 import { Avatar } from '@/components/catalyst/avatar'
 import { Badge } from '@/components/catalyst/badge'
@@ -40,14 +41,6 @@ export function initialsOf(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
-}
-
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(value)
 }
 
 function signInMethodOf(user: UserListItem) {
@@ -124,7 +117,7 @@ export function UserRow({
         {signInMethodOf(user)}
       </TableCell>
       <TableCell className="text-zinc-500 dark:text-zinc-400">
-        {formatDate(user.createdAt)}
+        <LocalTime value={user.createdAt} />
       </TableCell>
       <TableCell className="text-right">
         {user.isActive ? (

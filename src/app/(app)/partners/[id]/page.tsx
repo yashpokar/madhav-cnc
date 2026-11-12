@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ActivityTimeline } from '@/components/activity-timeline'
 import { notFound } from 'next/navigation'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
@@ -79,6 +80,8 @@ export default async function EditPartnerPage({
           />
         </DangerZone>
       ) : null}
+
+      <ActivityTimeline entity="partner" id={partner.id} />
     </div>
   )
 }

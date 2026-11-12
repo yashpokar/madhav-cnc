@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { ActivityTimeline } from '@/components/activity-timeline'
+import { LocalTime } from '@/components/local-time'
 import { notFound } from 'next/navigation'
 import { Heading } from '@/components/catalyst/heading'
 import { Divider } from '@/components/catalyst/divider'
@@ -17,12 +19,6 @@ import { DeleteExpense } from './delete-expense'
 export const metadata: Metadata = {
   title: 'Expense',
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function ExpensePage({
   params,
@@ -47,7 +43,7 @@ export default async function ExpensePage({
       <div className="grid grid-cols-1 gap-2">
         <Heading>{expense.number}</Heading>
         <Text>
-          Recorded {dateFormat.format(expense.createdAt)}
+          Recorded <LocalTime value={expense.createdAt} />
           {expense.createdBy ? ` by ${expense.createdBy.name}` : ''}
         </Text>
       </div>
@@ -83,6 +79,8 @@ export default async function ExpensePage({
           <DeleteExpense id={expense.id} />
         </>
       ) : null}
+
+      <ActivityTimeline entity="expense" id={expense.id} />
     </div>
   )
 }

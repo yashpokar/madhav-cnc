@@ -1,5 +1,6 @@
 'use client'
 
+import { LocalTime } from '@/components/local-time'
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/16/solid'
@@ -18,14 +19,6 @@ import type { SimpleResult } from '@/lib/actions/attachments'
 import type { AttachmentItem } from '@/lib/queries/quotations'
 
 const MAX_BYTES = 50 * 1024 * 1024
-
-const timeFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -230,7 +223,7 @@ export function DesignReferences({
                 </span>
                 <span>
                   {formatSize(item.sizeBytes)} ·{' '}
-                  {timeFormat.format(item.createdAt)}
+                  <LocalTime value={item.createdAt} />
                   {item.uploadedBy ? ` · ${item.uploadedBy.name}` : ''}
                 </span>
               </figcaption>
@@ -310,7 +303,7 @@ export function DesignReferences({
                 <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">
                   <div className="truncate">{item.fileName}</div>
                   <Badge color="zinc">
-                    Removed {item.removedAt ? timeFormat.format(item.removedAt) : ''}
+                    Removed {item.removedAt ? <LocalTime value={item.removedAt} /> : ''}
                   </Badge>
                 </div>
                 {editable ? (

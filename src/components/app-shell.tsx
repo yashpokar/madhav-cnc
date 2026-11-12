@@ -9,6 +9,7 @@ import {
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
   ChartBarIcon,
+  ClockIcon,
   ChevronDownIcon,
   MagnifyingGlassIcon,
   MoonIcon,
@@ -74,6 +75,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/cashbook': BookOpenIcon,
   '/reports': ChartBarIcon,
   '/admin/users': UsersIcon,
+  '/admin/activity': ClockIcon,
   '/settings/company': BuildingStorefrontIcon,
 }
 

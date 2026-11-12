@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ActivityTimeline } from '@/components/activity-timeline'
 import { notFound } from 'next/navigation'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
@@ -84,6 +85,8 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
           />
         </DangerZone>
       ) : null}
+
+      <ActivityTimeline entity="item" id={item.id} />
     </div>
   )
 }

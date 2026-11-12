@@ -1,13 +1,5 @@
+import { LocalTime } from '@/components/local-time'
 import { listActivity, type ActivityEntity } from '@/lib/activity'
-
-const stamp = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Kolkata',
-})
 
 /** Who did what to this record, newest first. Hidden when printing. */
 export async function ActivityTimeline({
@@ -47,12 +39,9 @@ export async function ActivityTimeline({
                 <span className="font-medium">{item.userName ?? 'Someone'}</span>{' '}
                 {item.summary}
               </p>
-              <time
-                dateTime={item.createdAt.toISOString()}
-                className="text-xs/5 text-zinc-500 dark:text-zinc-400"
-              >
-                {stamp.format(item.createdAt)}
-              </time>
+              <span className="text-xs/5 text-zinc-500 dark:text-zinc-400">
+                <LocalTime value={item.createdAt} withZone />
+              </span>
             </li>
           ))}
         </ol>

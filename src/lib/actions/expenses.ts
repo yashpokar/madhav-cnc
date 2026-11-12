@@ -83,6 +83,52 @@ export async function createExpense(
   redirect(`/expenses?created=${expense.number}`)
 }
 
+/** The light entry: vendor, amount, payment method (and a date, default today). */
+export async function createLiteExpense(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireCapability('expense:create')
+
+  const parsed = expenseInputSchema.safeParse({
+    expenseDate: formData.get('expenseDate'),
+    payeeName: formData.get('payeeName'),
+    amount: formData.get('amount') || 0,
+    paymentMode: formData.get('paymentMode') ?? undefined,
+  })
+
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      message: 'Please correct the highlighted fields',
+      fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
+    }
+  }
+
+  // Match an existing vendor's spelling so "ABC traders" and "Abc Traders"
+  // don't become two vendors.
+  const known = await prisma.expense.findFirst({
+    where: { payeeName: { equals: parsed.data.payeeName, mode: 'insensitive' } },
+    select: { payeeName: true },
+  })
+
+  const expense = await prisma.expense.create({
+    data: {
+      number: await nextExpenseNumber(),
+      expenseDate: parsed.data.expenseDate,
+      payeeName: known?.payeeName ?? parsed.data.payeeName,
+      amount: parsed.data.amount,
+      paymentMode: parsed.data.paymentMode,
+      ...amounts(parsed.data),
+      createdById: user.id,
+    },
+  })
+
+  revalidatePath('/expenses')
+  redirect(`/cashbook?saved=${expense.number}`)
+}
+
 export async function updateExpense(
   id: string,
   _previous: FormState,

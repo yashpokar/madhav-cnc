@@ -20,6 +20,7 @@ import {
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
 } from '@/lib/labels'
+import { FEATURES } from '@/lib/features'
 import { can } from '@/lib/permissions'
 import {
   customerRelated,
@@ -240,7 +241,7 @@ async function CustomerBody({ id, name, role }: { id: string; name: string; role
           allHref={`/payments?q=${q}`}
         />
       ) : null}
-      {can(role, 'note:read') ? (
+      {FEATURES.notes && can(role, 'note:read') ? (
         <RelatedTable
           title="Credit & debit notes"
           count={data.notes.count}
@@ -530,7 +531,7 @@ export function QuotationRelated(props: {
 async function InvoiceBody({ id, role }: { id: string; role: UserRole }) {
   const data = await invoiceRelated(id)
 
-  return can(role, 'note:read') ? (
+  return FEATURES.notes && can(role, 'note:read') ? (
     <RelatedTable
       title="Credit & debit notes"
       count={data.notes.length}

@@ -9,10 +9,11 @@ import { documentTotals, lineTotals, splitGst, sameState } from '@/lib/pricing'
 import {
   invoiceInputSchema,
   paymentInputSchema,
+  writeOffInputSchema,
 } from '@/lib/validation/invoices'
 import type { InvoiceData } from '@/lib/validation/invoices'
 import { logActivity } from '@/lib/activity'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { PAYMENT_MODE_LABELS, WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -345,6 +346,7 @@ export async function recordPayment(
       customerId: true,
       advanceAdjusted: true,
       paymentAllocations: { select: { amount: true } },
+      writeOffs: { select: { amount: true } },
     },
   })
 
@@ -369,8 +371,15 @@ export async function recordPayment(
     (sum, allocation) => sum + allocation.amount.toNumber(),
     0,
   )
+  const writtenOff = invoice.writeOffs.reduce(
+    (sum, row) => sum + row.amount.toNumber(),
+    0,
+  )
   const due =
-    invoice.total.toNumber() - invoice.advanceAdjusted.toNumber() - alreadyPaid
+    invoice.total.toNumber() -
+    invoice.advanceAdjusted.toNumber() -
+    alreadyPaid -
+    writtenOff
 
   if (parsed.data.amount > due + 0.005) {
     return {
@@ -466,6 +475,116 @@ export async function removeAllocation(
       ? `${allocation.payment.number} removed`
       : `${allocation.payment.number} unapplied from this invoice and moved back on account`,
   }
+}
+
+export async function writeOffInvoice(
+  invoiceId: string,
+  input: {
+    amount: string
+    reason: string
+    notes?: string
+    writtenOffOn: string
+  },
+): Promise<SimpleResult> {
+  const user = await requireCapability('payment:update')
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      status: true,
+      total: true,
+      advanceAdjusted: true,
+      paymentAllocations: { select: { amount: true } },
+      writeOffs: { select: { amount: true } },
+    },
+  })
+
+  if (!invoice) {
+    return { ok: false, error: 'Invoice not found' }
+  }
+
+  if (invoice.status !== 'ISSUED') {
+    return { ok: false, error: 'Only an issued invoice can be written off' }
+  }
+
+  const parsed = writeOffInputSchema.safeParse(input)
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const sum = (rows: { amount: { toNumber: () => number } }[]) =>
+    rows.reduce((total, row) => total + row.amount.toNumber(), 0)
+  const due =
+    invoice.total.toNumber() -
+    invoice.advanceAdjusted.toNumber() -
+    sum(invoice.paymentAllocations) -
+    sum(invoice.writeOffs)
+
+  if (parsed.data.amount > due + 0.005) {
+    return {
+      ok: false,
+      error: `Only ₹${Math.round(due * 100) / 100} is outstanding on this invoice`,
+    }
+  }
+
+  if (parsed.data.reason === 'OTHER' && !parsed.data.notes) {
+    return { ok: false, error: 'Add a note explaining why this is not recoverable' }
+  }
+
+  await prisma.invoiceWriteOff.create({
+    data: {
+      invoiceId,
+      amount: parsed.data.amount,
+      reason: parsed.data.reason,
+      notes: parsed.data.notes,
+      writtenOffOn: parsed.data.writtenOffOn,
+      recordedById: user.id,
+    },
+  })
+
+  await logActivity({
+    entity: 'invoice',
+    id: invoiceId,
+    action: 'write-off',
+    summary: `wrote off ₹${inr.format(parsed.data.amount)} as not recoverable (${WRITE_OFF_REASON_LABELS[parsed.data.reason]})`,
+    actor: actorOf(user),
+  })
+
+  revalidatePath('/invoices')
+  revalidatePath(`/invoices/${invoiceId}`)
+  revalidatePath('/customers')
+
+  return { ok: true, message: 'Marked as not recoverable' }
+}
+
+export async function removeWriteOff(writeOffId: string): Promise<SimpleResult> {
+  const user = await requireCapability('payment:update')
+
+  const row = await prisma.invoiceWriteOff.findUnique({
+    where: { id: writeOffId },
+    select: { invoiceId: true, amount: true },
+  })
+
+  if (!row) {
+    return { ok: false, error: 'Write-off not found' }
+  }
+
+  await prisma.invoiceWriteOff.delete({ where: { id: writeOffId } })
+
+  await logActivity({
+    entity: 'invoice',
+    id: row.invoiceId,
+    action: 'write-off',
+    summary: `reversed a write-off of ₹${inr.format(row.amount.toNumber())}; it is outstanding again`,
+    actor: actorOf(user),
+  })
+
+  revalidatePath('/invoices')
+  revalidatePath(`/invoices/${row.invoiceId}`)
+  revalidatePath('/customers')
+
+  return { ok: true, message: 'Write-off reversed' }
 }
 
 export async function suggestInterState(

@@ -128,6 +128,7 @@ export function CategoriesManager({
                       </Button>
                       <Button
                         plain
+                        className="text-red-600! dark:text-red-400! [--btn-icon:var(--color-red-500)]!"
                         aria-label={`Delete ${category.name}`}
                         disabled={pending}
                         onClick={() => remove(category.id)}

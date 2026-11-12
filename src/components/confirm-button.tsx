@@ -12,6 +12,10 @@ import {
 } from '@/components/catalyst/dialog'
 import { FormBanner } from '@/components/form-banner'
 
+/** Red trigger styling; `!` beats the zinc text set by Catalyst's outline/plain. */
+export const DANGER_TRIGGER =
+  'text-red-600! border-red-300! data-hover:bg-red-50! data-active:bg-red-50! [--btn-icon:var(--color-red-500)]! dark:text-red-400! dark:border-red-400/30! dark:data-hover:bg-red-400/10! dark:data-active:bg-red-400/10!'
+
 type Result = { ok: true; message: string; id?: string } | { ok: false; error: string }
 
 /**
@@ -80,6 +84,7 @@ export function ConfirmButton({
         type="button"
         {...(outline ? { outline: true } : { plain: true })}
         disabled={disabled}
+        className={tone === 'danger' ? DANGER_TRIGGER : undefined}
         onClick={() => setOpen(true)}
       >
         {children ?? label}

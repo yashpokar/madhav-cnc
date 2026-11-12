@@ -4,6 +4,7 @@ import {
   InvoiceStatus,
   MaterialSupply,
   PaymentMode,
+  WriteOffReason,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
 
@@ -83,6 +84,16 @@ export const paymentInputSchema = z.object({
   reference: optionalText(120),
   paidOn: requiredDate,
   notes: optionalText(500),
+})
+
+export const writeOffInputSchema = z.object({
+  amount: z.coerce
+    .number()
+    .gt(0, 'Amount must be greater than zero')
+    .max(99_999_999),
+  reason: z.enum(WriteOffReason),
+  notes: optionalText(500),
+  writtenOffOn: requiredDate,
 })
 
 export type InvoiceData = z.output<typeof invoiceInputSchema>

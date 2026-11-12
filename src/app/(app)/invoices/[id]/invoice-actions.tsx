@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
-import { ConfirmButton } from '@/components/confirm-button'
+import { ConfirmButton, DANGER_TRIGGER } from '@/components/confirm-button'
 import { Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import {
@@ -17,12 +17,14 @@ import {
   removeAllocation,
   duplicateInvoice,
   recordPayment,
+  removeWriteOff,
   setInvoiceStatus,
+  writeOffInvoice,
   type SimpleResult,
 } from '@/lib/actions/invoices'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { PAYMENT_MODE_LABELS, WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { whatsappLink } from '@/lib/whatsapp'
-import { InvoiceStatus, PaymentMode } from '@/generated/prisma/enums'
+import { InvoiceStatus, PaymentMode, WriteOffReason } from '@/generated/prisma/enums'
 
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -36,6 +38,7 @@ export function InvoiceActions({
   due,
   canUpdate,
   canTakePayment,
+  canWriteOff,
   canCreate,
   contact,
 }: {
@@ -45,6 +48,7 @@ export function InvoiceActions({
   due: number
   canUpdate: boolean
   canTakePayment: boolean
+  canWriteOff: boolean
   canCreate: boolean
 }) {
   const router = useRouter()
@@ -55,6 +59,11 @@ export function InvoiceActions({
   const [mode, setMode] = useState<PaymentMode>('UPI')
   const [reference, setReference] = useState('')
   const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10))
+  const [offOpen, setOffOpen] = useState(false)
+  const [offAmount, setOffAmount] = useState(String(due > 0 ? due : ''))
+  const [offReason, setOffReason] = useState<WriteOffReason>('CUSTOMER_UNREACHABLE')
+  const [offNotes, setOffNotes] = useState('')
+  const [offOn, setOffOn] = useState(new Date().toISOString().slice(0, 10))
 
   function run(action: () => Promise<SimpleResult>, after?: () => void) {
     startTransition(async () => {
@@ -106,6 +115,17 @@ export function InvoiceActions({
           </Button>
         ) : null}
 
+        {canWriteOff && status === 'ISSUED' && due > 0 ? (
+          <Button
+            outline
+            className={DANGER_TRIGGER}
+            disabled={pending}
+            onClick={() => setOffOpen(true)}
+          >
+            Mark not recoverable
+          </Button>
+        ) : null}
+
         {status === 'ISSUED' && due > 0 ? (
           <Button
             outline
@@ -149,6 +169,86 @@ export function InvoiceActions({
           </Button>
         ) : null}
       </div>
+
+      {offOpen ? (
+        <div className="grid max-w-xl grid-cols-1 gap-4 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+          <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
+            Use this when money on this invoice will not be collected. It stops
+            counting as owed, but stays on record with the reason, so you can
+            see the customer&apos;s history later.
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field>
+              <Label>Amount not recoverable</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                max={due}
+                value={offAmount}
+                autoFocus
+                onChange={(event) => setOffAmount(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <Label>Reason</Label>
+              <Listbox value={offReason} onChange={setOffReason}>
+                {Object.values(WriteOffReason).map((value) => (
+                  <ListboxOption key={value} value={value}>
+                    <ListboxLabel>{WRITE_OFF_REASON_LABELS[value]}</ListboxLabel>
+                  </ListboxOption>
+                ))}
+              </Listbox>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field>
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={offOn}
+                onChange={(event) => setOffOn(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <Label>Note{offReason === 'OTHER' ? '' : ' (optional)'}</Label>
+              <Input
+                value={offNotes}
+                placeholder="What happened, who you spoke to"
+                onChange={(event) => setOffNotes(event.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              disabled={pending || Number(offAmount) <= 0}
+              onClick={() =>
+                run(
+                  () =>
+                    writeOffInvoice(id, {
+                      amount: offAmount,
+                      reason: offReason,
+                      notes: offNotes.trim() || undefined,
+                      writtenOffOn: offOn,
+                    }),
+                  () => {
+                    setOffOpen(false)
+                    setOffNotes('')
+                  },
+                )
+              }
+            >
+              Mark not recoverable
+            </Button>
+            <Button plain onClick={() => setOffOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+          <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
+            {currency.format(due)} outstanding
+          </div>
+        </div>
+      ) : null}
 
       {payOpen ? (
         <div className="grid max-w-xl grid-cols-1 gap-4 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
@@ -250,6 +350,32 @@ export function RemovePaymentButton({
     >
       <TrashIcon className="size-4" aria-hidden="true" />
       <span className="sr-only">Unapply payment</span>
+    </ConfirmButton>
+  )
+}
+
+export function RemoveWriteOffButton({
+  writeOffId,
+  canUpdate,
+}: {
+  writeOffId: string
+  canUpdate: boolean
+}) {
+  if (!canUpdate) {
+    return null
+  }
+
+  return (
+    <ConfirmButton
+      outline={false}
+      label="Reverse write-off"
+      title="Reverse this write-off?"
+      description="The amount will count as outstanding on this invoice and the customer's balance again."
+      confirmLabel="Reverse"
+      action={() => removeWriteOff(writeOffId)}
+    >
+      <TrashIcon className="size-4" aria-hidden="true" />
+      <span className="sr-only">Reverse write-off</span>
     </ConfirmButton>
   )
 }

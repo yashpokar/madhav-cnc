@@ -56,6 +56,7 @@ export async function getReceivables(today = new Date()) {
         customer: { select: { id: true, name: true, phone: true } },
         order: { select: { id: true, number: true } },
         paymentAllocations: { select: { amount: true } },
+        writeOffs: { select: { amount: true } },
       },
     }),
     prisma.creditDebitNote.findMany({
@@ -116,8 +117,12 @@ export async function getReceivables(today = new Date()) {
         (sum, allocation) => sum + num(allocation.amount),
         0,
       )
+      const writtenOff = invoice.writeOffs.reduce(
+        (sum, row) => sum + num(row.amount),
+        0,
+      )
       const due = round2(
-        num(invoice.total) - num(invoice.advanceAdjusted) - paid,
+        num(invoice.total) - num(invoice.advanceAdjusted) - paid - writtenOff,
       )
       const reference = invoice.dueDate ?? invoice.invoiceDate
       const overdueBy = daysOverdue(reference, today)
@@ -328,3 +333,118 @@ export async function getReceivables(today = new Date()) {
 }
 
 export type Receivables = Awaited<ReturnType<typeof getReceivables>>
+
+/**
+ * One row per customer: what was billed, what came in, what is still due and
+ * what was written off as not recoverable ("defaulted").
+ */
+export async function getCustomerLedger(today = new Date()) {
+  const [invoices, payments] = await Promise.all([
+    prisma.invoice.findMany({
+      where: { status: 'ISSUED' },
+      select: {
+        total: true,
+        advanceAdjusted: true,
+        invoiceDate: true,
+        dueDate: true,
+        customer: { select: { id: true, name: true, phone: true } },
+        paymentAllocations: { select: { amount: true } },
+        writeOffs: { select: { amount: true } },
+      },
+    }),
+    prisma.payment.groupBy({
+      by: ['customerId'],
+      _sum: { amount: true },
+    }),
+  ])
+
+  type Row = {
+    id: string
+    name: string
+    phone: string
+    billed: number
+    received: number
+    due: number
+    overdue: number
+    defaulted: number
+    oldestDays: number
+  }
+
+  const rows = new Map<string, Row>()
+
+  for (const invoice of invoices) {
+    const row = rows.get(invoice.customer.id) ?? {
+      id: invoice.customer.id,
+      name: invoice.customer.name,
+      phone: invoice.customer.phone,
+      billed: 0,
+      received: 0,
+      due: 0,
+      overdue: 0,
+      defaulted: 0,
+      oldestDays: 0,
+    }
+
+    const paid = invoice.paymentAllocations.reduce(
+      (sum, a) => sum + num(a.amount),
+      0,
+    )
+    const writtenOff = invoice.writeOffs.reduce(
+      (sum, w) => sum + num(w.amount),
+      0,
+    )
+    const due = round2(
+      num(invoice.total) - num(invoice.advanceAdjusted) - paid - writtenOff,
+    )
+
+    row.billed = round2(row.billed + num(invoice.total))
+    row.defaulted = round2(row.defaulted + writtenOff)
+
+    if (due > 0) {
+      const late = daysOverdue(invoice.dueDate ?? invoice.invoiceDate, today)
+
+      row.due = round2(row.due + due)
+      if (late > 0) {
+        row.overdue = round2(row.overdue + due)
+        row.oldestDays = Math.max(row.oldestDays, late)
+      }
+    }
+
+    rows.set(row.id, row)
+  }
+
+  const received = new Map(
+    payments.map((p) => [p.customerId, p._sum.amount ? num(p._sum.amount) : 0]),
+  )
+
+  const missing = [...received.keys()].filter((id) => !rows.has(id))
+
+  if (missing.length > 0) {
+    const customers = await prisma.customer.findMany({
+      where: { id: { in: missing } },
+      select: { id: true, name: true, phone: true },
+    })
+
+    for (const customer of customers) {
+      rows.set(customer.id, {
+        ...customer,
+        billed: 0,
+        received: 0,
+        due: 0,
+        overdue: 0,
+        defaulted: 0,
+        oldestDays: 0,
+      })
+    }
+  }
+
+  for (const row of rows.values()) {
+    row.received = round2(received.get(row.id) ?? 0)
+  }
+
+  return [...rows.values()].sort(
+    (a, b) => b.due - a.due || b.defaulted - a.defaulted || a.name.localeCompare(b.name),
+  )
+}
+
+export type CustomerLedgerRow = Awaited<ReturnType<typeof getCustomerLedger>>[number]

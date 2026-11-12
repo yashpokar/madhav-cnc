@@ -27,6 +27,7 @@ export async function openInvoiceBalances(
       paymentAllocations: {
         select: { amount: true, paymentId: true },
       },
+      writeOffs: { select: { amount: true } },
     },
   })
 
@@ -36,6 +37,11 @@ export async function openInvoiceBalances(
         .filter((allocation) => allocation.paymentId !== ignorePaymentId)
         .reduce((sum, allocation) => sum + num(allocation.amount), 0)
 
+      const writtenOff = invoice.writeOffs.reduce(
+        (sum, row) => sum + num(row.amount),
+        0,
+      )
+
       return {
         id: invoice.id,
         number: invoice.number,
@@ -43,7 +49,9 @@ export async function openInvoiceBalances(
         dueDate: invoice.dueDate,
         total: num(invoice.total),
         paid: round2(paid + num(invoice.advanceAdjusted)),
-        due: round2(num(invoice.total) - num(invoice.advanceAdjusted) - paid),
+        due: round2(
+          num(invoice.total) - num(invoice.advanceAdjusted) - paid - writtenOff,
+        ),
       }
     })
     .filter((invoice) => invoice.due > 0)
@@ -188,6 +196,55 @@ export async function customerAccount(customerId: string) {
         unallocated: round2(num(receipt.amount) - allocated),
       }
     }),
+  }
+}
+
+export async function customerFinancials(customerId: string) {
+  const [account, billed, writeOffs] = await Promise.all([
+    customerAccount(customerId),
+    prisma.invoice.aggregate({
+      where: { customerId, status: 'ISSUED' },
+      _sum: { total: true },
+      _count: { _all: true },
+    }),
+    prisma.invoiceWriteOff.findMany({
+      where: { invoice: { customerId } },
+      orderBy: [{ writtenOffOn: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        amount: true,
+        reason: true,
+        notes: true,
+        writtenOffOn: true,
+        invoice: { select: { id: true, number: true } },
+      },
+    }),
+  ])
+
+  if (!account) {
+    return null
+  }
+
+  const today = new Date().setHours(0, 0, 0, 0)
+  const overdue = round2(
+    account.invoices
+      .filter((invoice) => invoice.dueDate && invoice.dueDate.getTime() < today)
+      .reduce((sum, invoice) => sum + invoice.due, 0),
+  )
+  const rows = writeOffs.map((row) => ({ ...row, amount: num(row.amount) }))
+
+  return {
+    billed: billed._sum.total ? num(billed._sum.total) : 0,
+    invoiceCount: billed._count._all,
+    received: round2(
+      account.receipts.reduce((sum, receipt) => sum + receipt.amount, 0),
+    ),
+    outstanding: account.due,
+    overdue,
+    onAccount: account.onAccount,
+    credit: account.credit,
+    writtenOff: round2(rows.reduce((sum, row) => sum + row.amount, 0)),
+    writeOffs: rows,
   }
 }
 

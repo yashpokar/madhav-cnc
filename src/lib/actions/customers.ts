@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
 import { requireCapability } from '@/lib/session'
 import { nextCustomerCode } from '@/lib/codes'
 import { customerInputSchema } from '@/lib/validation/customers'
@@ -97,6 +98,14 @@ export async function createCustomer(
     },
   })
 
+  await logActivity({
+    entity: 'customer',
+    id: customer.id,
+    action: 'created',
+    summary: 'created the customer',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/customers')
   redirect(`/customers?created=${encodeURIComponent(customer.code)}`)
 }
@@ -136,6 +145,14 @@ export async function updateCustomer(
   const customer = await prisma.customer.update({
     where: { id },
     data: { ...parsed.data, updatedById: user.id },
+  })
+
+  await logActivity({
+    entity: 'customer',
+    id,
+    action: 'updated',
+    summary: 'edited the customer details',
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath('/customers')
@@ -261,6 +278,14 @@ export async function quickCreateCustomer(input: {
       preferredArchitectId: true,
       preferredCarpenterId: true,
     },
+  })
+
+  await logActivity({
+    entity: 'customer',
+    id: customer.id,
+    action: 'created',
+    summary: 'created the customer from another form',
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath('/customers')

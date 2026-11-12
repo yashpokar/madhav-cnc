@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { can } from '@/lib/permissions'
+import { logActivity } from '@/lib/activity'
 import { invalidateApproval } from '@/lib/reapproval'
 import {
   ALLOWED_MIME_TYPES,
@@ -98,6 +99,16 @@ export async function POST(
     quotation.id,
     'Design reference added',
   )
+
+  await logActivity({
+    entity: 'quotation',
+    id: quotation.id,
+    action: 'attachment',
+    summary: wasApproved
+      ? `added the image ${attachment.fileName}; the customer approval was cleared`
+      : `added the image ${attachment.fileName}`,
+    actor: { id: user.id, name: user.name },
+  })
 
   return NextResponse.json({ ok: true, attachment, approvalCleared: wasApproved })
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import {
   OrderStatus,
@@ -154,9 +155,27 @@ export async function setTaskStatus(
 
   const moved = await syncOrderFromStages(task.orderId)
 
-  revalidateFor(task.orderId)
-
   const stageName = task.stage.name
+
+  const verbs: Record<ProductionTaskStatus, string> = {
+    PENDING: 'moved back to pending',
+    IN_PROGRESS: 'started',
+    ON_HOLD: 'put on hold',
+    DONE: 'completed',
+    SKIPPED: 'skipped',
+  }
+
+  await logActivity({
+    entity: 'order',
+    id: task.orderId,
+    action: 'production',
+    summary: moved
+      ? `${verbs[status]} ${stageName}; the order is now ${moved.toLowerCase().replace('_', ' ')}`
+      : `${verbs[status]} ${stageName}`,
+    actor: { id: user.id, name: user.name },
+  })
+
+  revalidateFor(task.orderId)
 
   if (moved) {
     return {
@@ -172,11 +191,11 @@ export async function assignTask(
   taskId: string,
   userId: string | null,
 ): Promise<SimpleResult> {
-  await requireCapability('production:update')
+  const user = await requireCapability('production:update')
 
   const task = await prisma.productionTask.findUnique({
     where: { id: taskId },
-    select: { orderId: true },
+    select: { orderId: true, stage: { select: { name: true } } },
   })
 
   if (!task) {
@@ -186,6 +205,23 @@ export async function assignTask(
   await prisma.productionTask.update({
     where: { id: taskId },
     data: { assignedToId: userId },
+  })
+
+  const assignee = userId
+    ? await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      })
+    : null
+
+  await logActivity({
+    entity: 'order',
+    id: task.orderId,
+    action: 'production',
+    summary: assignee
+      ? `assigned ${task.stage.name} to ${assignee.name}`
+      : `cleared the assignment on ${task.stage.name}`,
+    actor: { id: user.id, name: user.name },
   })
 
   revalidateFor(task.orderId)
@@ -218,6 +254,16 @@ export async function startProduction(orderId: string): Promise<SimpleResult> {
     await prisma.order.update({
       where: { id: orderId },
       data: { status: 'IN_PRODUCTION', updatedById: user.id },
+    })
+  }
+
+  if (order.status === 'CONFIRMED' || created > 0) {
+    await logActivity({
+      entity: 'order',
+      id: orderId,
+      action: 'status',
+      summary: `started production with ${created} stage${created === 1 ? '' : 's'}`,
+      actor: { id: user.id, name: user.name },
     })
   }
 

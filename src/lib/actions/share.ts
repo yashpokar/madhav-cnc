@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import { findShareByToken, shareIsUsable } from '@/lib/queries/share'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
@@ -46,6 +47,14 @@ export async function createShareLink(
     select: { token: true },
   })
 
+  await logActivity({
+    entity: 'quotation',
+    id: quotationId,
+    action: 'shared',
+    summary: 'shared the customer link',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath(`/quotations/${quotationId}`)
 
   return { ok: true, message: 'Share link created', id: share.token }
@@ -54,7 +63,7 @@ export async function createShareLink(
 export async function revokeShareLink(
   quotationId: string,
 ): Promise<SimpleResult> {
-  await requireCapability('quotation:update')
+  const user = await requireCapability('quotation:update')
 
   const result = await prisma.quotationShare.updateMany({
     where: { quotationId, isRevoked: false },
@@ -64,6 +73,14 @@ export async function revokeShareLink(
   if (result.count === 0) {
     return { ok: false, error: 'No active link to revoke' }
   }
+
+  await logActivity({
+    entity: 'quotation',
+    id: quotationId,
+    action: 'shared',
+    summary: 'revoked the customer link',
+    actor: { id: user.id, name: user.name },
+  })
 
   revalidatePath(`/quotations/${quotationId}`)
 
@@ -128,6 +145,21 @@ export async function respondToShare(input: {
     }
   })
 
+  const note = parsed.data.note
+    ? `: “${parsed.data.note.length > 120 ? `${parsed.data.note.slice(0, 117)}…` : parsed.data.note}”`
+    : ''
+
+  await logActivity({
+    entity: 'quotation',
+    id: share.quotationId,
+    action: 'customer-response',
+    summary:
+      parsed.data.decision === 'ACCEPTED'
+        ? `approved the quotation on the customer link (signed as ${parsed.data.name})${note}`
+        : `asked for changes on the customer link (${parsed.data.name})${note}`,
+    actor: null,
+  })
+
   revalidatePath(`/quotations/${share.quotationId}`)
   revalidatePath('/quotations')
 
@@ -184,6 +216,14 @@ export async function addCustomerComment(input: {
     },
   })
 
+  await logActivity({
+    entity: 'quotation',
+    id: share.quotationId,
+    action: 'comment',
+    summary: `commented on the customer link (${parsed.data.name})`,
+    actor: null,
+  })
+
   revalidatePath(`/quotations/${share.quotationId}`)
 
   return { ok: true, message: 'Comment added' }
@@ -210,6 +250,14 @@ export async function addStaffComment(
       authorType: 'STAFF',
       authorUserId: user.id,
     },
+  })
+
+  await logActivity({
+    entity: 'quotation',
+    id: quotationId,
+    action: 'comment',
+    summary: 'added a comment',
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath(`/quotations/${quotationId}`)

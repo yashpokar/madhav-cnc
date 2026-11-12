@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import { nextQuotationNumber } from '@/lib/codes'
 import { copyUpload, deleteUpload } from '@/lib/storage'
 import { invalidateApproval } from '@/lib/reapproval'
@@ -167,6 +168,14 @@ export async function createQuotation(
     },
   })
 
+  await logActivity({
+    entity: 'quotation',
+    id: quotation.id,
+    action: 'created',
+    summary: 'created the quotation',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/quotations')
   redirect(`/quotations/${quotation.id}?created=1`)
 }
@@ -241,6 +250,16 @@ export async function updateQuotation(
 
   const wasApproved = await invalidateApproval(id, 'Quotation amended')
 
+  await logActivity({
+    entity: 'quotation',
+    id,
+    action: 'updated',
+    summary: wasApproved
+      ? 'edited the quotation (customer approval cleared)'
+      : 'edited the quotation',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/quotations')
   revalidatePath(`/quotations/${id}`)
 
@@ -291,6 +310,14 @@ export async function setQuotationStatus(
   await prisma.quotation.update({
     where: { id },
     data: { status, updatedById: user.id },
+  })
+
+  await logActivity({
+    entity: 'quotation',
+    id,
+    action: 'status',
+    summary: `marked the quotation as ${status.toLowerCase()}`,
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath('/quotations')
@@ -395,6 +422,23 @@ export async function createRevision(id: string): Promise<SimpleResult> {
         })),
       },
     },
+  })
+
+  const actor = { id: user.id, name: user.name }
+
+  await logActivity({
+    entity: 'quotation',
+    id: created.id,
+    action: 'created',
+    summary: `created revision R${revision} from R${source.revision}`,
+    actor,
+  })
+  await logActivity({
+    entity: 'quotation',
+    id: source.id,
+    action: 'revised',
+    summary: `created revision R${revision}`,
+    actor,
   })
 
   revalidatePath('/quotations')

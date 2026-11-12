@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
@@ -11,7 +12,7 @@ export type { SimpleResult }
 export async function createTrackingLink(
   orderId: string,
 ): Promise<SimpleResult> {
-  await requireCapability('order:update')
+  const user = await requireCapability('order:update')
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -37,6 +38,14 @@ export async function createTrackingLink(
     data: { trackingToken: token },
   })
 
+  await logActivity({
+    entity: 'order',
+    id: orderId,
+    action: 'tracking',
+    summary: 'created the tracking link',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath(`/orders/${orderId}`)
 
   return { ok: true, message: 'Tracking link created', id: token }
@@ -45,7 +54,7 @@ export async function createTrackingLink(
 export async function revokeTrackingLink(
   orderId: string,
 ): Promise<SimpleResult> {
-  await requireCapability('order:update')
+  const user = await requireCapability('order:update')
 
   const result = await prisma.order.updateMany({
     where: { id: orderId, trackingToken: { not: null } },
@@ -55,6 +64,14 @@ export async function revokeTrackingLink(
   if (result.count === 0) {
     return { ok: false, error: 'There is no active tracking link' }
   }
+
+  await logActivity({
+    entity: 'order',
+    id: orderId,
+    action: 'tracking',
+    summary: 'revoked the tracking link',
+    actor: { id: user.id, name: user.name },
+  })
 
   revalidatePath(`/orders/${orderId}`)
 

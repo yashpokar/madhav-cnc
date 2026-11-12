@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
 import { requireCapability } from '@/lib/session'
 import { nextNoteNumber } from '@/lib/codes'
 import { documentTotals, lineTotals, splitGst } from '@/lib/pricing'
@@ -135,6 +136,14 @@ export async function createNote(
     },
   })
 
+  await logActivity({
+    entity: 'note',
+    id: note.id,
+    action: 'created',
+    summary: 'created the note',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/notes')
   redirect(`/notes/${note.id}?created=1`)
 }
@@ -193,6 +202,14 @@ export async function updateNote(
     }),
   ])
 
+  await logActivity({
+    entity: 'note',
+    id,
+    action: 'updated',
+    summary: 'edited the note',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/notes')
   revalidatePath(`/notes/${id}`)
 
@@ -221,6 +238,19 @@ export async function setNoteStatus(
   await prisma.creditDebitNote.update({
     where: { id },
     data: { status, updatedById: user.id },
+  })
+
+  await logActivity({
+    entity: 'note',
+    id,
+    action: 'status',
+    summary:
+      status === 'ISSUED'
+        ? 'issued the note'
+        : status === 'CANCELLED'
+          ? 'cancelled the note'
+          : 'moved the note back to draft',
+    actor: { id: user.id, name: user.name },
   })
 
   revalidatePath('/notes')

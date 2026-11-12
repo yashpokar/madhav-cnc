@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
 import { requireCapability } from '@/lib/session'
 import { nextPaymentNumber } from '@/lib/codes'
 import { round2 } from '@/lib/pricing'
@@ -132,6 +133,14 @@ export async function createReceipt(
     },
   })
 
+  await logActivity({
+    entity: 'payment',
+    id: payment.id,
+    action: 'created',
+    summary: 'recorded the receipt',
+    actor: { id: user.id, name: user.name },
+  })
+
   revalidatePath('/payments')
   revalidatePath('/invoices')
   redirect(`/payments/${payment.id}?created=1`)
@@ -141,7 +150,7 @@ export async function updateAllocations(
   paymentId: string,
   requested: { invoiceId: string; amount: number }[],
 ): Promise<SimpleResult> {
-  await requireCapability('payment:update')
+  const user = await requireCapability('payment:update')
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
@@ -171,6 +180,26 @@ export async function updateAllocations(
       }),
     ),
   ])
+
+  const actor = { id: user.id, name: user.name }
+
+  await logActivity({
+    entity: 'payment',
+    id: paymentId,
+    action: 'updated',
+    summary: 'changed how the receipt is applied',
+    actor,
+  })
+
+  for (const row of checked.rows) {
+    await logActivity({
+      entity: 'invoice',
+      id: row.invoiceId,
+      action: 'payment',
+      summary: `applied receipt ${payment.number} (₹${new Intl.NumberFormat('en-IN').format(row.amount)})`,
+      actor,
+    })
+  }
 
   revalidatePath('/payments')
   revalidatePath(`/payments/${paymentId}`)

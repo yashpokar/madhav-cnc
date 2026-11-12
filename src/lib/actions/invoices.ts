@@ -11,6 +11,7 @@ import {
   paymentInputSchema,
 } from '@/lib/validation/invoices'
 import type { InvoiceData } from '@/lib/validation/invoices'
+import { detailsFromOrderLine } from '@/lib/line-details'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { InvoiceStatus } from '@/generated/prisma/enums'
@@ -72,6 +73,9 @@ function buildPersistable(data: InvoiceData) {
       description: line.description,
       hsnCode: line.hsnCode,
       unit: line.unit,
+      materialName: line.materialName,
+      materialSupply: line.materialSupply,
+      sizeText: line.sizeText,
       quantity: line.quantity,
       rate: line.rate,
       discountPercent: line.discountPercent,
@@ -100,6 +104,37 @@ function buildPersistable(data: InvoiceData) {
   }
 }
 
+async function persistInvoice(data: InvoiceData, userId: string) {
+  const { totals, lines } = buildPersistable(data)
+  const number = await nextInvoiceNumber()
+
+  return prisma.invoice.create({
+    data: {
+      number,
+      status: data.status,
+      orderId: data.orderId,
+      customerId: data.customerId,
+      invoiceDate: data.invoiceDate,
+      dueDate: data.dueDate,
+      placeOfSupply: data.placeOfSupply,
+      isInterState: data.isInterState,
+      billingAddress: data.billingAddress,
+      customerGstin: data.customerGstin,
+      discountType: data.discountType,
+      discountValue: data.discountValue,
+      transportCharge: data.transportCharge,
+      transportTaxRatePercent: data.transportTaxRatePercent,
+      advanceAdjusted: data.advanceAdjusted,
+      notes: data.notes,
+      terms: data.terms,
+      ...totals,
+      createdById: userId,
+      updatedById: userId,
+      lines: { create: lines },
+    },
+  })
+}
+
 export async function createInvoice(
   _previous: FormState,
   formData: FormData,
@@ -125,34 +160,7 @@ export async function createInvoice(
     return { status: 'error', message: 'Customer not found' }
   }
 
-  const { totals, lines } = buildPersistable(parsed.data)
-  const number = await nextInvoiceNumber()
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      number,
-      status: parsed.data.status,
-      orderId: parsed.data.orderId,
-      customerId: parsed.data.customerId,
-      invoiceDate: parsed.data.invoiceDate,
-      dueDate: parsed.data.dueDate,
-      placeOfSupply: parsed.data.placeOfSupply,
-      isInterState: parsed.data.isInterState,
-      billingAddress: parsed.data.billingAddress,
-      customerGstin: parsed.data.customerGstin,
-      discountType: parsed.data.discountType,
-      discountValue: parsed.data.discountValue,
-      transportCharge: parsed.data.transportCharge,
-      transportTaxRatePercent: parsed.data.transportTaxRatePercent,
-      advanceAdjusted: parsed.data.advanceAdjusted,
-      notes: parsed.data.notes,
-      terms: parsed.data.terms,
-      ...totals,
-      createdById: user.id,
-      updatedById: user.id,
-      lines: { create: lines },
-    },
-  })
+  const invoice = await persistInvoice(parsed.data, user.id)
 
   revalidatePath('/invoices')
   redirect(`/invoices/${invoice.id}?created=1`)
@@ -457,6 +465,9 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
           description: line.description,
           hsnCode: line.hsnCode,
           unit: line.unit,
+          materialName: line.materialName,
+          materialSupply: line.materialSupply,
+          sizeText: line.sizeText,
           quantity: line.quantity,
           rate: line.rate,
           discountPercent: line.discountPercent,
@@ -522,4 +533,144 @@ export async function deleteInvoice(id: string): Promise<SimpleResult> {
   revalidatePath('/invoices')
 
   return { ok: true, message: `${invoice.number} deleted` }
+}
+
+/**
+ * One-click draft invoice for a completed order, using the order's lines,
+ * discount, transport and advance, and the customer's billing details and
+ * payment terms. The draft is opened for review before it is issued.
+ */
+export async function quickCreateInvoiceFromOrder(
+  orderId: string,
+): Promise<SimpleResult> {
+  const user = await requireCapability('invoice:create')
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      discountType: true,
+      discountValue: true,
+      transportCharge: true,
+      transportTaxRatePercent: true,
+      advanceAmount: true,
+      terms: true,
+      customer: {
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          pincode: true,
+          gstin: true,
+          paymentTermsDays: true,
+        },
+      },
+      lines: {
+        orderBy: { position: 'asc' },
+        select: {
+          itemId: true,
+          description: true,
+          hsnCode: true,
+          unit: true,
+          materialSupply: true,
+          dimensionUnit: true,
+          length: true,
+          width: true,
+          pieces: true,
+          item: { select: { material: { select: { name: true } } } },
+          quantity: true,
+          rate: true,
+          discountPercent: true,
+          taxRatePercent: true,
+        },
+      },
+      invoices: {
+        where: { status: { not: 'CANCELLED' } },
+        select: { id: true, number: true },
+      },
+    },
+  })
+
+  if (!order) {
+    return { ok: false, error: 'Order not found' }
+  }
+
+  if (order.status !== 'COMPLETED') {
+    return { ok: false, error: 'Mark the order completed before invoicing it' }
+  }
+
+  if (order.invoices.length > 0) {
+    return {
+      ok: false,
+      error: `Already invoiced as ${order.invoices.map((invoice) => invoice.number).join(', ')}`,
+      }
+  }
+
+  const company = await prisma.companySetting.findUnique({
+    where: { id: 'default' },
+    select: { invoiceTerms: true },
+  })
+
+  const today = new Date()
+  const iso = (date: Date) => date.toISOString().slice(0, 10)
+  const termsDays = order.customer.paymentTermsDays
+
+  const parsed = invoiceInputSchema.safeParse({
+    customerId: order.customer.id,
+    orderId: order.id,
+    invoiceDate: iso(today),
+    dueDate: termsDays
+      ? iso(new Date(today.getTime() + termsDays * 86_400_000))
+      : '',
+    status: 'DRAFT',
+    placeOfSupply: order.customer.state ?? '',
+    isInterState: await suggestInterState(order.customer.state),
+    billingAddress: [
+      order.customer.address,
+      order.customer.city,
+      order.customer.pincode,
+    ]
+      .filter(Boolean)
+      .join(', '),
+    customerGstin: order.customer.gstin ?? '',
+    discountType: order.discountType,
+    discountValue: order.discountValue.toNumber(),
+    transportCharge: order.transportCharge.toNumber(),
+    transportTaxRatePercent: order.transportTaxRatePercent.toNumber(),
+    advanceAdjusted: order.advanceAmount.toNumber(),
+    notes: '',
+    terms: order.terms ?? company?.invoiceTerms ?? '',
+    lines: order.lines.map((line) => ({
+      itemId: line.itemId ?? '',
+      description: line.description,
+      hsnCode: line.hsnCode ?? '',
+      unit: line.unit,
+      ...detailsFromOrderLine(line),
+      quantity: line.quantity.toNumber(),
+      rate: line.rate.toNumber(),
+      discountPercent: line.discountPercent.toNumber(),
+      taxRatePercent: line.taxRatePercent.toNumber(),
+    })),
+  })
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: `Could not build the invoice: ${parsed.error.issues[0].message}. Use New invoice to fix it by hand.`,
+    }
+  }
+
+  const invoice = await persistInvoice(parsed.data, user.id)
+
+  revalidatePath('/invoices')
+  revalidatePath(`/orders/${order.id}`)
+
+  return {
+    ok: true,
+    message: `Draft ${invoice.number} created`,
+    id: invoice.id,
+  }
 }

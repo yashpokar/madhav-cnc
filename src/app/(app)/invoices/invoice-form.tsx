@@ -26,7 +26,8 @@ import { FormBanner } from '@/components/form-banner'
 import { UNIT_SHORT } from '@/lib/labels'
 import { documentTotals, splitGst } from '@/lib/pricing'
 import type { FormState } from '@/lib/actions/invoices'
-import { DiscountType, UnitOfMeasure } from '@/generated/prisma/enums'
+import { describeLineDetails } from '@/lib/line-details'
+import { DiscountType, MaterialSupply, UnitOfMeasure } from '@/generated/prisma/enums'
 
 export type InvoiceLineValue = {
   key: string
@@ -34,6 +35,10 @@ export type InvoiceLineValue = {
   description: string
   hsnCode: string | null
   unit: UnitOfMeasure
+  /** What was supplied; carried from the order and shown on the invoice. */
+  materialName?: string | null
+  materialSupply?: MaterialSupply | null
+  sizeText?: string | null
   quantity: string
   rate: string
   discountPercent: string
@@ -141,6 +146,9 @@ export function InvoiceForm({
       description: line.description,
       hsnCode: line.hsnCode,
       unit: line.unit,
+      materialName: line.materialName ?? null,
+      materialSupply: line.materialSupply ?? null,
+      sizeText: line.sizeText ?? null,
       quantity: line.quantity,
       rate: line.rate,
       discountPercent: line.discountPercent,
@@ -270,6 +278,11 @@ export function InvoiceForm({
                         update(index, { description: event.target.value })
                       }
                     />
+                    {describeLineDetails(line) ? (
+                      <p className="mt-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
+                        {describeLineDetails(line)}
+                      </p>
+                    ) : null}
                   </td>
                   <td data-label="HSN" data-half className="py-2 pr-3">
                     <Input

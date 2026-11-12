@@ -33,6 +33,8 @@ import { PrintButton } from '@/components/print-button'
 import { DocumentLetterhead } from '@/components/document-letterhead'
 import { getCompanySetting } from '@/lib/queries/company'
 import { OrderStatusActions } from './status-actions'
+import { activeInvoicesForOrder } from '@/lib/queries/invoices'
+import { QuickInvoiceButton } from './quick-invoice-button'
 import { TrackingPanel } from './tracking-panel'
 import { ProductionPanel } from './production-panel'
 
@@ -71,6 +73,11 @@ export default async function QuotationDetailPage({
   }
 
   const tasks = await listTasksForOrder(order.id)
+  const canInvoice = can(user.role, 'invoice:create')
+  const activeInvoices =
+    order.status === 'COMPLETED' && can(user.role, 'invoice:read')
+      ? await activeInvoicesForOrder(order.id)
+      : []
   const canUpdateProduction = can(user.role, 'production:update')
 
   const materialSummary = summariseMaterial(order.lines)
@@ -145,6 +152,36 @@ export default async function QuotationDetailPage({
         <FormBanner tone="success">
           Order {order.number} created
         </FormBanner>
+      ) : null}
+
+      {order.status === 'COMPLETED' && canInvoice && activeInvoices.length === 0 ? (
+        <section
+          aria-label="Invoice"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-lime-50 p-3 ring-1 ring-lime-950/10 print:hidden dark:bg-lime-400/10 dark:ring-lime-400/20"
+        >
+          <div className="min-w-0 flex-1 basis-64">
+            <div className="text-sm/6 font-medium text-zinc-950 dark:text-white">
+              This order is completed and not invoiced yet
+            </div>
+            <div className="text-sm/6 text-zinc-600 dark:text-zinc-300">
+              Creates a draft from the order lines, material, sizes and the
+              customer&apos;s billing details. You review it before issuing.
+            </div>
+          </div>
+          <QuickInvoiceButton orderId={order.id} />
+        </section>
+      ) : null}
+
+      {order.status === 'COMPLETED' && activeInvoices.length > 0 ? (
+        <p className="text-sm/6 text-zinc-600 print:hidden dark:text-zinc-300">
+          Invoiced as{' '}
+          {activeInvoices.map((invoice, index) => (
+            <span key={invoice.id}>
+              {index > 0 ? ', ' : ''}
+              <TextLink href={`/invoices/${invoice.id}`}>{invoice.number}</TextLink>
+            </span>
+          ))}
+        </p>
       ) : null}
 
       <DocumentLetterhead

@@ -19,6 +19,7 @@ import {
   getProductionWatch,
   getQuoteWatch,
 } from '@/lib/queries/dashboard'
+import { listReadyToInvoice } from '@/lib/queries/invoices'
 import { getReceivables } from '@/lib/queries/receivables'
 import { countPendingUsers } from '@/lib/queries/users'
 import { requireUser } from '@/lib/session'
@@ -72,7 +73,7 @@ export default async function DashboardPage() {
   const canMoney = can(role, 'invoice:read')
   const isAdmin = can(role, 'user:update')
 
-  const [quotes, orders, production, dispatch, money, receivables, pending] =
+  const [quotes, orders, production, dispatch, money, receivables, pending, toInvoice] =
     await Promise.all([
       canQuotes ? getQuoteWatch() : null,
       canOrders ? getOrderWatch() : null,
@@ -81,6 +82,7 @@ export default async function DashboardPage() {
       canMoney ? getMoneyWatch() : null,
       canMoney ? getReceivables() : null,
       isAdmin ? countPendingUsers() : 0,
+      canMoney && can(role, 'invoice:create') ? listReadyToInvoice() : null,
     ])
 
   const quickActions = [
@@ -273,6 +275,25 @@ export default async function DashboardPage() {
                     ? `Valid to ${shortDate.format(quotation.validUntil)}`
                     : undefined
                 }
+              />
+            ))}
+          </Panel>
+        ) : null}
+
+        {toInvoice && toInvoice.count > 0 ? (
+          <Panel
+            title={`Ready to invoice (${toInvoice.count})`}
+            href="/invoices/new"
+            linkLabel="Pick an order"
+            empty=""
+          >
+            {toInvoice.orders.map((order) => (
+              <Row
+                key={order.id}
+                href={`/orders/${order.id}`}
+                title={`${order.number} · ${order.customer.name}`}
+                subtitle="Completed"
+                trailing={inr.format(order.total)}
               />
             ))}
           </Panel>

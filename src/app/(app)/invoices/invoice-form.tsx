@@ -39,6 +39,7 @@ export type InvoiceLineValue = {
   materialName?: string | null
   materialSupply?: MaterialSupply | null
   sizeText?: string | null
+  specText?: string | null
   quantity: string
   rate: string
   discountPercent: string
@@ -149,6 +150,7 @@ export function InvoiceForm({
       materialName: line.materialName ?? null,
       materialSupply: line.materialSupply ?? null,
       sizeText: line.sizeText ?? null,
+      specText: line.specText ?? null,
       quantity: line.quantity,
       rate: line.rate,
       discountPercent: line.discountPercent,

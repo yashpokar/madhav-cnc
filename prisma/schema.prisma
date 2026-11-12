@@ -949,6 +949,8 @@ model InvoiceLine {
   materialName   String?         @map("material_name")
   materialSupply MaterialSupply? @map("material_supply")
   sizeText       String?         @map("size_text")
+  // Brand, shade and thickness of the item, e.g. "Greenply · Shade 12 · 18 mm".
+  specText       String?         @map("spec_text")
 
   quantity        Decimal @db.Decimal(12, 3)
   rate            Decimal @db.Decimal(12, 2)

@@ -41,6 +41,7 @@ export const invoiceLineSchema = z.object({
     .optional()
     .transform((value) => (value ? value : null)),
   sizeText: optionalText(100),
+  specText: optionalText(150),
   quantity: z.coerce
     .number()
     .gt(0, 'Quantity must be greater than zero')

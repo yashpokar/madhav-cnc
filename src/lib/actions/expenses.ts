@@ -271,3 +271,42 @@ export async function deleteExpenseCategory(
 
   return { ok: true, message: `${category.name} removed` }
 }
+
+export type QuickCategoryResult =
+  | { ok: true; category: { id: string; name: string } }
+  | { ok: false; error: string }
+
+/** Adds an expense category from inside the expense form. */
+export async function quickCreateExpenseCategory(
+  name: string,
+): Promise<QuickCategoryResult> {
+  await requireCapability('expense:create')
+
+  const parsed = expenseCategorySchema.safeParse({
+    name,
+    sortOrder: 0,
+    isActive: true,
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const existing = await prisma.expenseCategory.findFirst({
+    where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
+    select: { id: true, name: true },
+  })
+
+  if (existing) {
+    return { ok: true, category: existing }
+  }
+
+  const category = await prisma.expenseCategory.create({
+    data: parsed.data,
+    select: { id: true, name: true },
+  })
+
+  revalidatePath('/expenses/categories')
+
+  return { ok: true, category }
+}

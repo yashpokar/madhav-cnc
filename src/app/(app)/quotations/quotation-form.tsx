@@ -19,17 +19,12 @@ import {
   ListboxLabel,
   ListboxOption,
 } from '@/components/catalyst/listbox'
-import {
-  Combobox,
-  ComboboxDescription,
-  ComboboxLabel,
-  ComboboxOption,
-} from '@/components/catalyst/combobox'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
 import { PartnerCombobox } from '@/components/partner-combobox'
 import { documentTotals } from '@/lib/pricing'
 import type { FormState } from '@/lib/actions/quotations'
+import { CustomerCombobox } from '@/components/customer-combobox'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
 import { DiscountType } from '@/generated/prisma/enums'
@@ -183,37 +178,11 @@ export function QuotationForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field className="sm:col-span-2">
               <Label>Customer</Label>
-              <Combobox<CustomerOption | null>
+              <CustomerCombobox
                 options={customers}
                 value={customer}
                 onChange={pickCustomer}
-                placeholder="Search customers…"
-                displayValue={(option) => option?.name ?? ''}
-                filter={(option, query) => {
-                  if (!option) return true
-                  const haystack = [
-                    option.name,
-                    option.code,
-                    option.phone,
-                    option.city,
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-                    .toLowerCase()
-                  return haystack.includes(query.toLowerCase())
-                }}
-              >
-                {(option) => (
-                  <ComboboxOption value={option}>
-                    <ComboboxLabel>{option.name}</ComboboxLabel>
-                    <ComboboxDescription>
-                      {[option.code, option.phone, option.city]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </ComboboxDescription>
-                  </ComboboxOption>
-                )}
-              </Combobox>
+              />
               {errors.customerId ? (
                 <ErrorMessage>{errors.customerId}</ErrorMessage>
               ) : (

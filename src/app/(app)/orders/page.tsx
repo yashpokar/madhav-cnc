@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { ListControls } from '@/components/list-controls'
+import { applyListControls } from '@/lib/list-controls'
+import { RowActions } from '@/components/row-actions'
+import { deleteOrder } from '@/lib/actions/orders'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
@@ -63,6 +69,14 @@ export default async function OrdersPage({
 
   const orders = await listOrders({ status: activeTab.status, search })
   const canCreate = can(user.role, 'order:create')
+  const canEdit = can(user.role, 'order:update')
+  const canDelete = can(user.role, 'order:delete')
+
+  const sorted = applyListControls(orders, params, {
+    date: (row) => row.orderDate,
+    amount: (row) => row.total,
+  })
+  const paged = paginate(sorted, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -112,7 +126,14 @@ export default async function OrdersPage({
         <SearchField placeholder="Search number, customer, PO…" />
       </div>
 
-      {orders.length === 0 ? (
+      <ListControls params={params} pathname="/orders" amountLabel="Total" />
+
+      {orders.length > 0 && sorted.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          description="Nothing falls in this amount range. Widen it or clear the filter."
+        />
+      ) : orders.length === 0 ? (
         <EmptyState
           title={search ? 'No matches' : 'No orders yet'}
           description={
@@ -127,6 +148,7 @@ export default async function OrdersPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -138,10 +160,11 @@ export default async function OrdersPage({
               <TableHeader className="text-right">Lines</TableHeader>
               <TableHeader className="text-right">Total</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {orders.map((order) => (
+            {paged.rows.map((order) => (
               <TableRow key={order.id} href={`/orders/${order.id}`}>
                 <TableCell className="font-mono text-xs">
                   {order.number}
@@ -184,10 +207,25 @@ export default async function OrdersPage({
                     {ORDER_STATUS_LABELS[order.status]}
                   </Badge>
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={order.number}
+                    viewHref={`/orders/${order.id}`}
+                    editHref={canEdit && (order.status === 'DRAFT' || order.status === 'CONFIRMED') ? `/orders/${order.id}/edit` : undefined}
+                    deleteAction={
+                      canDelete && (order.status === 'DRAFT' || order.status === 'CANCELLED')
+                        ? deleteOrder.bind(null, order.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${order.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/orders" />
+</>
       )}
     </div>
   )

@@ -31,9 +31,14 @@ import {
   PAYMENT_MODE_LABELS,
   PAYMENT_STATE_COLORS,
   PAYMENT_STATE_LABELS,
+  WRITE_OFF_REASON_LABELS,
   UNIT_SHORT,
 } from '@/lib/labels'
-import { InvoiceActions, RemovePaymentButton } from './invoice-actions'
+import {
+  InvoiceActions,
+  RemovePaymentButton,
+  RemoveWriteOffButton,
+} from './invoice-actions'
 
 export const metadata: Metadata = {
   title: 'Invoice',
@@ -72,6 +77,7 @@ export default async function InvoiceDetailPage({
   const canUpdate = can(user.role, 'invoice:update')
   const canTakePayment = can(user.role, 'payment:create')
   const canDeletePayment = can(user.role, 'payment:delete')
+  const canWriteOff = can(user.role, 'payment:update')
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -132,6 +138,7 @@ export default async function InvoiceDetailPage({
           }}
           canUpdate={canUpdate}
           canTakePayment={canTakePayment}
+          canWriteOff={canWriteOff}
           canCreate={can(user.role, 'invoice:create')}
         />
       </div>
@@ -362,6 +369,14 @@ export default async function InvoiceDetailPage({
               </dd>
             </>
           ) : null}
+          {invoice.writtenOff > 0 ? (
+            <>
+              <dt className="text-zinc-500 dark:text-zinc-400">Written off</dt>
+              <dd className="text-right tabular-nums">
+                −{currency.format(invoice.writtenOff)}
+              </dd>
+            </>
+          ) : null}
           <dt className="font-medium">Due</dt>
           <dd className="text-right text-base/6 font-semibold tabular-nums">
             {currency.format(invoice.due)}
@@ -411,6 +426,54 @@ export default async function InvoiceDetailPage({
                         <RemovePaymentButton
                           allocationId={payment.id}
                           canDelete={canDeletePayment}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {invoice.writeOffs.length > 0 ? (
+        <>
+          <Divider />
+          <div>
+            <Subheading level={2}>Not recoverable</Subheading>
+            <div className="mt-4">
+              <Table dense grid>
+                <TableHead>
+                  <TableRow>
+                    <TableHeader>Date</TableHeader>
+                    <TableHeader>Reason</TableHeader>
+                    <TableHeader>Note</TableHeader>
+                    <TableHeader>By</TableHeader>
+                    <TableHeader className="text-right">Amount</TableHeader>
+                    <TableHeader className="text-right print:hidden" />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {invoice.writeOffs.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-zinc-500 dark:text-zinc-400">
+                        {dateFormat.format(row.writtenOffOn)}
+                      </TableCell>
+                      <TableCell>{WRITE_OFF_REASON_LABELS[row.reason]}</TableCell>
+                      <TableCell className="whitespace-normal text-zinc-500 dark:text-zinc-400">
+                        {row.notes ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-zinc-500 dark:text-zinc-400">
+                        {row.recordedBy?.name ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {currency.format(row.amount)}
+                      </TableCell>
+                      <TableCell className="text-right print:hidden">
+                        <RemoveWriteOffButton
+                          writeOffId={row.id}
+                          canUpdate={canWriteOff}
                         />
                       </TableCell>
                     </TableRow>

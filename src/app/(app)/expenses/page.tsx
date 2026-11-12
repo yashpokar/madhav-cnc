@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { ListControls } from '@/components/list-controls'
+import { applyListControls } from '@/lib/list-controls'
+import { RowActions } from '@/components/row-actions'
+import { deleteExpense } from '@/lib/actions/expenses'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
@@ -59,10 +65,18 @@ export default async function ExpensesPage({
   ])
 
   const canCreate = can(user.role, 'expense:create')
+  const canEdit = can(user.role, 'expense:update')
+  const canDelete = can(user.role, 'expense:delete')
   const spent = expenses.reduce((sum, expense) => sum + expense.total, 0)
   const credit = expenses
     .filter((expense) => expense.isInputCredit)
     .reduce((sum, expense) => sum + expense.taxAmount, 0)
+
+  const sorted = applyListControls(expenses, params, {
+    date: (row) => row.expenseDate,
+    amount: (row) => row.total,
+  })
+  const paged = paginate(sorted, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -78,6 +92,9 @@ export default async function ExpensesPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <ExportButton kind="expenses" search={search} />
+          <Button outline href="/cashbook">
+            Cash book
+          </Button>
           <Button outline href="/expenses/categories">
             Categories
           </Button>
@@ -138,7 +155,14 @@ export default async function ExpensesPage({
         <SearchField placeholder="Search payee, bill, note…" />
       </div>
 
-      {expenses.length === 0 ? (
+      <ListControls params={params} pathname="/expenses" amountLabel="Total" />
+
+      {expenses.length > 0 && sorted.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          description="Nothing falls in this amount range. Widen it or clear the filter."
+        />
+      ) : expenses.length === 0 ? (
         <EmptyState
           title={search ? 'No matches' : 'No expenses yet'}
           description={
@@ -153,6 +177,7 @@ export default async function ExpensesPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -163,10 +188,11 @@ export default async function ExpensesPage({
               <TableHeader>Mode</TableHeader>
               <TableHeader className="text-right">Tax</TableHeader>
               <TableHeader className="text-right">Total</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {expenses.map((expense) => (
+            {paged.rows.map((expense) => (
               <TableRow key={expense.id} href={`/expenses/${expense.id}`}>
                 <TableCell className="font-mono text-xs">
                   {expense.number}
@@ -208,10 +234,25 @@ export default async function ExpensesPage({
                 <TableCell className="text-right font-medium tabular-nums">
                   {currency.format(expense.total)}
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={expense.number}
+                    
+                    editHref={canEdit && (true) ? `/expenses/${expense.id}` : undefined}
+                    deleteAction={
+                      canDelete && (true)
+                        ? deleteExpense.bind(null, expense.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${expense.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/expenses" />
+</>
       )}
     </div>
   )

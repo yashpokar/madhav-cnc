@@ -21,6 +21,25 @@ export async function listExpenseCategories(activeOnly = false) {
   })
 }
 
+/** Every vendor name used on an expense so far, A to Z, ignoring case. */
+export async function listExpenseVendors() {
+  const rows = await prisma.expense.findMany({
+    distinct: ['payeeName'],
+    select: { payeeName: true },
+    orderBy: { payeeName: 'asc' },
+  })
+  const seen = new Set<string>()
+
+  return rows
+    .map((row) => row.payeeName.trim())
+    .filter((name) => {
+      const key = name.toLowerCase()
+      if (!name || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
 export async function listExpenses({
   search,
   categoryId,

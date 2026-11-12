@@ -58,6 +58,7 @@ model User {
   invoicesCreated Invoice[] @relation("InvoiceCreatedBy")
   invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
   paymentsRecorded Payment[] @relation("PaymentRecordedBy")
+  writeOffsRecorded InvoiceWriteOff[] @relation("WriteOffRecordedBy")
   dispatchesCreated Dispatch[] @relation("DispatchCreatedBy")
   dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
   sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
@@ -914,6 +915,7 @@ model Invoice {
 
   lines    InvoiceLine[]
   paymentAllocations PaymentAllocation[]
+  writeOffs InvoiceWriteOff[]
   creditDebitNotes CreditDebitNote[]
 
   createdById String? @map("created_by_id")
@@ -967,6 +969,40 @@ model InvoiceLine {
   @@index([invoiceId])
   @@index([itemId])
   @@map("invoice_lines")
+}
+
+// Money on an invoice that will not be collected. It reduces what is owed (so
+// the customer's balance and receivables stay honest) but is kept as its own
+// record with a reason, so bad-debt history can be reviewed later, e.g. before
+// taking a new order from the same customer.
+enum WriteOffReason {
+  CUSTOMER_UNREACHABLE
+  DISPUTE
+  QUALITY_ISSUE
+  BUSINESS_CLOSED
+  SETTLED_FOR_LESS
+  LEGAL_ACTION
+  OTHER
+}
+
+model InvoiceWriteOff {
+  id String @id @default(cuid())
+
+  invoiceId String  @map("invoice_id")
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount       Decimal        @db.Decimal(14, 2)
+  reason       WriteOffReason
+  notes        String?
+  writtenOffOn DateTime       @map("written_off_on") @db.Date
+
+  recordedById String? @map("recorded_by_id")
+  recordedBy   User?   @relation("WriteOffRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([invoiceId])
+  @@map("invoice_write_offs")
 }
 
 model Payment {

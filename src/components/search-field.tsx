@@ -14,7 +14,12 @@ export function SearchField({ placeholder }: { placeholder: string }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      // Only act when the text actually changed, so moving between pages
+      // does not bounce back to page 1.
+      if (value.trim() === (searchParams.get('q') ?? '')) return
+
       const params = new URLSearchParams(searchParams.toString())
+      params.delete('page')
 
       if (value.trim()) {
         params.set('q', value.trim())

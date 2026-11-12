@@ -19,8 +19,9 @@ import {
   getProductionWatch,
   getQuoteWatch,
 } from '@/lib/queries/dashboard'
+import { OverallStatement } from '@/components/overall-statement'
 import { listReadyToInvoice } from '@/lib/queries/invoices'
-import { getReceivables } from '@/lib/queries/receivables'
+import { getCustomerLedger, getReceivables } from '@/lib/queries/receivables'
 import { countPendingUsers } from '@/lib/queries/users'
 import { requireUser } from '@/lib/session'
 
@@ -62,7 +63,22 @@ function isLate(date: Date | null) {
   )
 }
 
-export default async function DashboardPage() {
+const OUTSTANDING_FILTERS = [
+  { key: 'all', label: 'All due' },
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'defaulted', label: 'Defaulted' },
+] as const
+
+export default async function DashboardPage({
+  searchParams,
+}: PageProps<'/'>) {
+  const query = await searchParams
+  const picked = Array.isArray(query.outstanding)
+    ? query.outstanding[0]
+    : query.outstanding
+  const filter =
+    OUTSTANDING_FILTERS.find((f) => f.key === picked)?.key ?? 'all'
+
   const user = await requireUser()
   const role = user.role
 
@@ -73,7 +89,7 @@ export default async function DashboardPage() {
   const canMoney = can(role, 'invoice:read')
   const isAdmin = can(role, 'user:update')
 
-  const [quotes, orders, production, dispatch, money, receivables, pending, toInvoice] =
+  const [quotes, orders, production, dispatch, money, receivables, ledger, pending, toInvoice] =
     await Promise.all([
       canQuotes ? getQuoteWatch() : null,
       canOrders ? getOrderWatch() : null,
@@ -81,6 +97,7 @@ export default async function DashboardPage() {
       canDispatch ? getDispatchWatch() : null,
       canMoney ? getMoneyWatch() : null,
       canMoney ? getReceivables() : null,
+      canMoney && can(role, 'payment:read') ? getCustomerLedger() : null,
       isAdmin ? countPendingUsers() : 0,
       canMoney && can(role, 'invoice:create') ? listReadyToInvoice() : null,
     ])
@@ -92,6 +109,7 @@ export default async function DashboardPage() {
     { href: '/invoices/new', label: 'New invoice', cap: 'invoice:create' },
     { href: '/payments/new', label: 'Record receipt', cap: 'payment:create' },
     { href: '/dispatch/new', label: 'New challan', cap: 'dispatch:create' },
+    { href: '/cashbook', label: 'Cash book', cap: 'expense:read' },
   ].filter((action) => can(role, action.cap as never))
 
   return (
@@ -299,6 +317,100 @@ export default async function DashboardPage() {
           </Panel>
         ) : null}
 
+        {ledger ? (
+          <section className="rounded-lg ring-1 ring-zinc-950/10 lg:col-span-2 dark:ring-white/10">
+            <header className="flex flex-wrap items-center justify-between gap-3 px-3 pt-3">
+              <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">
+                Outstanding by customer
+              </h2>
+              <div className="flex items-center gap-3">
+                <nav aria-label="Filter outstanding" className="flex gap-1">
+                  {OUTSTANDING_FILTERS.map((f) => (
+                    <Link
+                      key={f.key}
+                      href={f.key === 'all' ? '/' : `/?outstanding=${f.key}`}
+                      aria-current={filter === f.key ? 'true' : undefined}
+                      className={
+                        filter === f.key
+                          ? 'rounded-md bg-zinc-950 px-2 py-0.5 text-xs/5 font-medium text-white dark:bg-white dark:text-zinc-950'
+                          : 'rounded-md px-2 py-0.5 text-xs/5 font-medium text-zinc-600 hover:bg-zinc-950/5 dark:text-zinc-400 dark:hover:bg-white/10'
+                      }
+                    >
+                      {f.label}
+                    </Link>
+                  ))}
+                </nav>
+                <Link
+                  href="/payments"
+                  className="text-xs/5 font-medium text-zinc-600 underline decoration-zinc-950/20 underline-offset-2 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                >
+                  View all
+                </Link>
+              </div>
+            </header>
+            {(() => {
+              const rows = ledger
+                .filter((r) =>
+                  filter === 'overdue'
+                    ? r.overdue > 0
+                    : filter === 'defaulted'
+                      ? r.defaulted > 0
+                      : r.due > 0,
+                )
+                .sort((a, b) =>
+                  filter === 'defaulted'
+                    ? b.defaulted - a.defaulted
+                    : filter === 'overdue'
+                      ? b.overdue - a.overdue
+                      : b.due - a.due,
+                )
+              const shown = rows.slice(0, 8)
+
+              return shown.length === 0 ? (
+                <p className="px-3 py-4 text-sm/6 text-zinc-500 dark:text-zinc-400">
+                  {filter === 'defaulted'
+                    ? 'Nothing has been written off.'
+                    : filter === 'overdue'
+                      ? 'No customer is past a due date.'
+                      : 'No customer owes anything.'}
+                </p>
+              ) : (
+                <>
+                  <ul className="mt-1 divide-y divide-zinc-950/5 pb-1 dark:divide-white/5">
+                  {shown.map((r) => (
+                    <Row
+                      key={r.id}
+                      href={`/customers/${r.id}/statement`}
+                      title={r.name}
+                      subtitle={
+                        r.defaulted > 0
+                          ? `${inr.format(r.defaulted)} written off`
+                          : r.overdue > 0
+                            ? `${inr.format(r.overdue)} overdue · ${r.oldestDays}d`
+                            : 'Not yet due'
+                      }
+                      trailing={inr.format(
+                        filter === 'defaulted'
+                          ? r.defaulted
+                          : filter === 'overdue'
+                            ? r.overdue
+                            : r.due,
+                      )}
+                      trailingTone={r.overdue > 0 ? 'warn' : 'default'}
+                    />
+                  ))}
+                  </ul>
+                  {rows.length > shown.length ? (
+                    <p className="px-3 pb-2 text-xs/5 text-zinc-500 dark:text-zinc-400">
+                      +{rows.length - shown.length} more customers
+                    </p>
+                  ) : null}
+                </>
+              )
+            })()}
+          </section>
+        ) : null}
+
         {money ? (
           <Panel
             title="Overdue invoices"
@@ -318,6 +430,10 @@ export default async function DashboardPage() {
           </Panel>
         ) : null}
       </div>
+
+      {canOrders ? (
+        <OverallStatement params={query} showMoney={canMoney} />
+      ) : null}
     </div>
   )
 }

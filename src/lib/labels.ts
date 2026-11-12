@@ -8,6 +8,7 @@ import type {
   NoteReason,
   NoteStatus,
   PaymentMode,
+  WriteOffReason,
   MaterialSupply,
   OrderStatus,
   QuotationStatus,
@@ -136,13 +137,25 @@ export const PAYMENT_STATE_LABELS = {
   UNPAID: 'Unpaid',
   PART_PAID: 'Part paid',
   PAID: 'Paid',
+  WRITTEN_OFF: 'Written off',
 } as const
 
 export const PAYMENT_STATE_COLORS = {
   UNPAID: 'amber',
   PART_PAID: 'cyan',
   PAID: 'lime',
+  WRITTEN_OFF: 'rose',
 } as const
+
+export const WRITE_OFF_REASON_LABELS: Record<WriteOffReason, string> = {
+  CUSTOMER_UNREACHABLE: 'Customer unreachable',
+  DISPUTE: 'Disputed amount',
+  QUALITY_ISSUE: 'Quality complaint',
+  BUSINESS_CLOSED: 'Customer closed or insolvent',
+  SETTLED_FOR_LESS: 'Settled for a lower amount',
+  LEGAL_ACTION: 'Under legal action',
+  OTHER: 'Other',
+}
 
 export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
   CASH: 'Cash',

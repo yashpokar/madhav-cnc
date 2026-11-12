@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { ListControls } from '@/components/list-controls'
+import { applyListControls } from '@/lib/list-controls'
+import { RowActions } from '@/components/row-actions'
+import { deleteQuotation } from '@/lib/actions/quotations'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
@@ -61,6 +67,14 @@ export default async function QuotationsPage({
 
   const quotations = await listQuotations({ status: activeTab.status, search })
   const canCreate = can(user.role, 'quotation:create')
+  const canEdit = can(user.role, 'quotation:update')
+  const canDelete = can(user.role, 'quotation:delete')
+
+  const sorted = applyListControls(quotations, params, {
+    date: (row) => row.quotationDate,
+    amount: (row) => row.total,
+  })
+  const paged = paginate(sorted, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -110,7 +124,14 @@ export default async function QuotationsPage({
         <SearchField placeholder="Search number, customer, subject…" />
       </div>
 
-      {quotations.length === 0 ? (
+      <ListControls params={params} pathname="/quotations" amountLabel="Total" />
+
+      {quotations.length > 0 && sorted.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          description="Nothing falls in this amount range. Widen it or clear the filter."
+        />
+      ) : quotations.length === 0 ? (
         <EmptyState
           title={search ? 'No matches' : 'No quotations yet'}
           description={
@@ -125,6 +146,7 @@ export default async function QuotationsPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -136,10 +158,11 @@ export default async function QuotationsPage({
               <TableHeader className="text-right">Lines</TableHeader>
               <TableHeader className="text-right">Total</TableHeader>
               <TableHeader>Status</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {quotations.map((quotation) => (
+            {paged.rows.map((quotation) => (
               <TableRow key={quotation.id} href={`/quotations/${quotation.id}`}>
                 <TableCell className="font-mono text-xs">
                   {quotation.number}
@@ -180,10 +203,25 @@ export default async function QuotationsPage({
                     {QUOTATION_STATUS_LABELS[quotation.status]}
                   </Badge>
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={quotation.number}
+                    viewHref={`/quotations/${quotation.id}`}
+                    editHref={canEdit && (quotation.status !== 'CONVERTED') ? `/quotations/${quotation.id}/edit` : undefined}
+                    deleteAction={
+                      canDelete && (['DRAFT', 'REJECTED', 'EXPIRED'].includes(quotation.status))
+                        ? deleteQuotation.bind(null, quotation.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${quotation.number}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/quotations" />
+</>
       )}
     </div>
   )

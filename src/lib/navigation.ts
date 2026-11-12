@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import type { Action, Resource } from '@/lib/permissions'
 
 export type NavEntry = {
@@ -6,7 +7,7 @@ export type NavEntry = {
   capability: `${Resource}:${Action}`
 }
 
-export const NAV_ENTRIES: readonly NavEntry[] = [
+const ALL_NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/', label: 'Dashboard', capability: 'order:read' },
   { href: '/customers', label: 'Customers', capability: 'customer:read' },
   { href: '/partners', label: 'Architects & Carpenters', capability: 'partner:read' },
@@ -19,8 +20,13 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/payments', label: 'Payments', capability: 'payment:read' },
   { href: '/notes', label: 'Credit & debit notes', capability: 'note:read' },
   { href: '/expenses', label: 'Expenses', capability: 'expense:read' },
+  { href: '/cashbook', label: 'Cash book', capability: 'expense:read' },
   { href: '/reports', label: 'Reports', capability: 'invoice:read' },
 ]
+
+export const NAV_ENTRIES: readonly NavEntry[] = ALL_NAV_ENTRIES.filter(
+  (entry) => FEATURES.notes || entry.href !== '/notes',
+)
 
 export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/users', label: 'Users', capability: 'user:update' },

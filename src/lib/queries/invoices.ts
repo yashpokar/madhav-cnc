@@ -7,16 +7,18 @@ function num(value: DecimalLike): number {
   return value.toNumber()
 }
 
-export type PaymentState = 'UNPAID' | 'PART_PAID' | 'PAID'
+export type PaymentState = 'UNPAID' | 'PART_PAID' | 'PAID' | 'WRITTEN_OFF'
 
 export function paymentState(
   total: number,
   advanceAdjusted: number,
   paid: number,
+  writtenOff = 0,
 ): PaymentState {
-  const due = Math.round((total - advanceAdjusted - paid) * 100) / 100
+  const due =
+    Math.round((total - advanceAdjusted - paid - writtenOff) * 100) / 100
 
-  if (due <= 0) return 'PAID'
+  if (due <= 0) return writtenOff > 0 ? 'WRITTEN_OFF' : 'PAID'
   if (paid > 0 || advanceAdjusted > 0) return 'PART_PAID'
   return 'UNPAID'
 }
@@ -57,14 +59,16 @@ export async function listInvoices({
       customer: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },
       paymentAllocations: { select: { amount: true } },
+      writeOffs: { select: { amount: true } },
     },
   })
 
-  return invoices.map(({ paymentAllocations, ...invoice }) => {
+  return invoices.map(({ paymentAllocations, writeOffs, ...invoice }) => {
     const paid = paymentAllocations.reduce(
       (sum, allocation) => sum + num(allocation.amount),
       0,
     )
+    const writtenOff = writeOffs.reduce((sum, row) => sum + num(row.amount), 0)
     const total = num(invoice.total)
     const advanceAdjusted = num(invoice.advanceAdjusted)
 
@@ -73,8 +77,9 @@ export async function listInvoices({
       total,
       advanceAdjusted,
       paid: Math.round(paid * 100) / 100,
-      due: Math.round((total - advanceAdjusted - paid) * 100) / 100,
-      paymentState: paymentState(total, advanceAdjusted, paid),
+      writtenOff: Math.round(writtenOff * 100) / 100,
+      due: Math.round((total - advanceAdjusted - paid - writtenOff) * 100) / 100,
+      paymentState: paymentState(total, advanceAdjusted, paid, writtenOff),
     }
   })
 }
@@ -96,6 +101,10 @@ export async function getInvoice(id: string) {
       },
       createdBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
+      writeOffs: {
+        orderBy: { createdAt: 'desc' },
+        include: { recordedBy: { select: { name: true } } },
+      },
       paymentAllocations: {
         orderBy: { createdAt: 'desc' },
         include: {
@@ -113,6 +122,10 @@ export async function getInvoice(id: string) {
 
   const paid = invoice.paymentAllocations.reduce(
     (sum, allocation) => sum + num(allocation.amount),
+    0,
+  )
+  const writtenOff = invoice.writeOffs.reduce(
+    (sum, row) => sum + num(row.amount),
     0,
   )
   const total = num(invoice.total)
@@ -134,8 +147,17 @@ export async function getInvoice(id: string) {
     total,
     advanceAdjusted,
     paid: Math.round(paid * 100) / 100,
-    due: Math.round((total - advanceAdjusted - paid) * 100) / 100,
-    paymentState: paymentState(total, advanceAdjusted, paid),
+    writtenOff: Math.round(writtenOff * 100) / 100,
+    due: Math.round((total - advanceAdjusted - paid - writtenOff) * 100) / 100,
+    paymentState: paymentState(total, advanceAdjusted, paid, writtenOff),
+    writeOffs: invoice.writeOffs.map((row) => ({
+      id: row.id,
+      amount: num(row.amount),
+      reason: row.reason,
+      notes: row.notes,
+      writtenOffOn: row.writtenOffOn,
+      recordedBy: row.recordedBy,
+    })),
     lines: invoice.lines.map((line) => ({
       ...line,
       quantity: num(line.quantity),

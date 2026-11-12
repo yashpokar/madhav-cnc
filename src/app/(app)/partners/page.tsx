@@ -1,4 +1,8 @@
 import type { Metadata } from 'next'
+import { Pagination } from '@/components/pagination'
+import { paginate } from '@/lib/pagination'
+import { RowActions } from '@/components/row-actions'
+import { deletePartner } from '@/lib/actions/partners'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
@@ -48,6 +52,10 @@ export default async function PartnersPage({
   })
 
   const canCreate = can(user.role, 'partner:create')
+  const canEdit = can(user.role, 'partner:update')
+  const canDelete = can(user.role, 'partner:delete')
+
+  const paged = paginate(partners, params)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -113,6 +121,7 @@ export default async function PartnersPage({
           }
         />
       ) : (
+<>
         <Table dense grid striped>
           <TableHead>
             <TableRow>
@@ -122,10 +131,11 @@ export default async function PartnersPage({
               <TableHeader>Phone</TableHeader>
               <TableHeader>City</TableHeader>
               <TableHeader className="text-right">Customers</TableHeader>
+            <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {partners.map((partner) => (
+            {paged.rows.map((partner) => (
               <TableRow key={partner.id} href={`/partners/${partner.id}`}>
                 <TableCell className="font-mono text-xs">{partner.code}</TableCell>
                 <TableCell>
@@ -154,10 +164,25 @@ export default async function PartnersPage({
                   {partner._count.preferredByArchitect +
                     partner._count.preferredByCarpenter}
                 </TableCell>
+              <TableCell>
+                  <RowActions
+                    name={partner.name}
+                    
+                    editHref={canEdit && (true) ? `/partners/${partner.id}` : undefined}
+                    deleteAction={
+                      canDelete && (true)
+                        ? deletePartner.bind(null, partner.id)
+                        : undefined
+                    }
+                    deleteTitle={`Delete ${partner.name}?`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+<Pagination paged={paged} params={params} pathname="/partners" />
+</>
       )}
     </div>
   )

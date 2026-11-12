@@ -1,6 +1,8 @@
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
+import { CustomerDueBanner, CustomerFinancials } from '@/components/customer-financials'
 import { CustomerRelated } from '@/components/related-sections'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
@@ -77,6 +79,18 @@ export default async function EditCustomerPage({
           ) : null}
         </nav>
       </div>
+
+      {can(user.role, 'payment:read') ? (
+        <Suspense fallback={null}>
+          <CustomerDueBanner id={customer.id} />
+        </Suspense>
+      ) : null}
+
+      {can(user.role, 'payment:read') ? (
+        <Suspense fallback={null}>
+          <CustomerFinancials id={customer.id} />
+        </Suspense>
+      ) : null}
 
       <CustomerRelated id={customer.id} name={customer.name} role={user.role} />
 

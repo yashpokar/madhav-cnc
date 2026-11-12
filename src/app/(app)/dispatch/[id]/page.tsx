@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -225,6 +226,8 @@ export default async function DispatchDetailPage({
           </div>
         </div>
       )}
+
+      <ActivityTimeline entity="dispatch" id={dispatch.id} />
     </div>
   )
 }

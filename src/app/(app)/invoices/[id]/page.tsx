@@ -1,3 +1,4 @@
+import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -454,6 +455,8 @@ export default async function InvoiceDetailPage({
       ) : null}
 
       <InvoiceRelated id={invoice.id} role={user.role} />
+
+      <ActivityTimeline entity="invoice" id={invoice.id} />
     </div>
   )
 }

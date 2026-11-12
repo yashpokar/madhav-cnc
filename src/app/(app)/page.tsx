@@ -114,7 +114,7 @@ export default async function DashboardPage({
 
   return (
     <div className="grid grid-cols-1 gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div className="grid gap-1">
           <Heading>
             {greeting()}, {user.name.split(' ')[0]}
@@ -139,7 +139,7 @@ export default async function DashboardPage({
       {isAdmin && pending > 0 ? (
         <div
           role="status"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-900 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20"
+          className="print:hidden flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-900 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20"
         >
           <span>
             {pending} account{pending === 1 ? '' : 's'} awaiting approval
@@ -151,7 +151,7 @@ export default async function DashboardPage({
       ) : null}
 
       {quickActions.length > 0 ? (
-        <nav aria-label="Quick actions" className="flex flex-wrap gap-2">
+        <nav aria-label="Quick actions" className="flex flex-wrap gap-2 print:hidden">
           {quickActions.map((action, index) =>
             index === 0 ? (
               <Button key={action.href} href={action.href}>
@@ -166,7 +166,7 @@ export default async function DashboardPage({
         </nav>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 print:hidden">
         {orders ? (
           <>
             <StatTile
@@ -241,7 +241,7 @@ export default async function DashboardPage({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 print:hidden">
         {production && production.mine.length > 0 ? (
           <Panel title="My tasks" href="/production" empty="">
             {production.mine.map((task) => (

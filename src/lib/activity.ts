@@ -8,6 +8,15 @@ export type ActivityEntity =
   | 'dispatch'
   | 'payment'
   | 'note'
+  | 'expense'
+  | 'expense-category'
+  | 'cash-credit'
+  | 'item'
+  | 'material'
+  | 'partner'
+  | 'stage'
+  | 'company'
+  | 'user'
 
 type Actor = { id: string; name: string } | null
 

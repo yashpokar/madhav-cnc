@@ -1,9 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@/generated/prisma/client'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+import { withAudit } from '@/lib/audit'
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL
@@ -12,9 +9,15 @@ function createPrismaClient() {
     throw new Error('DATABASE_URL is not set')
   }
 
-  return new PrismaClient({
-    adapter: new PrismaPg({ connectionString }),
-  })
+  return withAudit(
+    new PrismaClient({
+      adapter: new PrismaPg({ connectionString }),
+    }),
+  )
+}
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: ReturnType<typeof createPrismaClient> | undefined
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()

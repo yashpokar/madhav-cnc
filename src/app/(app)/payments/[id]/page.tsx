@@ -1,5 +1,6 @@
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
+import { LocalTime } from '@/components/local-time'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
@@ -196,7 +197,7 @@ export default async function ReceiptPage({
       </div>
 
       <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
-        Recorded {dateFormat.format(receipt.createdAt)}
+        Recorded <LocalTime value={receipt.createdAt} />
         {receipt.recordedBy ? ` by ${receipt.recordedBy.name}` : ''}
       </div>
 

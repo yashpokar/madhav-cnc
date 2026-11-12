@@ -15,7 +15,7 @@ import {
   ComboboxOption,
 } from '@/components/catalyst/combobox'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
-import { derivedQuantity, lineTotals } from '@/lib/pricing'
+import { billedSize, derivedQuantity, lineTotals } from '@/lib/pricing'
 import type { ItemOption } from '@/lib/queries/quotations'
 import {
   DimensionUnit,
@@ -136,6 +136,22 @@ export function LineEditor({
     })
 
     update(index, derived === null ? patch : { ...patch, quantity: String(derived) })
+  }
+
+  /** Rounds a side up to the next 3 inch step once the user leaves the field. */
+  function snapSide(index: number, field: 'length' | 'width') {
+    const line = lines[index]
+    const value = optNum(line[field])
+
+    if (!line.dimensionUnit || value === null || value <= 0) {
+      return
+    }
+
+    const billed = billedSize(value, line.dimensionUnit)
+
+    if (billed !== value) {
+      recomputeQuantity(index, { [field]: String(billed) })
+    }
   }
 
   return (
@@ -285,6 +301,7 @@ export function LineEditor({
                             min={0}
                             placeholder="W"
                             value={line.length}
+                            onBlur={() => snapSide(index, 'length')}
                             onChange={(event) =>
                               recomputeQuantity(index, {
                                 length: event.target.value,
@@ -299,6 +316,7 @@ export function LineEditor({
                             min={0}
                             placeholder="H"
                             value={line.width}
+                            onBlur={() => snapSide(index, 'width')}
                             onChange={(event) =>
                               recomputeQuantity(index, {
                                 width: event.target.value,
@@ -321,6 +339,24 @@ export function LineEditor({
                           />
                         </div>
                       ) : null}
+                      {line.dimensionUnit ? (() => {
+                        const l = optNum(line.length)
+                        const w = optNum(line.width)
+                        const bl = l && l > 0 ? billedSize(l, line.dimensionUnit) : null
+                        const bw = w && w > 0 ? billedSize(w, line.dimensionUnit) : null
+                        const changed = (bl !== null && bl !== l) || (bw !== null && bw !== w)
+
+                        return (
+                          <p
+                            className="text-xs/5 text-zinc-500 dark:text-zinc-400"
+                            aria-live="polite"
+                          >
+                            {changed
+                              ? `Billed as ${bl ?? l} × ${bw ?? w} ${DIMENSION_UNIT_SHORT[line.dimensionUnit]}`
+                              : 'Sizes round up to the next 3 in'}
+                          </p>
+                        )
+                      })() : null}
                     </div>
                     )}
                   </td>

@@ -37,6 +37,67 @@ const SQFT_PER: Record<DimensionUnit, number> = {
   FT: 1,
 }
 
+const INCH_PER: Record<DimensionUnit, number> = {
+  MM: 1 / 25.4,
+  INCH: 1,
+  FT: 12,
+}
+
+/** Boards are sold in steps of 3 inches, so every side is rounded up to one. */
+export const SIZE_STEP_INCH = 3
+
+/**
+ * The size that is actually taken (and billed) for an entered side:
+ * 3 in -> 3, 4 -> 6, 5 -> 6, 6 -> 6, 7 -> 9; 2.1 ft -> 2.25 ft.
+ * The result stays in the unit it was entered in.
+ */
+export function billedSize(value: number, unit: DimensionUnit): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return value
+  }
+
+  const inches = value * INCH_PER[unit]
+  // The small tolerance stops 6.0000000001 from jumping to the next step.
+  const steps = Math.ceil(inches / SIZE_STEP_INCH - 1e-9)
+
+  return Math.round(((steps * SIZE_STEP_INCH) / INCH_PER[unit]) * 1000) / 1000
+}
+
+type SizedLine = {
+  isFlatRate?: boolean
+  dimensionUnit: DimensionUnit | null
+  length: number | null
+  width: number | null
+  pieces: number | null
+  quantity: number
+}
+
+/**
+ * Applies the 3-inch rule to a line: snaps length and width and re-derives the
+ * quantity from them. Flat-rate and size-less lines are left alone.
+ */
+export function applySizeRule<T extends SizedLine>(line: T): T {
+  if (
+    line.isFlatRate ||
+    line.dimensionUnit === null ||
+    line.length === null ||
+    line.width === null
+  ) {
+    return line
+  }
+
+  const length = billedSize(line.length, line.dimensionUnit)
+  const width = billedSize(line.width, line.dimensionUnit)
+  const quantity = derivedQuantity({
+    length,
+    width,
+    pieces: line.pieces,
+    dimensionUnit: line.dimensionUnit,
+  })
+
+  return { ...line, length, width, quantity: quantity ?? line.quantity }
+}
+
 export function areaInSqft(
   length: number,
   width: number,

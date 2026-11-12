@@ -7,7 +7,7 @@ import { requireCapability } from '@/lib/session'
 import { nextQuotationNumber } from '@/lib/codes'
 import { copyUpload, deleteUpload } from '@/lib/storage'
 import { invalidateApproval } from '@/lib/reapproval'
-import { documentTotals, lineTotals } from '@/lib/pricing'
+import { applySizeRule, documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
 import type { QuotationData } from '@/lib/validation/quotations'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -77,7 +77,9 @@ async function assertReferences(data: QuotationData) {
   return null
 }
 
-function buildPersistable(data: QuotationData) {
+function buildPersistable(input: QuotationData) {
+  const data = { ...input, lines: input.lines.map(applySizeRule) }
+
   const totals = documentTotals({
     lines: data.lines,
     discountType: data.discountType,

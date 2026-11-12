@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
-import { listBankAccounts, listDenominations } from '@/lib/queries/daybook'
+import { listBankAccounts, listChannels, listDenominations } from '@/lib/queries/daybook'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { TallySetup } from './tally-setup'
@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 
 export default async function DayBookSetupPage() {
   const user = await requireCapability('expense:update')
-  const [banks, notes] = await Promise.all([listBankAccounts(), listDenominations()])
+  const [banks, notes, channels] = await Promise.all([
+    listBankAccounts(),
+    listDenominations(),
+    listChannels(),
+  ])
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
@@ -21,8 +25,9 @@ export default async function DayBookSetupPage() {
         <div className="grid grid-cols-1 gap-2">
           <Heading>Day book setup</Heading>
           <Text>
-            The bank accounts and note denominations shown in the counting area under each day.
-            Hiding one keeps its past counts; deleting one removes them.
+            The payment modes offered when adding an entry, and the bank accounts and note
+            denominations in the counting area under each day. Hiding one keeps its past counts;
+            deleting one removes them.
           </Text>
         </div>
         <Button outline href="/daybook">
@@ -30,7 +35,12 @@ export default async function DayBookSetupPage() {
         </Button>
       </div>
 
-      <TallySetup banks={banks} notes={notes} canDelete={can(user.role, 'expense:delete')} />
+      <TallySetup
+        banks={banks}
+        notes={notes}
+        channels={channels}
+        canDelete={can(user.role, 'expense:delete')}
+      />
     </div>
   )
 }

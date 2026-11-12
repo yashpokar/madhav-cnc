@@ -37,6 +37,7 @@ const AREAS: Record<string, { label: string; href?: (id: string) => string }> = 
   'cash-credit': { label: 'Cash credit' },
   'bank-account': { label: 'Bank account' },
   'day-close': { label: 'Day-end check' },
+  'payment-channel': { label: 'Payment mode' },
   denomination: { label: 'Note denomination' },
   item: { label: 'Item', href: (id) => `/items/${id}` },
   material: { label: 'Material' },

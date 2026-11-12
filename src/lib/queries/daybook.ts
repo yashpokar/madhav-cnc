@@ -8,6 +8,20 @@ export async function listBankAccounts(activeOnly = false) {
   })
 }
 
+export async function listChannels(activeOnly = false) {
+  return prisma.paymentChannel.findMany({
+    where: activeOnly ? { isActive: true } : {},
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      mode: true,
+      bankAccountId: true,
+      isActive: true,
+    },
+  })
+}
+
 export async function listDenominations(activeOnly = false) {
   return prisma.cashDenomination.findMany({
     where: activeOnly ? { isActive: true } : {},

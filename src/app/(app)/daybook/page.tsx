@@ -16,6 +16,7 @@ import {
   getDayClose,
   getDayTally,
   listBankAccounts,
+  listChannels,
   listDenominations,
   reconcile,
 } from '@/lib/queries/daybook'
@@ -64,6 +65,8 @@ type Line = {
   /** Set for lines that can be deleted from here. */
   deleteId?: string
   checked?: boolean
+  /** The business's own name for how it was paid, e.g. HDFC NEFT. */
+  channelName?: string
 }
 
 const MIN_ROWS = 15
@@ -194,7 +197,9 @@ function Ledger({
                   )}
                 </td>
                 <td className={`${grid} px-2 text-zinc-600 dark:text-zinc-300`}>
-                  {reference ? 'Credit note' : line.mode ? PAYMENT_MODE_LABELS[line.mode] : ''}
+                  {reference
+                    ? 'Credit note'
+                    : (line.channelName ?? (line.mode ? PAYMENT_MODE_LABELS[line.mode] : ''))}
                 </td>
                 <td className="px-1 text-center print:hidden">
                   {line.deleteId && canDelete ? (
@@ -267,6 +272,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
     priorCredits,
     vendors,
     sources,
+    channels,
   ] = await Promise.all([
     prisma.expense.findMany({
       where: { expenseDate: inRange, ...(modeFilter ? { paymentMode: modeFilter } : {}) },
@@ -279,6 +285,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
         paymentMode: true,
         total: true,
         isChecked: true,
+        channel: { select: { name: true } },
       },
     }),
     canSeeReceipts
@@ -307,6 +314,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
         mode: true,
         amount: true,
         isChecked: true,
+        channel: { select: { name: true } },
       },
     }),
     // Credit notes move no cash, so they are listed for reference only and are
@@ -344,6 +352,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
     }),
     canCreate ? listExpenseVendors() : [],
     canCreate ? listCashCreditSources() : [],
+    canCreate ? listChannels(true) : [],
   ])
 
   const opening =
@@ -381,6 +390,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       note: c.notes,
       deleteId: c.id,
       checked: c.isChecked,
+      channelName: c.channel?.name,
     })
   }
   for (const n of notes) {
@@ -405,6 +415,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       href: `/expenses/${e.id}`,
       deleteId: e.id,
       checked: e.isChecked,
+      channelName: e.channel?.name,
     })
   }
 
@@ -614,7 +625,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     canCheck={canCheck}
                     entry={
                       editable ? (
-                        <EntryRow kind="credit" date={day.key} suggestions={sources} />
+                        <EntryRow
+                          kind="credit"
+                          date={day.key}
+                          suggestions={sources}
+                          channels={channels}
+                        />
                       ) : undefined
                     }
                   />
@@ -628,7 +644,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     canCheck={canCheck}
                     entry={
                       editable ? (
-                        <EntryRow kind="debit" date={day.key} suggestions={vendors} />
+                        <EntryRow
+                          kind="debit"
+                          date={day.key}
+                          suggestions={vendors}
+                          channels={channels}
+                        />
                       ) : undefined
                     }
                   />

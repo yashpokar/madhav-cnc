@@ -41,10 +41,7 @@ function amounts(data: ExpenseData) {
   return { taxAmount, total: round2(data.amount + taxAmount) }
 }
 
-export async function createExpense(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
+export async function createExpense(_previous: FormState, formData: FormData): Promise<FormState> {
   const user = await requireCapability('expense:create')
   const parsed = parse(formData)
 
@@ -137,16 +134,25 @@ export async function createLiteExpense(
 export async function quickAddExpense(input: {
   payeeName: string
   amount: string
-  mode: string
+  channelId: string
   date: string
 }): Promise<SimpleResult> {
   const user = await requireCapability('expense:create')
+
+  const channel = await prisma.paymentChannel.findUnique({
+    where: { id: input.channelId },
+    select: { id: true, mode: true },
+  })
+
+  if (!channel) {
+    return { ok: false, error: 'Choose a payment mode' }
+  }
 
   const parsed = expenseInputSchema.safeParse({
     expenseDate: input.date,
     payeeName: input.payeeName,
     amount: input.amount || 0,
-    paymentMode: input.mode,
+    paymentMode: channel.mode,
   })
 
   if (!parsed.success) {
@@ -165,6 +171,7 @@ export async function quickAddExpense(input: {
       payeeName: known?.payeeName ?? parsed.data.payeeName,
       amount: parsed.data.amount,
       paymentMode: parsed.data.paymentMode,
+      channelId: channel.id,
       ...amounts(parsed.data),
       createdById: user.id,
     },
@@ -203,16 +210,25 @@ export async function setEntryChecked(
 export async function quickAddCredit(input: {
   sourceName: string
   amount: string
-  mode: string
+  channelId: string
   date: string
 }): Promise<SimpleResult> {
   const user = await requireCapability('expense:create')
+
+  const channel = await prisma.paymentChannel.findUnique({
+    where: { id: input.channelId },
+    select: { id: true, mode: true },
+  })
+
+  if (!channel) {
+    return { ok: false, error: 'Choose a payment mode' }
+  }
 
   const parsed = cashCreditSchema.safeParse({
     entryDate: input.date,
     sourceName: input.sourceName,
     amount: input.amount || 0,
-    mode: input.mode,
+    mode: channel.mode,
   })
 
   if (!parsed.success) {
@@ -228,6 +244,7 @@ export async function quickAddCredit(input: {
     data: {
       ...parsed.data,
       sourceName: known?.sourceName ?? parsed.data.sourceName,
+      channelId: channel.id,
       recordedById: user.id,
     },
   })
@@ -455,9 +472,7 @@ export async function updateExpenseCategory(
   return { status: 'success', message: 'Category saved', id }
 }
 
-export async function deleteExpenseCategory(
-  id: string,
-): Promise<SimpleResult> {
+export async function deleteExpenseCategory(id: string): Promise<SimpleResult> {
   await requireCapability('expense:delete')
 
   const category = await prisma.expenseCategory.findUnique({
@@ -484,13 +499,10 @@ export async function deleteExpenseCategory(
 }
 
 export type QuickCategoryResult =
-  | { ok: true; category: { id: string; name: string } }
-  | { ok: false; error: string }
+  { ok: true; category: { id: string; name: string } } | { ok: false; error: string }
 
 /** Adds an expense category from inside the expense form. */
-export async function quickCreateExpenseCategory(
-  name: string,
-): Promise<QuickCategoryResult> {
+export async function quickCreateExpenseCategory(name: string): Promise<QuickCategoryResult> {
   await requireCapability('expense:create')
 
   const parsed = expenseCategorySchema.safeParse({

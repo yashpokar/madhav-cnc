@@ -34,6 +34,12 @@ const SPECS: Record<string, Spec> = {
   Item: { entity: 'item', label: 'item', ops: all, name: (r) => text(r.name, r.code) },
   Material: { entity: 'material', label: 'material', ops: all, name: (r) => text(r.name) },
   Partner: { entity: 'partner', label: 'partner', ops: all, name: (r) => text(r.name, r.code) },
+  PaymentChannel: {
+    entity: 'payment-channel',
+    label: 'payment mode',
+    ops: all,
+    name: (r) => text(r.name),
+  },
   DayClose: {
     entity: 'day-close',
     label: 'day-end check',

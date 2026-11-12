@@ -158,115 +158,91 @@ export function DayTally({
 
   return (
     <div className="grid grid-cols-1 gap-6 border-t border-zinc-950/10 p-3 lg:grid-cols-2 dark:border-white/10">
-      <div className="grid min-w-0 content-start gap-5">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[20rem] border-collapse text-sm/6">
-            <caption className="pb-2 text-center text-sm/6 font-bold tracking-wide uppercase">
-              Bank balances
-            </caption>
-            <tbody>
-              {banks.length === 0 ? (
-                <tr>
-                  <td className="py-2 text-center text-zinc-500">No bank accounts yet.</td>
+      <div className="min-w-0 overflow-x-auto">
+        <table className="w-full min-w-[22rem] border-collapse text-sm/6">
+          <caption className="pb-2 text-center text-sm/6 font-bold tracking-wide uppercase">
+            Banks and cash counted
+          </caption>
+          <thead>
+            <tr className="bg-zinc-100 text-left font-medium dark:bg-white/5">
+              <th className={`${grid} px-2 py-1`}>Mode</th>
+              <th className={`${grid} w-28 px-2 py-1 text-right`}>Count</th>
+              <th className={`${grid} w-44 px-2 py-1 text-right`}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {banks.map((b) => (
+              <tr key={b.id}>
+                <th scope="row" className={`${grid} px-2 py-1.5 text-right font-medium`}>
+                  {b.name} <span className="text-zinc-400">x</span>
+                </th>
+                <td className={`${grid} px-2 text-right text-zinc-300`}>—</td>
+                <td className={`${grid} p-0`}>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={bankBalances[b.id] ?? ''}
+                    disabled={!editable}
+                    aria-label={`${b.name} balance`}
+                    placeholder="0.00"
+                    className={input}
+                    onChange={(event) =>
+                      setBankBalances((current) => ({ ...current, [b.id]: event.target.value }))
+                    }
+                    onBlur={() =>
+                      save(() => setTallyBank(date, b.id, Number(bankBalances[b.id]) || 0))
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+            {denominations.map((d) => {
+              const count = Number(noteCounts[d.value]) || 0
+
+              return (
+                <tr key={d.id}>
+                  <th
+                    scope="row"
+                    className={`${grid} px-2 py-1.5 text-right font-medium tabular-nums`}
+                  >
+                    {d.value} <span className="text-zinc-400">x</span>
+                  </th>
+                  <td className={`${grid} p-0`}>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min={0}
+                      value={noteCounts[d.value] ?? ''}
+                      disabled={!editable}
+                      aria-label={`Number of ₹${d.value} notes`}
+                      placeholder="0"
+                      className={input}
+                      onChange={(event) =>
+                        setNoteCounts((current) => ({ ...current, [d.value]: event.target.value }))
+                      }
+                      onBlur={() => save(() => setTallyCount(date, d.value, count))}
+                    />
+                  </td>
+                  <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
+                    {count ? money.format(count * d.value) : ''}
+                  </td>
                 </tr>
-              ) : (
-                banks.map((b) => (
-                  <tr key={b.id}>
-                    <th scope="row" className={`${grid} px-2 py-1.5 text-left font-medium`}>
-                      {b.name}
-                    </th>
-                    <td className={`${grid} w-44 p-0`}>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        value={bankBalances[b.id] ?? ''}
-                        disabled={!editable}
-                        aria-label={`${b.name} balance`}
-                        placeholder="0.00"
-                        className={input}
-                        onChange={(event) =>
-                          setBankBalances((current) => ({ ...current, [b.id]: event.target.value }))
-                        }
-                        onBlur={() =>
-                          save(() => setTallyBank(date, b.id, Number(bankBalances[b.id]) || 0))
-                        }
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-              <tr className="font-semibold">
-                <td className={`${grid} px-2 py-1.5`}>Total in banks</td>
-                <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
-                  {money.format(bankCounted)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[20rem] border-collapse text-sm/6">
-            <caption className="pb-2 text-center text-sm/6 font-bold tracking-wide uppercase">
-              Cash counted
-            </caption>
-            <thead>
-              <tr className="text-left font-medium">
-                <th className={`${grid} px-2 py-1 text-right`}>Note</th>
-                <th className={`${grid} w-28 px-2 py-1 text-right`}>Count</th>
-                <th className={`${grid} px-2 py-1 text-right`}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {denominations.map((d) => {
-                const count = Number(noteCounts[d.value]) || 0
-
-                return (
-                  <tr key={d.id}>
-                    <th
-                      scope="row"
-                      className={`${grid} px-2 py-1.5 text-right font-medium tabular-nums`}
-                    >
-                      ₹{d.value}
-                    </th>
-                    <td className={`${grid} p-0`}>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        step="1"
-                        min={0}
-                        value={noteCounts[d.value] ?? ''}
-                        disabled={!editable}
-                        aria-label={`Number of ₹${d.value} notes`}
-                        placeholder="0"
-                        className={input}
-                        onChange={(event) =>
-                          setNoteCounts((current) => ({
-                            ...current,
-                            [d.value]: event.target.value,
-                          }))
-                        }
-                        onBlur={() => save(() => setTallyCount(date, d.value, count))}
-                      />
-                    </td>
-                    <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
-                      {count ? money.format(count * d.value) : ''}
-                    </td>
-                  </tr>
-                )
-              })}
-              <tr className="font-semibold">
-                <td className={`${grid} px-2 py-1.5 text-right`} colSpan={2}>
-                  Total cash counted
-                </td>
-                <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
-                  {money.format(cashCounted)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="font-semibold">
+              <td className={`${grid} px-2 py-1.5 text-right`} colSpan={2}>
+                Grand TOTAL
+              </td>
+              <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
+                {money.format(bankCounted + cashCounted)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       <div className="grid content-start gap-4">

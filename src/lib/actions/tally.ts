@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { reconcile } from '@/lib/queries/daybook'
 import { requireCapability } from '@/lib/session'
+import { PaymentMode } from '@/generated/prisma/enums'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -238,4 +239,105 @@ export async function reopenDay(date: string): Promise<SimpleResult> {
   await prisma.dayClose.deleteMany({ where: { closeDate } })
 
   return done('Day reopened')
+}
+
+async function checkChannel(
+  name: string,
+  mode: string,
+  bankAccountId: string | null,
+  ignoreId?: string,
+) {
+  const clean = name.trim()
+
+  if (!clean) return { ok: false as const, error: 'Enter a name, like HDFC NEFT' }
+  if (clean.length > 40) return { ok: false as const, error: 'That name is too long' }
+  if (!(Object.values(PaymentMode) as string[]).includes(mode)) {
+    return { ok: false as const, error: 'Choose the kind of payment' }
+  }
+
+  if (mode === 'CASH' && bankAccountId) {
+    return { ok: false as const, error: 'Cash does not go through a bank account' }
+  }
+
+  if (bankAccountId) {
+    const bank = await prisma.bankAccount.findUnique({
+      where: { id: bankAccountId },
+      select: { id: true },
+    })
+
+    if (!bank) return { ok: false as const, error: 'Bank account not found' }
+  }
+
+  const clash = await prisma.paymentChannel.findFirst({
+    where: {
+      name: { equals: clean, mode: 'insensitive' },
+      ...(ignoreId ? { NOT: { id: ignoreId } } : {}),
+    },
+    select: { id: true },
+  })
+
+  if (clash) return { ok: false as const, error: 'That payment mode already exists' }
+
+  return { ok: true as const, clean, mode: mode as PaymentMode }
+}
+
+export async function createChannel(input: {
+  name: string
+  mode: string
+  bankAccountId: string | null
+}): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+  const checked = await checkChannel(input.name, input.mode, input.bankAccountId)
+
+  if (!checked.ok) return { ok: false, error: checked.error }
+
+  const last = await prisma.paymentChannel.aggregate({ _max: { sortOrder: true } })
+
+  await prisma.paymentChannel.create({
+    data: {
+      name: checked.clean,
+      mode: checked.mode,
+      bankAccountId: input.bankAccountId,
+      sortOrder: (last._max.sortOrder ?? 0) + 1,
+    },
+  })
+
+  return done(`${checked.clean} added`)
+}
+
+export async function updateChannel(
+  id: string,
+  input: { name: string; mode: string; bankAccountId: string | null },
+): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+  const checked = await checkChannel(input.name, input.mode, input.bankAccountId, id)
+
+  if (!checked.ok) return { ok: false, error: checked.error }
+
+  await prisma.paymentChannel.update({
+    where: { id },
+    data: { name: checked.clean, mode: checked.mode, bankAccountId: input.bankAccountId },
+  })
+
+  return done('Saved')
+}
+
+export async function setChannelActive(id: string, isActive: boolean): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+  await prisma.paymentChannel.update({ where: { id }, data: { isActive } })
+
+  return done(isActive ? 'Shown in the day book' : 'Hidden from the day book')
+}
+
+export async function deleteChannel(id: string): Promise<SimpleResult> {
+  await requireCapability('expense:delete')
+
+  const found = await prisma.paymentChannel.findUnique({ where: { id }, select: { id: true } })
+
+  if (!found) return { ok: false, error: 'Payment mode not found' }
+
+  // Entries that used it keep their kind of payment; only the name is lost.
+  await prisma.paymentChannel.delete({ where: { id } })
+
+  return done('Payment mode deleted')
 }

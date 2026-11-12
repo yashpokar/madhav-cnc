@@ -1015,6 +1015,8 @@ model CashCredit {
   entryDate  DateTime    @map("entry_date") @db.Date
   sourceName String      @map("source_name")
   isChecked  Boolean     @default(false) @map("is_checked")
+  channelId  String?     @map("channel_id")
+  channel    PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
   amount     Decimal     @db.Decimal(14, 2)
   mode       PaymentMode @default(CASH)
   reference  String?
@@ -1040,6 +1042,7 @@ model BankAccount {
   isActive  Boolean @default(true) @map("is_active")
 
   balances DayTallyBank[]
+  channels PaymentChannel[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1097,6 +1100,26 @@ model DayClose {
   closedAt   DateTime @default(now()) @map("closed_at")
 
   @@map("day_closes")
+}
+
+// A way of paying as the business names it ("HDFC NEFT", "SBI UPI", "CASH"):
+// the underlying kind of payment, and the bank account it moves money through
+// (none for cash). Entries remember the channel they used.
+model PaymentChannel {
+  id            String       @id @default(cuid())
+  name          String       @unique
+  mode          PaymentMode
+  bankAccountId String?      @map("bank_account_id")
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  sortOrder     Int          @default(0) @map("sort_order")
+  isActive      Boolean      @default(true) @map("is_active")
+
+  expenses    Expense[]
+  cashCredits CashCredit[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("payment_channels")
 }
 
 model Payment {
@@ -1195,6 +1218,8 @@ model Expense {
   payeeName   String   @map("payee_name")
   /// Ticked off in the day book once verified against the bank or cash.
   isChecked   Boolean  @default(false) @map("is_checked")
+  channelId   String?  @map("channel_id")
+  channel     PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
   description String?
 
   amount         Decimal @db.Decimal(14, 2)

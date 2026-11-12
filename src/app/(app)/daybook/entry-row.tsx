@@ -2,9 +2,7 @@
 
 import { useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { quickAddCredit, quickAddExpense } from '@/lib/actions/expenses'
-import { PaymentMode } from '@/generated/prisma/enums'
 
 const cell =
   'w-full bg-transparent px-2 py-1.5 text-sm/6 outline-none focus:bg-blue-50 focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:focus:bg-blue-400/10'
@@ -17,17 +15,20 @@ export function EntryRow({
   kind,
   date,
   suggestions,
+  channels,
 }: {
   kind: 'credit' | 'debit'
   /** The day this row adds to, YYYY-MM-DD. */
   date: string
   suggestions: string[]
+  /** The business's own payment modes, e.g. HDFC NEFT, SBI UPI, CASH. */
+  channels: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const listId = useId()
   const amountRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
-  const [mode, setMode] = useState<PaymentMode>('CASH')
+  const [channelId, setChannelId] = useState(channels[0]?.id ?? '')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -39,8 +40,8 @@ export function EntryRow({
     startTransition(async () => {
       const result =
         kind === 'debit'
-          ? await quickAddExpense({ payeeName: name, amount, mode, date })
-          : await quickAddCredit({ sourceName: name, amount, mode, date })
+          ? await quickAddExpense({ payeeName: name, amount, channelId, date })
+          : await quickAddCredit({ sourceName: name, amount, channelId, date })
 
       if (!result.ok) {
         setError(result.error)
@@ -104,16 +105,16 @@ export function EntryRow({
         </td>
         <td className="border border-zinc-400 p-0 dark:border-white/30">
           <select
-            value={mode}
-            onChange={(event) => setMode(event.target.value as PaymentMode)}
+            value={channelId}
+            onChange={(event) => setChannelId(event.target.value)}
             onKeyDown={onEnter}
             aria-label="Payment mode"
             className={cell}
             disabled={pending}
           >
-            {Object.values(PaymentMode).map((value) => (
-              <option key={value} value={value}>
-                {PAYMENT_MODE_LABELS[value]}
+            {channels.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.name}
               </option>
             ))}
           </select>

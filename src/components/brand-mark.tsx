@@ -8,10 +8,10 @@ export function BrandMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={clsx('size-8 shrink-0', className)}
     >
-      <rect width="32" height="32" rx="7" className="fill-zinc-950 dark:fill-white" />
+      <rect width="32" height="32" rx="7" className="fill-zinc-900 dark:fill-gold-400" />
       <path
         d="M8.5 22V10.5l4.2 6.2 4.2-6.2V22"
-        className="stroke-white dark:stroke-zinc-950"
+        className="stroke-gold-400 dark:stroke-zinc-950"
         strokeWidth="2.1"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -20,7 +20,7 @@ export function BrandMark({ className }: { className?: string }) {
         cx="22.5"
         cy="19.5"
         r="2.6"
-        className="stroke-white dark:stroke-zinc-950"
+        className="stroke-gold-400 dark:stroke-zinc-950"
         strokeWidth="2.1"
       />
     </svg>

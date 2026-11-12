@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { TrashIcon, PlusIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
 import { Input } from '@/components/catalyst/input'
@@ -14,8 +15,10 @@ import {
   ComboboxLabel,
   ComboboxOption,
 } from '@/components/catalyst/combobox'
+import { Switch } from '@/components/catalyst/switch'
+import { QuickItemDialog } from '@/components/quick-item-dialog'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
-import { derivedQuantity, lineTotals } from '@/lib/pricing'
+import { billedSize, derivedQuantity, lineTotals } from '@/lib/pricing'
 import type { ItemOption } from '@/lib/queries/quotations'
 import {
   DimensionUnit,
@@ -30,6 +33,8 @@ export type EditorLine = {
   unit: UnitOfMeasure
   materialSupply: MaterialSupply
   isFlatRate: boolean
+  /** Round sides up to 3 inch steps (auto) or bill them as entered (manual). */
+  autoSize: boolean
   dimensionUnit: DimensionUnit | null
   length: string
   width: string
@@ -50,6 +55,7 @@ export function emptyLine(materialSupply: MaterialSupply = 'WITH_MATERIAL'): Edi
     unit: 'NOS',
     materialSupply,
     isFlatRate: false,
+    autoSize: true,
     dimensionUnit: null,
     length: '',
     width: '',
@@ -74,6 +80,25 @@ const optNum = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const CREATE_ITEM: ItemOption = {
+  id: '__create__',
+  code: '',
+  name: 'Add a new item',
+  unit: 'NOS',
+  rate: 0,
+  taxRatePercent: 0,
+  hsnCode: null,
+  brand: null,
+  supplyType: 'GOODS',
+  isFlatRate: false,
+  material: null,
+}
+
+/** Item name with its material in brackets, e.g. "Louvers (Teak)". */
+function itemLabel(item: ItemOption) {
+  return item.material?.name ? `${item.name} (${item.material.name})` : item.name
+}
+
 export const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
@@ -83,12 +108,18 @@ export const currency = new Intl.NumberFormat('en-IN', {
 export function LineEditor({
   lines,
   onChange,
-  items,
+  items: catalogue,
 }: {
   lines: EditorLine[]
   onChange: (lines: EditorLine[]) => void
   items: ItemOption[]
 }) {
+  // Items added on the spot join the picker without a page reload.
+  const [created, setCreated] = useState<ItemOption[]>([])
+  const items = [...catalogue, ...created]
+  const [creating, setCreating] = useState<{ index: number; name: string } | null>(null)
+  const [search, setSearch] = useState({ index: -1, text: '' })
+
   function update(index: number, patch: Partial<EditorLine>) {
     onChange(
       lines.map((line, i) => (i === index ? { ...line, ...patch } : line)),
@@ -103,7 +134,7 @@ export function LineEditor({
 
     update(index, {
       itemId: item.id,
-      description: item.name,
+      description: itemLabel(item),
       unit: item.unit,
       rate: String(item.rate),
       taxRatePercent: String(item.taxRatePercent),
@@ -123,14 +154,55 @@ export function LineEditor({
 
   function recomputeQuantity(index: number, patch: Partial<EditorLine>) {
     const line = { ...lines[index], ...patch }
+    const side = (raw: string) => {
+      const value = optNum(raw)
+
+      return value !== null && value > 0 && line.dimensionUnit && line.autoSize
+        ? billedSize(value, line.dimensionUnit)
+        : value
+    }
     const derived = derivedQuantity({
-      length: optNum(line.length),
-      width: optNum(line.width),
+      length: side(line.length),
+      width: side(line.width),
       pieces: optNum(line.pieces),
       dimensionUnit: line.dimensionUnit,
     })
 
     update(index, derived === null ? patch : { ...patch, quantity: String(derived) })
+  }
+
+  /** Rounds a side up to the next 3 inch step once the user leaves the field. */
+  function snapSide(index: number, field: 'length' | 'width') {
+    const line = lines[index]
+    const value = optNum(line[field])
+
+    if (!line.autoSize || !line.dimensionUnit || value === null || value <= 0) {
+      return
+    }
+
+    const billed = billedSize(value, line.dimensionUnit)
+
+    if (billed !== value) {
+      recomputeQuantity(index, { [field]: String(billed) })
+    }
+  }
+
+  /** Switching to auto corrects the sizes already typed; manual leaves them. */
+  function setAutoSize(index: number, autoSize: boolean) {
+    const line = lines[index]
+    const patch: Partial<EditorLine> = { autoSize }
+
+    if (autoSize && line.dimensionUnit) {
+      for (const field of ['length', 'width'] as const) {
+        const value = optNum(line[field])
+
+        if (value !== null && value > 0) {
+          patch[field] = String(billedSize(value, line.dimensionUnit))
+        }
+      }
+    }
+
+    recomputeQuantity(index, patch)
   }
 
   return (
@@ -171,13 +243,36 @@ export function LineEditor({
                   <td data-label="Item / description" className="py-2 pr-3">
                     <div className="grid grid-cols-1 gap-2">
                       <Combobox<ItemOption | null>
-                        options={items}
+                        options={[
+                          ...items,
+                          ...(search.index === index &&
+                          search.text.trim() &&
+                          !items.some(
+                            (item) =>
+                              item.name.toLowerCase() === search.text.trim().toLowerCase(),
+                          )
+                            ? [{ ...CREATE_ITEM, name: `Add “${search.text.trim()}” as a new item` }]
+                            : [{ ...CREATE_ITEM, name: 'Add a new item' }]),
+                        ]}
                         value={selectedItem}
-                        onChange={(item) => applyItem(index, item)}
+                        onChange={(item) => {
+                          if (item?.id === CREATE_ITEM.id) {
+                            setCreating({
+                              index,
+                              name: search.index === index ? search.text.trim() : '',
+                            })
+                            return
+                          }
+
+                          applyItem(index, item)
+                        }}
+                        onQueryChange={(text) => setSearch({ index, text })}
                         placeholder="Pick an item…"
-                        displayValue={(item) => item?.name ?? ''}
+                        displayValue={(item) =>
+                          item && item.id !== CREATE_ITEM.id ? itemLabel(item) : ''
+                        }
                         filter={(item, query) => {
-                          if (!item) return true
+                          if (!item || item.id === CREATE_ITEM.id) return true
                           const haystack = [
                             item.name,
                             item.code,
@@ -192,11 +287,20 @@ export function LineEditor({
                       >
                         {(item) => (
                           <ComboboxOption value={item}>
-                            <ComboboxLabel>{item.name}</ComboboxLabel>
-                            <ComboboxDescription>
-                              {item.code} · {currency.format(item.rate)} /{' '}
-                              {UNIT_SHORT[item.unit]}
-                            </ComboboxDescription>
+                            {item.id === CREATE_ITEM.id ? (
+                              <>
+                                <PlusIcon />
+                                <ComboboxLabel>{item.name}</ComboboxLabel>
+                              </>
+                            ) : (
+                              <>
+                                <ComboboxLabel>{itemLabel(item)}</ComboboxLabel>
+                                <ComboboxDescription>
+                                  {item.code} · {currency.format(item.rate)} /{' '}
+                                  {UNIT_SHORT[item.unit]}
+                                </ComboboxDescription>
+                              </>
+                            )}
                           </ComboboxOption>
                         )}
                       </Combobox>
@@ -280,6 +384,7 @@ export function LineEditor({
                             min={0}
                             placeholder="W"
                             value={line.length}
+                            onBlur={() => snapSide(index, 'length')}
                             onChange={(event) =>
                               recomputeQuantity(index, {
                                 length: event.target.value,
@@ -294,6 +399,7 @@ export function LineEditor({
                             min={0}
                             placeholder="H"
                             value={line.width}
+                            onBlur={() => snapSide(index, 'width')}
                             onChange={(event) =>
                               recomputeQuantity(index, {
                                 width: event.target.value,
@@ -316,6 +422,38 @@ export function LineEditor({
                           />
                         </div>
                       ) : null}
+                      {line.dimensionUnit ? (() => {
+                        const l = optNum(line.length)
+                        const w = optNum(line.width)
+                        const bl = l && l > 0 ? billedSize(l, line.dimensionUnit) : null
+                        const bw = w && w > 0 ? billedSize(w, line.dimensionUnit) : null
+                        const changed =
+                          line.autoSize &&
+                          ((bl !== null && bl !== l) || (bw !== null && bw !== w))
+
+                        return (
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p
+                              className="text-xs/5 text-zinc-500 dark:text-zinc-400"
+                              aria-live="polite"
+                            >
+                              {!line.autoSize
+                                ? 'Manual: billed exactly as entered'
+                                : changed
+                                  ? `Billed as ${bl ?? l} × ${bw ?? w} ${DIMENSION_UNIT_SHORT[line.dimensionUnit]}`
+                                  : 'Auto: sizes round up to the next 3 in'}
+                            </p>
+                            <label className="flex items-center gap-2 text-xs/5 text-zinc-600 dark:text-zinc-300">
+                              Auto
+                              <Switch
+                                aria-label={`Auto-correct size to 3 inch steps for line ${index + 1}`}
+                                checked={line.autoSize}
+                                onChange={(checked) => setAutoSize(index, checked)}
+                              />
+                            </label>
+                          </div>
+                        )
+                      })() : null}
                     </div>
                     )}
                   </td>
@@ -404,6 +542,19 @@ export function LineEditor({
           Add line
         </Button>
       </div>
+
+      <QuickItemDialog
+        open={creating !== null}
+        onClose={() => setCreating(null)}
+        initialName={creating?.name ?? ''}
+        onCreated={(item) => {
+          setCreated((current) => [...current, item])
+
+          if (creating) {
+            applyItem(creating.index, item)
+          }
+        }}
+      />
     </div>
   )
 }

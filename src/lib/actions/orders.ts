@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextOrderNumber } from '@/lib/codes'
-import { documentTotals, lineTotals } from '@/lib/pricing'
+import { applySizeRule, documentTotals, lineTotals } from '@/lib/pricing'
 import { orderInputSchema } from '@/lib/validation/orders'
 import type { OrderData } from '@/lib/validation/orders'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -80,7 +80,9 @@ async function assertReferences(data: OrderData) {
   return null
 }
 
-function buildPersistable(data: OrderData) {
+function buildPersistable(input: OrderData) {
+  const data = { ...input, lines: input.lines.map(applySizeRule) }
+
   const totals = documentTotals({
     lines: data.lines,
     discountType: data.discountType,
@@ -99,6 +101,7 @@ function buildPersistable(data: OrderData) {
       unit: line.unit,
       materialSupply: line.materialSupply,
       isFlatRate: line.isFlatRate,
+      autoSize: line.autoSize,
       dimensionUnit: line.dimensionUnit,
       length: line.length,
       width: line.width,
@@ -359,6 +362,7 @@ export async function convertQuotationToOrder(
             unit: line.unit,
             materialSupply: line.materialSupply,
             isFlatRate: line.isFlatRate,
+            autoSize: line.autoSize,
             dimensionUnit: line.dimensionUnit,
             length: line.length,
             width: line.width,

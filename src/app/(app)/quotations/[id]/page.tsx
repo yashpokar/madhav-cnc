@@ -15,6 +15,7 @@ import {
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { getQuotation, summariseMaterial } from '@/lib/queries/quotations'
+import { QuotationRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteQuotation } from '@/lib/actions/quotations'
 import { can } from '@/lib/permissions'
@@ -368,6 +369,8 @@ export default async function QuotationDetailPage({
           </div>
         </>
       ) : null}
+
+      <QuotationRelated id={quotation.id} parentId={quotation.parentId} role={user.role} />
     </div>
   )
 }

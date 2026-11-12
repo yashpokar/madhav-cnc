@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlusIcon, TrashIcon } from '@heroicons/react/16/solid'
+import { QuickCustomerDialog } from '@/components/quick-customer-dialog'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
 import {
@@ -91,7 +92,7 @@ function blankLine(): NoteLineValue {
 export function NoteForm({
   action,
   values,
-  customers,
+  customers: initialCustomers,
   invoices,
   companyState,
   submitLabel,
@@ -114,6 +115,9 @@ export function NoteForm({
   const [kind, setKind] = useState(values.kind)
   const [partyType, setPartyType] = useState(values.partyType)
   const [customerId, setCustomerId] = useState(values.customerId ?? '')
+  const [created, setCreated] = useState<{ id: string; name: string; state: string | null }[]>([])
+  const [newCustomerOpen, setNewCustomerOpen] = useState(false)
+  const customers = [...initialCustomers, ...created]
   const [isInterState, setIsInterState] = useState(values.isInterState)
   const [lines, setLines] = useState(
     values.lines.length > 0 ? values.lines : [blankLine()],
@@ -261,6 +265,20 @@ export function NoteForm({
                     </option>
                   ))}
                 </Select>
+                <Button type="button" plain onClick={() => setNewCustomerOpen(true)}>
+                  + New customer
+                </Button>
+                <QuickCustomerDialog
+                  open={newCustomerOpen}
+                  onClose={() => setNewCustomerOpen(false)}
+                  onCreated={(customer) => {
+                    setCreated((current) => [
+                      ...current,
+                      { id: customer.id, name: customer.name, state: null },
+                    ])
+                    pickCustomer(customer.id)
+                  }}
+                />
                 {errors.customerId ? (
                   <ErrorMessage>{errors.customerId}</ErrorMessage>
                 ) : null}

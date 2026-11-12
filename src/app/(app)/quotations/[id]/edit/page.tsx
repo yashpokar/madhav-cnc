@@ -80,6 +80,7 @@ export default async function EditQuotationPage({
             unit: line.unit,
             materialSupply: line.materialSupply,
             isFlatRate: line.isFlatRate,
+            autoSize: line.autoSize,
             dimensionUnit: line.dimensionUnit,
             length: line.length === null ? '' : String(line.length),
             width: line.width === null ? '' : String(line.width),

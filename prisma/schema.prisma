@@ -432,6 +432,7 @@ model QuotationLine {
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
   isFlatRate     Boolean        @default(false) @map("is_flat_rate")
+  autoSize       Boolean        @default(true) @map("auto_size")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
@@ -548,6 +549,7 @@ model OrderLine {
 
   materialSupply MaterialSupply @default(WITH_MATERIAL) @map("material_supply")
   isFlatRate     Boolean        @default(false) @map("is_flat_rate")
+  autoSize       Boolean        @default(true) @map("auto_size")
 
   dimensionUnit DimensionUnit? @map("dimension_unit")
   length        Decimal?       @db.Decimal(10, 3)
@@ -941,6 +943,12 @@ model InvoiceLine {
   description String
   hsnCode     String?       @map("hsn_code")
   unit        UnitOfMeasure
+
+  // Snapshot of what was supplied, copied from the order line so the invoice
+  // still reads correctly if the item or material is renamed later.
+  materialName   String?         @map("material_name")
+  materialSupply MaterialSupply? @map("material_supply")
+  sizeText       String?         @map("size_text")
 
   quantity        Decimal @db.Decimal(12, 3)
   rate            Decimal @db.Decimal(12, 2)

@@ -7,6 +7,7 @@ import { requireCapability } from '@/lib/session'
 import { nextItemCode } from '@/lib/codes'
 import { materialInputSchema, itemInputSchema } from '@/lib/validation/items'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
+import type { SupplyType, UnitOfMeasure } from '@/generated/prisma/enums'
 
 export type { FormState }
 
@@ -157,4 +158,82 @@ export async function deleteItem(id: string) {
   revalidatePath('/items')
 
   return { ok: true as const, message: `${item.name} deleted` }
+}
+
+export type QuickItemResult =
+  | {
+      ok: true
+      item: {
+        id: string
+        code: string
+        name: string
+        unit: UnitOfMeasure
+        rate: number
+        taxRatePercent: number
+        hsnCode: string | null
+        brand: string | null
+        supplyType: SupplyType
+        isFlatRate: boolean
+        material: { name: string } | null
+      }
+    }
+  | { ok: false; error: string }
+
+/** Creates an item from the essentials, from inside a quotation or order. */
+export async function quickCreateItem(input: {
+  name: string
+  unit: UnitOfMeasure
+  rate: string
+  taxRatePercent: string
+  materialId?: string | null
+}): Promise<QuickItemResult> {
+  const user = await requireCapability('item:create')
+
+  const parsed = itemInputSchema.safeParse({
+    name: input.name,
+    unit: input.unit,
+    rate: input.rate || 0,
+    taxRatePercent: input.taxRatePercent || 0,
+    materialId: input.materialId ?? '',
+    isActive: true,
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  const code = await nextItemCode()
+
+  const item = await prisma.item.create({
+    data: {
+      ...parsed.data,
+      code,
+      createdById: user.id,
+      updatedById: user.id,
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      unit: true,
+      rate: true,
+      taxRatePercent: true,
+      hsnCode: true,
+      brand: true,
+      supplyType: true,
+      isFlatRate: true,
+      material: { select: { name: true } },
+    },
+  })
+
+  revalidatePath('/items')
+
+  return {
+    ok: true,
+    item: {
+      ...item,
+      rate: item.rate.toNumber(),
+      taxRatePercent: item.taxRatePercent.toNumber(),
+    },
+  }
 }

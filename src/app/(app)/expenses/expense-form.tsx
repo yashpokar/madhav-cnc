@@ -18,7 +18,8 @@ import { Select } from '@/components/catalyst/select'
 import { Switch, SwitchField } from '@/components/catalyst/switch'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
-import type { FormState } from '@/lib/actions/expenses'
+import { QuickNameDialog } from '@/components/quick-name-dialog'
+import { quickCreateExpenseCategory, type FormState } from '@/lib/actions/expenses'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { PaymentMode } from '@/generated/prisma/enums'
 
@@ -47,7 +48,7 @@ const currency = new Intl.NumberFormat('en-IN', {
 export function ExpenseForm({
   action,
   values,
-  categories,
+  categories: initialCategories,
   orders,
   submitLabel,
 }: {
@@ -69,6 +70,14 @@ export function ExpenseForm({
     submitted[name] ??
     (fallback === null || fallback === undefined ? '' : String(fallback))
 
+  const [createdCategories, setCreatedCategories] = useState<
+    { id: string; name: string }[]
+  >([])
+  const categories = [...initialCategories, ...createdCategories]
+  const [categoryId, setCategoryId] = useState(
+    keep('categoryId', values.categoryId),
+  )
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false)
   const [amount, setAmount] = useState(keep('amount', values.amount))
   const [taxRate, setTaxRate] = useState(
     keep('taxRatePercent', values.taxRatePercent),
@@ -120,7 +129,8 @@ export function ExpenseForm({
               <Label>Category</Label>
               <Select
                 name="categoryId"
-                defaultValue={keep('categoryId', values.categoryId)}
+                value={categoryId}
+                onChange={(event) => setCategoryId(event.target.value)}
               >
                 <option value="">Uncategorised</option>
                 {categories.map((category) => (
@@ -129,6 +139,31 @@ export function ExpenseForm({
                   </option>
                 ))}
               </Select>
+              <Button type="button" plain onClick={() => setNewCategoryOpen(true)}>
+                + New category
+              </Button>
+              <QuickNameDialog
+                open={newCategoryOpen}
+                onClose={() => setNewCategoryOpen(false)}
+                title="New expense category"
+                label="Category name"
+                save={async (name) => {
+                  const result = await quickCreateExpenseCategory(name)
+
+                  if (!result.ok) {
+                    return result.error
+                  }
+
+                  setCreatedCategories((current) =>
+                    current.some((entry) => entry.id === result.category.id)
+                      ? current
+                      : [...current, result.category],
+                  )
+                  setCategoryId(result.category.id)
+
+                  return null
+                }}
+              />
             </Field>
           </div>
 

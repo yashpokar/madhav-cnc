@@ -84,7 +84,16 @@ export async function getInvoice(id: string) {
     where: { id },
     include: {
       customer: true,
-      order: { select: { id: true, number: true, subject: true } },
+      order: {
+        select: {
+          id: true,
+          number: true,
+          subject: true,
+          customerPoNumber: true,
+          siteAddress: true,
+          siteCity: true,
+        },
+      },
       createdBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
       paymentAllocations: {
@@ -186,6 +195,12 @@ export async function getOrderForInvoice(orderId: string) {
           description: true,
           hsnCode: true,
           unit: true,
+          materialSupply: true,
+          dimensionUnit: true,
+          length: true,
+          width: true,
+          pieces: true,
+          item: { select: { material: { select: { name: true } } } },
           quantity: true,
           rate: true,
           discountPercent: true,
@@ -236,3 +251,40 @@ export async function listInvoiceableOrders() {
 
 export type InvoiceListItem = Awaited<ReturnType<typeof listInvoices>>[number]
 export type InvoiceDetail = NonNullable<Awaited<ReturnType<typeof getInvoice>>>
+
+/** Invoices on an order that still count (anything not cancelled). */
+export async function activeInvoicesForOrder(orderId: string) {
+  return prisma.invoice.findMany({
+    where: { orderId, status: { not: 'CANCELLED' } },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, number: true, status: true },
+  })
+}
+
+/** Completed orders nobody has invoiced yet. */
+export async function listReadyToInvoice(limit = 5) {
+  const where = {
+    status: 'COMPLETED' as const,
+    invoices: { none: { status: { not: 'CANCELLED' as const } } },
+  }
+
+  const [count, orders] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      orderBy: { updatedAt: 'asc' },
+      take: limit,
+      select: {
+        id: true,
+        number: true,
+        total: true,
+        customer: { select: { name: true } },
+      },
+    }),
+  ])
+
+  return {
+    count,
+    orders: orders.map((order) => ({ ...order, total: order.total.toNumber() })),
+  }
+}

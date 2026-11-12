@@ -20,6 +20,7 @@ import {
 import { getCompanySetting } from '@/lib/queries/company'
 import { requireCapability } from '@/lib/session'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/lib/labels'
+import { detailsFromOrderLine } from '@/lib/line-details'
 import { InvoiceForm } from '../invoice-form'
 
 export const metadata: Metadata = {
@@ -166,6 +167,7 @@ export default async function NewInvoicePage({
             description: line.description,
             hsnCode: line.hsnCode,
             unit: line.unit,
+            ...detailsFromOrderLine(line),
             quantity: String(line.quantity),
             rate: String(line.rate),
             discountPercent: String(line.discountPercent),

@@ -21,6 +21,7 @@ import { getCompanySetting } from '@/lib/queries/company'
 import { InvoiceRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteInvoice } from '@/lib/actions/invoices'
+import { describeLineDetails } from '@/lib/line-details'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -178,6 +179,25 @@ export default async function InvoiceDetailPage({
           <Subheading level={2}>Supply</Subheading>
           <div className="mt-2 text-sm/6 text-zinc-500 dark:text-zinc-400">
             <div>Place: {invoice.placeOfSupply ?? '—'}</div>
+            {invoice.order ? (
+              <>
+                <div>Order: {invoice.order.number}</div>
+                {invoice.order.customerPoNumber ? (
+                  <div>Your PO: {invoice.order.customerPoNumber}</div>
+                ) : null}
+                {invoice.order.subject ? (
+                  <div>Project: {invoice.order.subject}</div>
+                ) : null}
+                {invoice.order.siteAddress || invoice.order.siteCity ? (
+                  <div>
+                    Site:{' '}
+                    {[invoice.order.siteAddress, invoice.order.siteCity]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
             <div>{invoice.isInterState ? 'Inter-state (IGST)' : 'Intra-state (CGST + SGST)'}</div>
           </div>
         </div>
@@ -227,7 +247,14 @@ export default async function InvoiceDetailPage({
                 <TableCell className="tabular-nums text-zinc-500 dark:text-zinc-400">
                   {line.position}
                 </TableCell>
-                <TableCell className="font-medium">{line.description}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{line.description}</div>
+                  {describeLineDetails(line) ? (
+                    <div className="text-xs/5 font-normal text-zinc-500 dark:text-zinc-400">
+                      {describeLineDetails(line)}
+                    </div>
+                  ) : null}
+                </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
                   {line.hsnCode ?? '—'}
                 </TableCell>

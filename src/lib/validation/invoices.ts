@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   DiscountType,
   InvoiceStatus,
+  MaterialSupply,
   PaymentMode,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
@@ -34,6 +35,12 @@ export const invoiceLineSchema = z.object({
   description: z.string().trim().min(1, 'Description is required').max(500),
   hsnCode: optionalText(12),
   unit: z.enum(UnitOfMeasure),
+  materialName: optionalText(100),
+  materialSupply: z
+    .union([z.literal(''), z.null(), z.enum(MaterialSupply)])
+    .optional()
+    .transform((value) => (value ? value : null)),
+  sizeText: optionalText(100),
   quantity: z.coerce
     .number()
     .gt(0, 'Quantity must be greater than zero')

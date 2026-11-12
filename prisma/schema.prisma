@@ -59,6 +59,7 @@ model User {
   invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
   paymentsRecorded Payment[] @relation("PaymentRecordedBy")
   writeOffsRecorded InvoiceWriteOff[] @relation("WriteOffRecordedBy")
+  cashCreditsRecorded CashCredit[] @relation("CashCreditRecordedBy")
   dispatchesCreated Dispatch[] @relation("DispatchCreatedBy")
   dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
   sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
@@ -1003,6 +1004,27 @@ model InvoiceWriteOff {
 
   @@index([invoiceId])
   @@map("invoice_write_offs")
+}
+
+// Money received that is not a customer receipt: owner capital, a vendor
+// refund, other income. Shown on the CREDIT side of the cash book.
+model CashCredit {
+  id String @id @default(cuid())
+
+  entryDate  DateTime    @map("entry_date") @db.Date
+  sourceName String      @map("source_name")
+  amount     Decimal     @db.Decimal(14, 2)
+  mode       PaymentMode @default(CASH)
+  reference  String?
+  notes      String?
+
+  recordedById String? @map("recorded_by_id")
+  recordedBy   User?   @relation("CashCreditRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entryDate])
+  @@map("cash_credits")
 }
 
 model Payment {

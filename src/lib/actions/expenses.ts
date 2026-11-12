@@ -9,6 +9,7 @@ import { round2 } from '@/lib/pricing'
 import {
   expenseCategorySchema,
   expenseInputSchema,
+  cashCreditSchema,
 } from '@/lib/validation/accounting'
 import type { ExpenseData } from '@/lib/validation/accounting'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -127,6 +128,63 @@ export async function createLiteExpense(
 
   revalidatePath('/expenses')
   redirect(`/cashbook?saved=${expense.number}`)
+}
+
+/** Money in that is not a customer receipt; shows on the cash book's CREDIT side. */
+export async function createCashCredit(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireCapability('expense:create')
+
+  const parsed = cashCreditSchema.safeParse({
+    entryDate: formData.get('entryDate'),
+    sourceName: formData.get('sourceName'),
+    amount: formData.get('amount') || 0,
+    mode: formData.get('mode') ?? undefined,
+    reference: formData.get('reference'),
+    notes: formData.get('notes'),
+  })
+
+  if (!parsed.success) {
+    return {
+      status: 'error',
+      message: 'Please correct the highlighted fields',
+      fieldErrors: fieldErrorsFrom(parsed.error),
+      values: rawValues(formData),
+    }
+  }
+
+  const known = await prisma.cashCredit.findFirst({
+    where: { sourceName: { equals: parsed.data.sourceName, mode: 'insensitive' } },
+    select: { sourceName: true },
+  })
+
+  await prisma.cashCredit.create({
+    data: {
+      ...parsed.data,
+      sourceName: known?.sourceName ?? parsed.data.sourceName,
+      recordedById: user.id,
+    },
+  })
+
+  revalidatePath('/cashbook')
+  redirect('/cashbook?savedCredit=1')
+}
+
+export async function deleteCashCredit(id: string): Promise<SimpleResult> {
+  await requireCapability('expense:delete')
+
+  const row = await prisma.cashCredit.findUnique({ where: { id }, select: { id: true } })
+
+  if (!row) {
+    return { ok: false, error: 'Entry not found' }
+  }
+
+  await prisma.cashCredit.delete({ where: { id } })
+  revalidatePath('/cashbook')
+
+  return { ok: true, message: 'Credit entry deleted' }
 }
 
 export async function updateExpense(

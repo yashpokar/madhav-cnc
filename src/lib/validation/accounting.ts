@@ -49,6 +49,18 @@ export const expenseInputSchema = z.object({
   orderId: optionalId,
 })
 
+export const cashCreditSchema = z.object({
+  entryDate: requiredDate,
+  sourceName: z.string().trim().min(1, 'Received from is required').max(160),
+  amount: z.coerce
+    .number()
+    .gt(0, 'Amount must be greater than zero')
+    .max(99_999_999),
+  mode: z.enum(PaymentMode).default('CASH'),
+  reference: optionalText(120),
+  notes: optionalText(500),
+})
+
 export const noteLineSchema = z.object({
   description: z.string().trim().min(1, 'Description is required').max(500),
   hsnCode: optionalText(12),

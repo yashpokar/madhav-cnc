@@ -74,6 +74,11 @@ const optNum = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/** Item name with its material in brackets, e.g. "Louvers (Teak)". */
+function itemLabel(item: ItemOption) {
+  return item.material?.name ? `${item.name} (${item.material.name})` : item.name
+}
+
 export const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
@@ -103,7 +108,7 @@ export function LineEditor({
 
     update(index, {
       itemId: item.id,
-      description: item.name,
+      description: itemLabel(item),
       unit: item.unit,
       rate: String(item.rate),
       taxRatePercent: String(item.taxRatePercent),
@@ -175,7 +180,7 @@ export function LineEditor({
                         value={selectedItem}
                         onChange={(item) => applyItem(index, item)}
                         placeholder="Pick an item…"
-                        displayValue={(item) => item?.name ?? ''}
+                        displayValue={(item) => (item ? itemLabel(item) : '')}
                         filter={(item, query) => {
                           if (!item) return true
                           const haystack = [
@@ -192,7 +197,7 @@ export function LineEditor({
                       >
                         {(item) => (
                           <ComboboxOption value={item}>
-                            <ComboboxLabel>{item.name}</ComboboxLabel>
+                            <ComboboxLabel>{itemLabel(item)}</ComboboxLabel>
                             <ComboboxDescription>
                               {item.code} · {currency.format(item.rate)} /{' '}
                               {UNIT_SHORT[item.unit]}

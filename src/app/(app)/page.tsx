@@ -1,25 +1,27 @@
-import { Badge } from '@/components/catalyst/badge'
-import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
-import { Text } from '@/components/catalyst/text'
+import { CreateMenu } from '@/components/create-menu'
 import {
+  CARD,
   inr,
+  MoneyBars,
+  NowStrip,
   Panel,
+  PeriodTile,
   Row,
   shortDate,
-  StatTile,
 } from '@/components/dashboard-parts'
+import { DashboardRangeBar } from '@/components/dashboard-range-bar'
+import { readDashboardRange } from '@/lib/dashboard-range'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
-import { can, ROLE_LABELS } from '@/lib/permissions'
+import { can } from '@/lib/permissions'
 import {
   getDispatchWatch,
-  getMoneyWatch,
+  getPeriodActivity,
   getOrderWatch,
   getProductionWatch,
   getQuoteWatch,
 } from '@/lib/queries/dashboard'
-import { OverallStatement } from '@/components/overall-statement'
 import { listReadyToInvoice } from '@/lib/queries/invoices'
 import { getCustomerLedger, getReceivables } from '@/lib/queries/receivables'
 import { countPendingUsers } from '@/lib/queries/users'
@@ -81,65 +83,242 @@ export default async function DashboardPage({
 
   const user = await requireUser()
   const role = user.role
+  const range = readDashboardRange(query)
 
   const canQuotes = can(role, 'quotation:read')
   const canOrders = can(role, 'order:read')
   const canProduction = can(role, 'production:read')
   const canDispatch = can(role, 'dispatch:read')
   const canMoney = can(role, 'invoice:read')
+  const canExpenses = can(role, 'expense:read')
   const isAdmin = can(role, 'user:update')
 
-  const [quotes, orders, production, dispatch, money, receivables, ledger, pending, toInvoice] =
-    await Promise.all([
+  const [
+    quotes,
+    orders,
+    production,
+    dispatch,
+    receivables,
+    ledger,
+    pending,
+    toInvoice,
+    activity,
+  ] = await Promise.all([
       canQuotes ? getQuoteWatch() : null,
       canOrders ? getOrderWatch() : null,
       canProduction ? getProductionWatch(user.id) : null,
       canDispatch ? getDispatchWatch() : null,
-      canMoney ? getMoneyWatch() : null,
       canMoney ? getReceivables() : null,
       canMoney && can(role, 'payment:read') ? getCustomerLedger() : null,
       isAdmin ? countPendingUsers() : 0,
       canMoney && can(role, 'invoice:create') ? listReadyToInvoice() : null,
+      canMoney || canExpenses || canOrders || canQuotes
+        ? getPeriodActivity(range, {
+            money: canMoney,
+            expenses: canExpenses,
+            orders: canOrders,
+            quotes: canQuotes,
+          })
+        : null,
     ])
 
-  const quickActions = [
-    { href: '/quotations/new', label: 'New quotation', cap: 'quotation:create' },
-    { href: '/orders/new', label: 'New order', cap: 'order:create' },
-    { href: '/customers/new', label: 'New customer', cap: 'customer:create' },
-    { href: '/invoices/new', label: 'New invoice', cap: 'invoice:create' },
-    { href: '/payments/new', label: 'Record receipt', cap: 'payment:create' },
-    { href: '/dispatch/new', label: 'New challan', cap: 'dispatch:create' },
-    { href: '/daybook', label: 'Day book', cap: 'expense:read' },
-  ].filter((action) => can(role, action.cap as never))
+  // Carried along when the period changes, so the other filter is not lost.
+  const keep: Record<string, string> = {}
+  if (typeof query.outstanding === 'string') keep.outstanding = query.outstanding
+  const span = `from=${range.fromIso}&to=${range.toIso}`
+  const now = activity?.current
+  const before = activity?.previous
+  const attention = [
+    receivables && receivables.overdue > 0
+      ? {
+          href: '/payments',
+          text: `${inr.format(receivables.overdue)} is overdue from customers`,
+          tone: 'bad' as const,
+        }
+      : null,
+    orders && orders.overdue > 0
+      ? { href: '/orders', text: `${orders.overdue} order${orders.overdue === 1 ? ' is' : 's are'} past the due date`, tone: 'bad' as const }
+      : null,
+    orders && orders.dueThisWeek > 0
+      ? { href: '/orders', text: `${orders.dueThisWeek} order${orders.dueThisWeek === 1 ? '' : 's'} due in the next 7 days`, tone: 'warn' as const }
+      : null,
+    quotes && quotes.expiringSoon > 0
+      ? { href: '/quotations?tab=sent', text: `${quotes.expiringSoon} quotation${quotes.expiringSoon === 1 ? '' : 's'} expire within 3 days`, tone: 'warn' as const }
+      : null,
+    toInvoice && toInvoice.count > 0
+      ? { href: '/invoices/new', text: `${toInvoice.count} completed order${toInvoice.count === 1 ? '' : 's'} not yet invoiced`, tone: 'warn' as const }
+      : null,
+    orders && orders.readyToDispatch > 0
+      ? { href: '/orders', text: `${orders.readyToDispatch} order${orders.readyToDispatch === 1 ? ' is' : 's are'} ready to dispatch`, tone: 'info' as const }
+      : null,
+    production && production.onHold > 0
+      ? { href: '/production', text: `${production.onHold} production task${production.onHold === 1 ? ' is' : 's are'} on hold`, tone: 'warn' as const }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null)
+
+  const create = (
+    [
+      ['quotation', 'quotation:create'],
+      ['order', 'order:create'],
+      ['challan', 'dispatch:create'],
+      ['invoice', 'invoice:create'],
+      ['receipt', 'payment:create'],
+      ['expense', 'expense:create'],
+      ['customer', 'customer:create'],
+    ] as const
+  )
+    .filter(([, cap]) => can(role, cap))
+    .map(([key]) => key)
+
+  const todayLong = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Asia/Kolkata',
+  })
+
+  const nowItems = [
+    orders
+      ? { href: '/orders', label: 'Open orders', value: orders.openCount, hint: `${orders.readyToDispatch} ready to dispatch` }
+      : null,
+    production
+      ? {
+          href: '/production',
+          label: 'In production',
+          value: production.inProgress,
+          hint: production.onHold > 0 ? `${production.onHold} on hold` : 'tasks running',
+          tone: production.onHold > 0 ? ('warn' as const) : undefined,
+        }
+      : null,
+    quotes
+      ? {
+          href: '/quotations?tab=sent',
+          label: 'Quotes awaiting reply',
+          value: quotes.awaiting,
+          hint: `${quotes.drafts} in draft`,
+        }
+      : null,
+    dispatch
+      ? { href: '/dispatch', label: 'Challans in transit', value: dispatch.inTransit, hint: `${dispatch.drafts} draft` }
+      : null,
+    receivables
+      ? {
+          href: '/payments',
+          label: 'Outstanding',
+          value: inr.format(receivables.outstanding),
+          hint: `${inr.format(receivables.overdue)} overdue`,
+          tone: receivables.overdue > 0 ? ('warn' as const) : undefined,
+        }
+      : null,
+    ledger
+      ? {
+          href: '/?outstanding=defaulted',
+          label: 'Not recoverable',
+          value: inr.format(ledger.reduce((sum, r) => sum + r.defaulted, 0)),
+          hint: `${ledger.filter((r) => r.defaulted > 0).length} customer(s)`,
+        }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null)
+
+  const showChart = Boolean(activity?.series) && range.days > 1
+
+  const panels = [
+    production && production.mine.length > 0 ? (
+      <Panel key="mine" title="My tasks" href="/production" empty="">
+        {production.mine.map((task) => (
+          <Row
+            key={task.id}
+            href={`/orders/${task.order.id}`}
+            title={`${task.order.number} · ${task.stage.name}`}
+            subtitle={task.order.customer.name}
+            trailing={dueLabel(task.order.dueDate)}
+            trailingTone={isLate(task.order.dueDate) ? 'warn' : 'default'}
+          />
+        ))}
+      </Panel>
+    ) : null,
+    orders ? (
+      <Panel key="orders" title="Orders by due date" href="/orders" empty="No open orders. Nice and quiet.">
+        {orders.list.map((order) => (
+          <Row
+            key={order.id}
+            href={`/orders/${order.id}`}
+            title={`${order.number} · ${order.customer.name}`}
+            subtitle={ORDER_STATUS_LABELS[order.status]}
+            trailing={dueLabel(order.dueDate)}
+            trailingTone={isLate(order.dueDate) ? 'warn' : 'default'}
+          />
+        ))}
+      </Panel>
+    ) : null,
+    quotes ? (
+      <Panel
+        key="quotes"
+        title="Quotes to follow up"
+        href="/quotations?tab=sent"
+        empty="No quotations are waiting on a customer."
+      >
+        {quotes.list.map((quotation) => (
+          <Row
+            key={quotation.id}
+            href={`/quotations/${quotation.id}`}
+            title={`${quotation.number} · ${quotation.customer.name}`}
+            subtitle={inr.format(quotation.total)}
+            trailing={
+              quotation.validUntil ? `Valid to ${shortDate.format(quotation.validUntil)}` : undefined
+            }
+          />
+        ))}
+      </Panel>
+    ) : null,
+    toInvoice && toInvoice.count > 0 ? (
+      <Panel
+        key="bill"
+        title={`Ready to invoice (${toInvoice.count})`}
+        href="/invoices/new"
+        linkLabel="Create invoice"
+        empty=""
+      >
+        {toInvoice.orders.map((order) => (
+          <Row
+            key={order.id}
+            href={`/orders/${order.id}`}
+            title={`${order.number} · ${order.customer.name}`}
+            subtitle="Completed"
+            trailing={inr.format(order.total)}
+          />
+        ))}
+      </Panel>
+    ) : null,
+  ].filter(Boolean)
+
+  const filterHref = (key: string) =>
+    `/?${new URLSearchParams({
+      ...(range.key === 'custom'
+        ? { range: 'custom', from: range.fromIso, to: range.toIso }
+        : { range: range.key }),
+      ...(key === 'all' ? {} : { outstanding: key }),
+    })}`
 
   return (
-    <div className="grid grid-cols-1 gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
+    <div className="grid grid-cols-1 gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
         <div className="grid gap-1">
+          <p className="text-sm/6 text-zinc-500 dark:text-zinc-400">{todayLong}</p>
           <Heading>
             {greeting()}, {user.name.split(' ')[0]}
           </Heading>
-          <Text>
-            Signed in as <Badge color="zinc">{ROLE_LABELS[role]}</Badge>
-          </Text>
         </div>
-        <p className="hidden text-xs/5 text-zinc-500 sm:block dark:text-zinc-400">
-          Tip: press{' '}
-          <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">
-            ⌘K
-          </kbd>{' '}
-          or{' '}
-          <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">
-            Ctrl K
-          </kbd>{' '}
-          to search anything
-        </p>
-      </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <DashboardRangeBar range={range} keep={keep} />
+          <CreateMenu allowed={[...create]} />
+        </div>
+      </header>
 
       {isAdmin && pending > 0 ? (
         <div
           role="status"
-          className="print:hidden flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-900 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-sm/6 text-amber-900 ring-1 ring-amber-950/10 print:hidden dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20"
         >
           <span>
             {pending} account{pending === 1 ? '' : 's'} awaiting approval
@@ -150,247 +329,198 @@ export default async function DashboardPage({
         </div>
       ) : null}
 
-      {quickActions.length > 0 ? (
-        <nav aria-label="Quick actions" className="flex flex-wrap gap-2 print:hidden">
-          {quickActions.map((action, index) =>
-            index === 0 ? (
-              <Button key={action.href} href={action.href}>
-                {action.label}
-              </Button>
-            ) : (
-              <Button key={action.href} href={action.href} outline>
-                {action.label}
-              </Button>
-            ),
-          )}
-        </nav>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 print:hidden">
-        {orders ? (
-          <>
-            <StatTile
-              href="/orders"
-              label="Open orders"
-              value={orders.openCount}
-              hint={`${orders.readyToDispatch} ready to dispatch`}
-            />
-            <StatTile
-              href="/orders"
-              label="Due this week"
-              value={orders.dueThisWeek}
-              hint={
-                orders.overdue > 0
-                  ? `${orders.overdue} overdue`
-                  : 'Nothing overdue'
-              }
-              tone={orders.overdue > 0 ? 'warn' : 'default'}
-            />
-          </>
-        ) : null}
-        {quotes ? (
-          <StatTile
-            href="/quotations?tab=sent"
-            label="Quotes awaiting reply"
-            value={quotes.awaiting}
-            hint={
-              quotes.expiringSoon > 0
-                ? `${quotes.expiringSoon} expire within 3 days`
-                : `${quotes.drafts} in draft`
-            }
-            tone={quotes.expiringSoon > 0 ? 'warn' : 'default'}
-          />
-        ) : null}
-        {production ? (
-          <StatTile
-            href="/production"
-            label="In production"
-            value={production.inProgress}
-            hint={
-              production.onHold > 0
-                ? `${production.onHold} on hold`
-                : 'Tasks running now'
-            }
-            tone={production.onHold > 0 ? 'warn' : 'default'}
-          />
-        ) : null}
-        {receivables && money ? (
-          <>
-            <StatTile
-              href="/payments"
-              label="Outstanding"
-              value={inr.format(receivables.outstanding)}
-              hint={`${inr.format(receivables.overdue)} overdue`}
-              tone={receivables.overdue > 0 ? 'warn' : 'default'}
-            />
-            {ledger ? (
-              <StatTile
-                href="/?outstanding=defaulted"
-                label="Not recoverable"
-                value={inr.format(ledger.reduce((sum, r) => sum + r.defaulted, 0))}
-                hint={`${ledger.filter((r) => r.defaulted > 0).length} customer(s) with write-offs`}
-                tone={ledger.some((r) => r.defaulted > 0) ? 'warn' : 'default'}
+      {activity && now && before ? (
+        <section aria-label={`Activity: ${range.label}`} className="grid gap-3 print:hidden">
+          <h2 className="text-sm/6 font-semibold">
+            {range.label}
+            <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+              compared with {range.compareLabel}
+            </span>
+          </h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+            {canMoney ? (
+              <PeriodTile
+                href={`/payments?${span}`}
+                label="Money in"
+                value={inr.format(now.received)}
+                current={now.received}
+                previous={before.received}
+                versus={range.compareLabel}
+                tone="good"
+                note="receipts + day-book credits"
               />
             ) : null}
-            <StatTile
-              href="/payments"
-              label="Collected this month"
-              value={inr.format(money.collectedThisMonth)}
-              hint={
-                money.creditsThisMonth > 0
-                  ? `${inr.format(money.receiptsThisMonth)} receipts · ${inr.format(money.creditsThisMonth)} day-book credits`
-                  : 'Customer receipts this month'
-              }
-              tone="good"
-            />
-          </>
+            {canExpenses ? (
+              <PeriodTile
+                href={`/expenses?${span}`}
+                label="Money out"
+                value={inr.format(now.spent)}
+                current={now.spent}
+                previous={before.spent}
+                goodWhenUp={false}
+                versus={range.compareLabel}
+                tone={now.spent > 0 ? 'bad' : 'default'}
+                note="expenses"
+              />
+            ) : null}
+            {canMoney && canExpenses ? (
+              <PeriodTile
+                label="Net"
+                value={`${now.received - now.spent < 0 ? '−' : ''}${inr.format(Math.abs(now.received - now.spent))}`}
+                current={now.received - now.spent}
+                previous={before.received - before.spent}
+                versus={range.compareLabel}
+                tone={now.received - now.spent < 0 ? 'bad' : 'good'}
+                note="money in minus out"
+              />
+            ) : null}
+            {canMoney ? (
+              <PeriodTile
+                href={`/invoices?tab=issued&${span}`}
+                label="Billed"
+                value={inr.format(now.billed)}
+                current={now.billed}
+                previous={before.billed}
+                versus={range.compareLabel}
+                note={`${now.billedCount} invoice${now.billedCount === 1 ? '' : 's'} issued`}
+              />
+            ) : null}
+            {canOrders ? (
+              <PeriodTile
+                href={`/orders?${span}`}
+                label="New orders"
+                value={String(now.orders)}
+                current={now.orders}
+                previous={before.orders}
+                versus={range.compareLabel}
+                note={`worth ${inr.format(now.ordersValue)}`}
+              />
+            ) : null}
+            {canQuotes ? (
+              <PeriodTile
+                href={`/quotations?${span}`}
+                label="Quotations sent"
+                value={String(now.quotes)}
+                current={now.quotes}
+                previous={before.quotes}
+                versus={range.compareLabel}
+                note={`worth ${inr.format(now.quotesValue)}`}
+              />
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      <div className={`grid grid-cols-1 gap-3 print:hidden ${showChart ? 'lg:grid-cols-3' : ''}`}>
+        {showChart && activity?.series ? (
+          <section className={`${CARD} p-4 lg:col-span-2`}>
+            <h2 className="mb-3 text-sm/6 font-semibold">
+              Money in and out{activity.series.weekly ? ', by week' : ', by day'}
+            </h2>
+            <MoneyBars buckets={activity.series.buckets} weekly={activity.series.weekly} />
+          </section>
         ) : null}
-        {dispatch ? (
-          <StatTile
-            href="/dispatch"
-            label="Challans"
-            value={dispatch.inTransit}
-            hint={`in transit · ${dispatch.drafts} draft`}
-          />
-        ) : null}
+
+        <section className={CARD}>
+          <h2 className="px-4 pt-4 text-sm/6 font-semibold">Needs attention</h2>
+          {attention.length === 0 ? (
+            <p className="flex items-center gap-2 px-4 pt-2 pb-5 text-sm/6 text-zinc-500 dark:text-zinc-400">
+              <span aria-hidden="true" className="size-2 rounded-full bg-lime-500" />
+              All clear. Nothing is late or waiting on you.
+            </p>
+          ) : (
+            <ul className="mt-2 divide-y divide-zinc-950/5 pb-2 dark:divide-white/5">
+              {attention.map((item) => (
+                <li key={item.text}>
+                  <Link
+                    href={item.href}
+                    className="flex items-start gap-3 px-4 py-2.5 text-sm/6 hover:bg-zinc-50 dark:hover:bg-white/5"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`mt-2 size-2 shrink-0 rounded-full ${
+                        item.tone === 'bad'
+                          ? 'bg-red-500'
+                          : item.tone === 'warn'
+                            ? 'bg-amber-500'
+                            : 'bg-blue-500'
+                      }`}
+                    />
+                    {item.text}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 print:hidden">
-        {production && production.mine.length > 0 ? (
-          <Panel title="My tasks" href="/production" empty="">
-            {production.mine.map((task) => (
-              <Row
-                key={task.id}
-                href={`/orders/${task.order.id}`}
-                title={`${task.order.number} · ${task.stage.name}`}
-                subtitle={task.order.customer.name}
-                trailing={dueLabel(task.order.dueDate)}
-                trailingTone={isLate(task.order.dueDate) ? 'warn' : 'default'}
-              />
-            ))}
-          </Panel>
-        ) : null}
+      <div className="print:hidden">
+        <NowStrip items={nowItems} />
+      </div>
 
-        {orders ? (
-          <Panel
-            title="Orders by due date"
-            href="/orders"
-            empty="No open orders. Nice and quiet."
-          >
-            {orders.list.map((order) => (
-              <Row
-                key={order.id}
-                href={`/orders/${order.id}`}
-                title={`${order.number} · ${order.customer.name}`}
-                subtitle={ORDER_STATUS_LABELS[order.status]}
-                trailing={dueLabel(order.dueDate)}
-                trailingTone={isLate(order.dueDate) ? 'warn' : 'default'}
-              />
-            ))}
-          </Panel>
-        ) : null}
+      {panels.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>*:last-child:nth-child(odd)]:col-span-2 print:hidden">
+          {panels}
+        </div>
+      ) : null}
 
-        {quotes ? (
-          <Panel
-            title="Quotes to follow up"
-            href="/quotations"
-            empty="No quotations are waiting on a customer."
-          >
-            {quotes.list.map((quotation) => (
-              <Row
-                key={quotation.id}
-                href={`/quotations/${quotation.id}`}
-                title={`${quotation.number} · ${quotation.customer.name}`}
-                subtitle={inr.format(quotation.total)}
-                trailing={
-                  quotation.validUntil
-                    ? `Valid to ${shortDate.format(quotation.validUntil)}`
-                    : undefined
-                }
-              />
-            ))}
-          </Panel>
-        ) : null}
+      {ledger ? (
+        <section className={`${CARD} print:hidden`}>
+          <header className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
+            <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">
+              Outstanding by customer
+            </h2>
+            <div className="flex items-center gap-3">
+              <nav aria-label="Filter outstanding" className="flex gap-1 rounded-lg bg-zinc-950/5 p-0.5 dark:bg-white/5">
+                {OUTSTANDING_FILTERS.map((f) => (
+                  <Link
+                    key={f.key}
+                    href={filterHref(f.key)}
+                    aria-current={filter === f.key ? 'true' : undefined}
+                    className={
+                      filter === f.key
+                        ? 'rounded-md bg-white px-2.5 py-0.5 text-xs/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
+                        : 'rounded-md px-2.5 py-0.5 text-xs/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+                    }
+                  >
+                    {f.label}
+                  </Link>
+                ))}
+              </nav>
+              <Link
+                href="/payments"
+                className="text-xs/5 font-medium text-zinc-600 underline decoration-zinc-950/20 underline-offset-2 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              >
+                View all
+              </Link>
+            </div>
+          </header>
+          {(() => {
+            const rows = ledger
+              .filter((r) =>
+                filter === 'overdue' ? r.overdue > 0 : filter === 'defaulted' ? r.defaulted > 0 : r.due > 0,
+              )
+              .sort((a, b) =>
+                filter === 'defaulted'
+                  ? b.defaulted - a.defaulted
+                  : filter === 'overdue'
+                    ? b.overdue - a.overdue
+                    : b.due - a.due,
+              )
+            const shown = rows.slice(0, 8)
 
-        {toInvoice && toInvoice.count > 0 ? (
-          <Panel
-            title={`Ready to invoice (${toInvoice.count})`}
-            href="/invoices/new"
-            linkLabel="Pick an order"
-            empty=""
-          >
-            {toInvoice.orders.map((order) => (
-              <Row
-                key={order.id}
-                href={`/orders/${order.id}`}
-                title={`${order.number} · ${order.customer.name}`}
-                subtitle="Completed"
-                trailing={inr.format(order.total)}
-              />
-            ))}
-          </Panel>
-        ) : null}
-
-        {ledger ? (
-          <section className="rounded-lg ring-1 ring-zinc-950/10 lg:col-span-2 dark:ring-white/10">
-            <header className="flex flex-wrap items-center justify-between gap-3 px-3 pt-3">
-              <h2 className="text-sm/6 font-semibold text-zinc-950 dark:text-white">
-                Outstanding by customer
-              </h2>
-              <div className="flex items-center gap-3">
-                <nav aria-label="Filter outstanding" className="flex gap-1">
-                  {OUTSTANDING_FILTERS.map((f) => (
-                    <Link
-                      key={f.key}
-                      href={f.key === 'all' ? '/' : `/?outstanding=${f.key}`}
-                      aria-current={filter === f.key ? 'true' : undefined}
-                      className={
-                        filter === f.key
-                          ? 'rounded-md bg-zinc-950 px-2 py-0.5 text-xs/5 font-medium text-white dark:bg-white dark:text-zinc-950'
-                          : 'rounded-md px-2 py-0.5 text-xs/5 font-medium text-zinc-600 hover:bg-zinc-950/5 dark:text-zinc-400 dark:hover:bg-white/10'
-                      }
-                    >
-                      {f.label}
-                    </Link>
-                  ))}
-                </nav>
-                <Link
-                  href="/payments"
-                  className="text-xs/5 font-medium text-zinc-600 underline decoration-zinc-950/20 underline-offset-2 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-                >
-                  View all
-                </Link>
-              </div>
-            </header>
-            {(() => {
-              const rows = ledger
-                .filter((r) =>
-                  filter === 'overdue'
-                    ? r.overdue > 0
-                    : filter === 'defaulted'
-                      ? r.defaulted > 0
-                      : r.due > 0,
-                )
-                .sort((a, b) =>
-                  filter === 'defaulted'
-                    ? b.defaulted - a.defaulted
-                    : filter === 'overdue'
-                      ? b.overdue - a.overdue
-                      : b.due - a.due,
-                )
-              const shown = rows.slice(0, 8)
-
-              return shown.length === 0 ? (
-                <p className="px-3 py-4 text-sm/6 text-zinc-500 dark:text-zinc-400">
-                  {filter === 'defaulted'
-                    ? 'Nothing has been written off.'
-                    : filter === 'overdue'
-                      ? 'No customer is past a due date.'
-                      : 'No customer owes anything.'}
-                </p>
-              ) : (
-                <>
-                  <ul className="mt-1 divide-y divide-zinc-950/5 pb-1 dark:divide-white/5">
+            return shown.length === 0 ? (
+              <p className="px-4 pt-2 pb-5 text-sm/6 text-zinc-500 dark:text-zinc-400">
+                {filter === 'defaulted'
+                  ? 'Nothing has been written off.'
+                  : filter === 'overdue'
+                    ? 'No customer is past a due date.'
+                    : 'No customer owes anything.'}
+              </p>
+            ) : (
+              <>
+                <ul className="mt-2 divide-y divide-zinc-950/5 pb-2 dark:divide-white/5">
                   {shown.map((r) => (
                     <Row
                       key={r.id}
@@ -404,49 +534,21 @@ export default async function DashboardPage({
                             : 'Not yet due'
                       }
                       trailing={inr.format(
-                        filter === 'defaulted'
-                          ? r.defaulted
-                          : filter === 'overdue'
-                            ? r.overdue
-                            : r.due,
+                        filter === 'defaulted' ? r.defaulted : filter === 'overdue' ? r.overdue : r.due,
                       )}
                       trailingTone={r.overdue > 0 ? 'warn' : 'default'}
                     />
                   ))}
-                  </ul>
-                  {rows.length > shown.length ? (
-                    <p className="px-3 pb-2 text-xs/5 text-zinc-500 dark:text-zinc-400">
-                      +{rows.length - shown.length} more customers
-                    </p>
-                  ) : null}
-                </>
-              )
-            })()}
-          </section>
-        ) : null}
-
-        {money ? (
-          <Panel
-            title="Overdue invoices"
-            href="/invoices"
-            empty="No overdue invoices."
-          >
-            {money.overdueList.map((invoice) => (
-              <Row
-                key={invoice.id}
-                href={`/invoices/${invoice.id}`}
-                title={`${invoice.number} · ${invoice.customer.name}`}
-                subtitle={inr.format(invoice.total)}
-                trailing={invoice.dueDate ? dueLabel(invoice.dueDate) : undefined}
-                trailingTone="warn"
-              />
-            ))}
-          </Panel>
-        ) : null}
-      </div>
-
-      {canOrders ? (
-        <OverallStatement params={query} showMoney={canMoney} />
+                </ul>
+                {rows.length > shown.length ? (
+                  <p className="px-4 pb-3 text-xs/5 text-zinc-500 dark:text-zinc-400">
+                    +{rows.length - shown.length} more customers
+                  </p>
+                ) : null}
+              </>
+            )
+          })()}
+        </section>
       ) : null}
     </div>
   )

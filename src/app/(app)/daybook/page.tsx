@@ -11,7 +11,8 @@ import { deleteCashCredit, deleteExpense } from '@/lib/actions/expenses'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { can } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
-import { listCashCreditSources, listExpenseVendors } from '@/lib/queries/accounting'
+import { listCashCreditSources } from '@/lib/queries/accounting'
+import { listVendorOptions } from '@/lib/queries/vendors'
 import {
   getDayClose,
   getDaybookLayout,
@@ -24,6 +25,7 @@ import {
 import { requireCapability } from '@/lib/session'
 import type { PaymentMode } from '@/generated/prisma/enums'
 import { CheckCell } from './check-cell'
+import { DateJump } from './date-jump'
 import { DayTally } from './day-tally'
 import { EntryRow } from './entry-row'
 
@@ -254,8 +256,6 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
   const canDelete = can(user.role, 'expense:delete')
   const canCheck = can(user.role, 'expense:update')
   const canSeeNotes = can(user.role, 'note:read')
-  const saved = typeof params.saved === 'string' ? params.saved : undefined
-  const savedCredit = params.savedCredit === '1'
   const modeFilter = cashOnly ? { equals: 'CASH' as const } : undefined
   const inRange = { gte: range.from, lte: range.to }
 
@@ -343,7 +343,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       where: { entryDate: { lt: range.from }, ...(modeFilter ? { mode: modeFilter } : {}) },
       _sum: { amount: true },
     }),
-    canCreate ? listExpenseVendors() : [],
+    canCreate ? listVendorOptions() : [],
     canCreate ? listCashCreditSources() : [],
     canCreate ? listChannels(true) : [],
   ])
@@ -495,7 +495,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
           <Text>
             Every day&apos;s money received and money spent, page by page.
             {editable
-              ? ' Type straight into the last row of a side and press Enter to add it.'
+              ? ' Add entries in the box under each side.'
               : ''}
           </Text>
         </div>
@@ -509,17 +509,9 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
               Banks &amp; notes
             </Button>
           ) : null}
-          {canCreate ? (
-            <Button outline href="/daybook/credit/new">
-              Add money received
-            </Button>
-          ) : null}
-          {canCreate ? <Button href="/expenses/lite/new">Add expense</Button> : null}
+          {canCreate ? <Button href="/expenses/new">Add bill</Button> : null}
         </div>
       </div>
-
-      {saved ? <FormBanner tone="success">Expense {saved} saved</FormBanner> : null}
-      {savedCredit ? <FormBanner tone="success">Money received saved</FormBanner> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div className="flex gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
@@ -541,20 +533,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
           <Button plain href={link({ date: iso(new Date()) })}>
             Today
           </Button>
-          <form method="get" action="/daybook" className="flex items-center gap-1">
-            <input type="hidden" name="view" value={range.view} />
-            {cashOnly ? <input type="hidden" name="mode" value="cash" /> : null}
-            <input
-              type="date"
-              name="date"
-              defaultValue={iso(range.anchor)}
-              aria-label="Go to date"
-              className="rounded-md border border-zinc-950/10 bg-transparent px-2 py-1 text-sm/6 dark:border-white/15"
-            />
-            <Button type="submit" plain>
-              Go
-            </Button>
-          </form>
+          <DateJump date={iso(range.anchor)} view={range.view} cashOnly={cashOnly} />
         </div>
         <div className="flex gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
           <Link href={link({ mode: null })} className={pill(!cashOnly)}>
@@ -605,14 +584,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                       </Link>
                     ) : null}
                   </h2>
-                  {layout.showBroughtForward ? (
-                    <span className="text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
-                      Brought forward{' '}
-                      <strong className="font-semibold text-zinc-950 dark:text-white">
-                        {money.format(day.start)}
-                      </strong>
-                    </span>
-                  ) : null}
+                  <span className="text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+                    Brought forward{' '}
+                    <strong className="font-semibold text-zinc-950 dark:text-white">
+                      {money.format(day.start)}
+                    </strong>
+                  </span>
                 </header>
 
                 <div
@@ -655,7 +632,8 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                         <EntryRow
                           kind="debit"
                           date={day.key}
-                          suggestions={vendors}
+                          suggestions={[]}
+                          vendors={vendors}
                           channels={channels}
                         />
                       ) : undefined
@@ -692,14 +670,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                       {money.format(day.receivedTotal - day.spentTotal)}
                     </strong>
                   </span>
-                  {layout.showCarriedForward ? (
-                    <span className="text-zinc-500 dark:text-zinc-400">
-                      Carried forward{' '}
-                      <strong className="font-semibold text-zinc-950 dark:text-white">
-                        {money.format(day.end)}
-                      </strong>
-                    </span>
-                  ) : null}
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    Carried forward{' '}
+                    <strong className="font-semibold text-zinc-950 dark:text-white">
+                      {money.format(day.end)}
+                    </strong>
+                  </span>
                 </footer>
               </section>
             )

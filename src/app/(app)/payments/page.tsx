@@ -12,6 +12,7 @@ import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
 import { ExportButton } from '@/components/export-button'
 import { Heading, Subheading } from '@/components/catalyst/heading'
+import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -110,11 +111,27 @@ export default async function PaymentsPage({
   const receiptsFiltered =
     from !== undefined || to !== undefined || minPaid !== undefined || maxPaid !== undefined
 
+  const TABS = [
+    { value: 'recover', label: 'To recover', count: data.invoices.length },
+    { value: 'received', label: 'Received', count: undefined },
+    ...(canSeeOrders ? [{ value: 'tobill', label: 'Yet to bill', count: data.toBill.length }] : []),
+  ]
+  const asked = typeof params.tab === 'string' ? params.tab : undefined
+  const tab = TABS.some((t) => t.value === asked)
+    ? asked
+    : receiptsFiltered
+      ? 'received'
+      : 'recover'
+  const tabHref = (value: string) => {
+    const next = new URLSearchParams()
+    if (value !== 'recover') next.set('tab', value)
+    if (q) next.set('q', String(params.q))
+    return next.toString() ? `/payments?${next}` : '/payments'
+  }
+
   const byCustomerRows = data.byCustomer.filter((row) => matches(row.name))
-  const ledgerRows = ledger.filter((row) => matches(row.name))
   const openRows = data.invoices.filter((row) => matches(row.customer.name))
   const byCustomerPaged = paginate(byCustomerRows, params, { pageKey: 'cp', sizeKey: 'cs' })
-  const ledgerPaged = paginate(ledgerRows, params, { pageKey: 'lp', sizeKey: 'ls' })
   const openPaged = paginate(openRows, params, { pageKey: 'ip', sizeKey: 'is' })
 
   return (
@@ -127,14 +144,6 @@ export default async function PaymentsPage({
         <div className="flex flex-wrap items-center gap-2">
           <SearchField placeholder="Search customer…" />
           <ExportButton kind="payments" />
-          {can(user.role, 'expense:read') ? (
-            <Button outline href="/daybook">
-              Day book
-            </Button>
-          ) : null}
-          <Button outline href="/invoices?tab=issued">
-            Issued invoices
-          </Button>
           {canRecord ? (
             <Button href="/payments/new">Record receipt</Button>
           ) : null}
@@ -183,6 +192,30 @@ export default async function PaymentsPage({
         />
       </div>
 
+      <nav aria-label="Payments views" className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
+        {TABS.map((t) => (
+          <Link
+            key={t.value}
+            href={tabHref(t.value)}
+            aria-current={tab === t.value ? 'page' : undefined}
+            className={
+              tab === t.value
+                ? 'flex shrink-0 items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
+                : 'flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+            }
+          >
+            {t.label}
+            {t.count ? (
+              <span className="rounded-full bg-zinc-950/5 px-1.5 text-xs/5 tabular-nums dark:bg-white/10">
+                {t.count}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
+      {tab === 'recover' ? (
+        <>
       <div>
         <Subheading level={2}>Ageing</Subheading>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -278,72 +311,6 @@ export default async function PaymentsPage({
         </div>
       </div>
 
-      <Divider />
-
-      <div>
-        <Subheading level={2}>Payments by customer</Subheading>
-        <div className="mt-4">
-          {ledgerRows.length === 0 ? (
-            <EmptyState
-              title="No customer activity yet"
-              description="Billed, received and due amounts appear here once invoices are issued."
-            />
-          ) : (
-<>
-            <Table dense grid striped>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Customer</TableHeader>
-                  <TableHeader className="text-right">Billed</TableHeader>
-                  <TableHeader className="text-right">Received</TableHeader>
-                  <TableHeader className="text-right">Due</TableHeader>
-                  <TableHeader className="text-right">Defaulted</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {ledgerPaged.rows.map((row) => (
-                  <TableRow key={row.id} href={`/customers/${row.id}/statement`}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {exact.format(row.billed)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {exact.format(row.received)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.due > 0 ? (
-                        <span
-                          className={
-                            row.overdue > 0
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : undefined
-                          }
-                        >
-                          {exact.format(row.due)}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.defaulted > 0 ? (
-                        <span className="font-medium text-rose-600 dark:text-rose-400">
-                          {exact.format(row.defaulted)}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-<Pagination paged={ledgerPaged} params={params} pathname="/payments" pageKey="lp" sizeKey="ls" />
-</>
-          )}
-        </div>
-      </div>
-
       {data.invoices.length > 0 ? (
         <>
           <Divider />
@@ -417,9 +384,17 @@ export default async function PaymentsPage({
         </>
       ) : null}
 
-      {canSeeOrders && data.toBill.length > 0 ? (
+        </>
+      ) : null}
+
+      {tab === 'tobill' && canSeeOrders ? (
+        data.toBill.length === 0 ? (
+          <EmptyState
+            title="Everything delivered is billed"
+            description="Completed orders show up here until an invoice is raised for them."
+          />
+        ) : (
         <>
-          <Divider />
           <div>
             <Subheading level={2}>Delivered but not invoiced</Subheading>
             <Text className="mt-1">
@@ -467,10 +442,10 @@ export default async function PaymentsPage({
             </div>
           </div>
         </>
+        )
       ) : null}
 
-      <Divider />
-
+      {tab === 'received' ? (
       <div>
         <Subheading level={2}>
           {receiptsFiltered ? 'Payments' : 'Recent payments'}
@@ -481,6 +456,7 @@ export default async function PaymentsPage({
           className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
         >
           {q ? <input type="hidden" name="q" value={String(params.q)} /> : null}
+          <input type="hidden" name="tab" value="received" />
           <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
           <RangeSlider
             label="Amount received"
@@ -493,7 +469,7 @@ export default async function PaymentsPage({
             Apply
           </Button>
           {receiptsFiltered ? (
-            <Button plain href={q ? `/payments?q=${encodeURIComponent(String(params.q))}` : '/payments'}>
+            <Button plain href={tabHref('received')}>
               Clear
             </Button>
           ) : null}
@@ -578,6 +554,7 @@ export default async function PaymentsPage({
           )}
         </div>
       </div>
+      ) : null}
     </div>
   )
 }

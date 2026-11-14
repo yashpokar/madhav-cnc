@@ -6,6 +6,7 @@ import {
   listExpenseCategories,
   listOrdersForPicker,
 } from '@/lib/queries/accounting'
+import { listVendorOptions } from '@/lib/queries/vendors'
 import { requireCapability } from '@/lib/session'
 import { ExpenseForm } from '../expense-form'
 
@@ -16,9 +17,10 @@ export const metadata: Metadata = {
 export default async function NewExpensePage() {
   await requireCapability('expense:create')
 
-  const [categories, orders] = await Promise.all([
+  const [categories, orders, vendors] = await Promise.all([
     listExpenseCategories(true),
     listOrdersForPicker(),
+    listVendorOptions(),
   ])
 
   return (
@@ -33,6 +35,7 @@ export default async function NewExpensePage() {
         submitLabel="Save expense"
         categories={categories.map(({ id, name }) => ({ id, name }))}
         orders={orders}
+        vendors={vendors}
         values={{
           categoryId: null,
           expenseDate: new Date().toISOString().slice(0, 10),

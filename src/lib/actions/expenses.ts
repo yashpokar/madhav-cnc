@@ -84,50 +84,6 @@ export async function createExpense(_previous: FormState, formData: FormData): P
   redirect(`/expenses?created=${expense.number}`)
 }
 
-/** The light entry: vendor, amount, payment method (and a date, default today). */
-export async function createLiteExpense(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const user = await requireCapability('expense:create')
-
-  const parsed = expenseInputSchema.safeParse({
-    expenseDate: formData.get('expenseDate'),
-    payeeName: formData.get('payeeName'),
-    amount: formData.get('amount') || 0,
-    paymentMode: formData.get('paymentMode') ?? undefined,
-  })
-
-  if (!parsed.success) {
-    return {
-      status: 'error',
-      message: 'Please correct the highlighted fields',
-      fieldErrors: fieldErrorsFrom(parsed.error),
-      values: rawValues(formData),
-    }
-  }
-
-  // Match an existing vendor's spelling so "ABC traders" and "Abc Traders"
-  // don't become two vendors.
-  const vendor = await resolveVendor(parsed.data.payeeName)
-
-  const expense = await prisma.expense.create({
-    data: {
-      number: await nextExpenseNumber(),
-      expenseDate: parsed.data.expenseDate,
-      payeeName: vendor.name,
-      vendorId: vendor.id,
-      amount: parsed.data.amount,
-      paymentMode: parsed.data.paymentMode,
-      ...amounts(parsed.data),
-      createdById: user.id,
-    },
-  })
-
-  revalidatePath('/expenses')
-  redirect(`/daybook?saved=${expense.number}`)
-}
-
 /**
  * One row typed straight into the day book. Saves without leaving the page, so
  * the next row can be typed straight away.
@@ -251,48 +207,6 @@ export async function quickAddCredit(input: {
   revalidatePath('/daybook')
 
   return { ok: true, message: 'Saved', id: credit.id }
-}
-
-/** Money in that is not a customer receipt; shows on the cash book's CREDIT side. */
-export async function createCashCredit(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const user = await requireCapability('expense:create')
-
-  const parsed = cashCreditSchema.safeParse({
-    entryDate: formData.get('entryDate'),
-    sourceName: formData.get('sourceName'),
-    amount: formData.get('amount') || 0,
-    mode: formData.get('mode') ?? undefined,
-    reference: formData.get('reference'),
-    notes: formData.get('notes'),
-  })
-
-  if (!parsed.success) {
-    return {
-      status: 'error',
-      message: 'Please correct the highlighted fields',
-      fieldErrors: fieldErrorsFrom(parsed.error),
-      values: rawValues(formData),
-    }
-  }
-
-  const known = await prisma.cashCredit.findFirst({
-    where: { sourceName: { equals: parsed.data.sourceName, mode: 'insensitive' } },
-    select: { sourceName: true },
-  })
-
-  await prisma.cashCredit.create({
-    data: {
-      ...parsed.data,
-      sourceName: known?.sourceName ?? parsed.data.sourceName,
-      recordedById: user.id,
-    },
-  })
-
-  revalidatePath('/daybook')
-  redirect('/daybook?savedCredit=1')
 }
 
 export async function deleteCashCredit(id: string): Promise<SimpleResult> {

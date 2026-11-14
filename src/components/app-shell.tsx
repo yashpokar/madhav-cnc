@@ -20,6 +20,7 @@ import {
   CreditCardIcon,
   CurrencyRupeeIcon,
   CubeIcon,
+  DocumentChartBarIcon,
   DocumentTextIcon,
   HomeIcon,
   ShoppingBagIcon,
@@ -60,6 +61,8 @@ import type { NavEntry } from '@/lib/navigation'
 import type { CurrentUser } from '@/lib/session'
 import { ROLE_LABELS } from '@/lib/permissions'
 
+const GROUP_ORDER = ['Overview', 'Sell', 'Money', 'People', 'Catalogue'] as const
+
 const ICONS: Record<string, typeof HomeIcon> = {
   '/': HomeIcon,
   '/customers': BuildingOffice2Icon,
@@ -67,6 +70,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/items': CubeIcon,
   '/quotations': DocumentTextIcon,
   '/orders': ClipboardDocumentListIcon,
+  '/statement': DocumentChartBarIcon,
   '/production': WrenchScrewdriverIcon,
   '/dispatch': TruckIcon,
   '/invoices': BanknotesIcon,
@@ -183,22 +187,31 @@ export function AppShell({
           </SidebarHeader>
 
           <SidebarBody>
-            <SidebarSection>
-              {nav.map((entry) => {
-                const Icon = ICONS[entry.href]
+            {GROUP_ORDER.map((group) => {
+              const entries = nav.filter((entry) => entry.group === group)
 
-                return (
-                  <SidebarItem
-                    key={entry.href}
-                    href={entry.href}
-                    current={isCurrent(pathname, entry.href)}
-                  >
-                    {Icon ? <Icon /> : null}
-                    <SidebarLabel>{entry.label}</SidebarLabel>
-                  </SidebarItem>
-                )
-              })}
-            </SidebarSection>
+              if (entries.length === 0) return null
+
+              return (
+                <SidebarSection key={group} className={group === 'Overview' ? undefined : 'mt-4'}>
+                  {group === 'Overview' ? null : <SidebarHeading>{group}</SidebarHeading>}
+                  {entries.map((entry) => {
+                    const Icon = ICONS[entry.href]
+
+                    return (
+                      <SidebarItem
+                        key={entry.href}
+                        href={entry.href}
+                        current={isCurrent(pathname, entry.href)}
+                      >
+                        {Icon ? <Icon /> : null}
+                        <SidebarLabel>{entry.label}</SidebarLabel>
+                      </SidebarItem>
+                    )
+                  })}
+                </SidebarSection>
+              )
+            })}
 
             {adminNav.length > 0 ? (
               <SidebarSection className="mt-6">

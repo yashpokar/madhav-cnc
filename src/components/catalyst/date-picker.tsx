@@ -51,6 +51,19 @@ function CalendarDropdown({ options, value, onChange, disabled }: DropdownProps)
   )
 }
 
+function quickDays() {
+  const now = new Date()
+  const at = (offset: number) =>
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+
+  return [
+    { label: 'Yesterday', date: at(-1) },
+    { label: 'Today', date: at(0) },
+    { label: 'Tomorrow', date: at(1) },
+    { label: 'In a week', date: at(7) },
+  ]
+}
+
 const display = new Intl.DateTimeFormat('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -153,7 +166,7 @@ export function DatePicker({
           <Headless.PopoverPanel
             transition
             anchor={{ to: 'bottom start', gap: 4, padding: 16 }}
-            className="z-50 rounded-xl bg-white p-3 shadow-lg ring-1 ring-zinc-950/10 transition duration-100 ease-out data-closed:opacity-0 dark:bg-zinc-800 dark:ring-white/10"
+            className="z-50 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-zinc-950/10 transition duration-100 ease-out data-closed:translate-y-1 data-closed:opacity-0 dark:bg-zinc-800 dark:ring-white/10"
           >
             <DayPicker
               mode="single"
@@ -168,8 +181,33 @@ export function DatePicker({
                 ...(endMonth ? [{ after: endMonth }] : []),
               ]}
               className="date-picker"
+              weekStartsOn={1}
               components={{ Dropdown: CalendarDropdown }}
             />
+            <div className="mt-2 flex flex-wrap gap-1.5 border-t border-zinc-950/5 pt-3 dark:border-white/10">
+              {quickDays().map((quick) => {
+                const iso = toIso(quick.date)
+                const blocked =
+                  (startMonth && quick.date < startMonth) || (endMonth && quick.date > endMonth)
+
+                return (
+                  <button
+                    key={quick.label}
+                    type="button"
+                    disabled={Boolean(blocked)}
+                    onClick={() => commit(iso, close)}
+                    className={clsx(
+                      'rounded-full px-3 py-1 text-xs/5 font-medium ring-1 ring-inset disabled:opacity-40',
+                      current === iso
+                        ? 'bg-zinc-950 text-white ring-zinc-950 dark:bg-white dark:text-zinc-950 dark:ring-white'
+                        : 'text-zinc-700 ring-zinc-950/10 hover:bg-zinc-950/5 dark:text-zinc-200 dark:ring-white/15 dark:hover:bg-white/10',
+                    )}
+                  >
+                    {quick.label}
+                  </button>
+                )
+              })}
+            </div>
           </Headless.PopoverPanel>
         </>
       )}

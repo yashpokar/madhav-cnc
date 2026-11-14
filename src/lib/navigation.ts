@@ -1,28 +1,33 @@
 import { FEATURES } from '@/lib/features'
 import type { Action, Resource } from '@/lib/permissions'
 
+export type NavGroup = 'Overview' | 'Sell' | 'Money' | 'People' | 'Catalogue'
+
 export type NavEntry = {
   href: string
   label: string
   capability: `${Resource}:${Action}`
+  group?: NavGroup
 }
 
+/** Grouped by the job being done, in the order people usually do it. */
 const ALL_NAV_ENTRIES: readonly NavEntry[] = [
-  { href: '/', label: 'Dashboard', capability: 'order:read' },
-  { href: '/customers', label: 'Customers', capability: 'customer:read' },
-  { href: '/partners', label: 'Architects & Carpenters', capability: 'partner:read' },
-  { href: '/items', label: 'Items', capability: 'item:read' },
-  { href: '/quotations', label: 'Quotations', capability: 'quotation:read' },
-  { href: '/orders', label: 'Orders', capability: 'order:read' },
-  { href: '/production', label: 'Production', capability: 'production:read' },
-  { href: '/dispatch', label: 'Dispatch', capability: 'dispatch:read' },
-  { href: '/invoices', label: 'Invoices', capability: 'invoice:read' },
-  { href: '/payments', label: 'Payments', capability: 'payment:read' },
-  { href: '/notes', label: 'Credit & debit notes', capability: 'note:read' },
-  { href: '/expenses', label: 'Expenses', capability: 'expense:read' },
-  { href: '/vendors', label: 'Vendors', capability: 'expense:read' },
-  { href: '/daybook', label: 'Day book', capability: 'expense:read' },
-  { href: '/reports', label: 'Reports', capability: 'invoice:read' },
+  { href: '/', label: 'Dashboard', capability: 'order:read', group: 'Overview' },
+  { href: '/quotations', label: 'Quotations', capability: 'quotation:read', group: 'Sell' },
+  { href: '/orders', label: 'Orders', capability: 'order:read', group: 'Sell' },
+  { href: '/statement', label: 'Order statement', capability: 'order:read', group: 'Sell' },
+  { href: '/production', label: 'Production', capability: 'production:read', group: 'Sell' },
+  { href: '/dispatch', label: 'Dispatch', capability: 'dispatch:read', group: 'Sell' },
+  { href: '/invoices', label: 'Invoices', capability: 'invoice:read', group: 'Money' },
+  { href: '/payments', label: 'Payments', capability: 'payment:read', group: 'Money' },
+  { href: '/daybook', label: 'Day book', capability: 'expense:read', group: 'Money' },
+  { href: '/expenses', label: 'Expenses', capability: 'expense:read', group: 'Money' },
+  { href: '/notes', label: 'Credit & debit notes', capability: 'note:read', group: 'Money' },
+  { href: '/reports', label: 'Reports', capability: 'invoice:read', group: 'Money' },
+  { href: '/customers', label: 'Customers', capability: 'customer:read', group: 'People' },
+  { href: '/vendors', label: 'Vendors', capability: 'expense:read', group: 'People' },
+  { href: '/partners', label: 'Architects & Carpenters', capability: 'partner:read', group: 'People' },
+  { href: '/items', label: 'Items', capability: 'item:read', group: 'Catalogue' },
 ]
 
 export const NAV_ENTRIES: readonly NavEntry[] = ALL_NAV_ENTRIES.filter(

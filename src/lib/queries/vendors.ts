@@ -85,3 +85,18 @@ export async function getVendor(id: string) {
     bills: totals._count._all,
   }
 }
+
+/** Active vendors for pickers: the name, plus a line to tell similar ones apart. */
+export async function listVendorOptions() {
+  const rows = await prisma.vendor.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, phone: true, city: true, description: true },
+  })
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    detail: [row.phone, row.city].filter(Boolean).join(' · ') || row.description || '',
+  }))
+}

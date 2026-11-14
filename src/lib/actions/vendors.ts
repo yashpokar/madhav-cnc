@@ -140,3 +140,46 @@ export async function deleteVendor(id: string) {
 
   return { ok: true as const, message: `${vendor.name} deleted` }
 }
+
+/** A vendor added on the spot from a picker; returns it so it can be selected. */
+export async function quickCreateVendor(input: {
+  name: string
+  contactName?: string
+  phone?: string
+  city?: string
+  description?: string
+  gstin?: string
+}) {
+  await requireCapability('expense:create')
+
+  const parsed = vendorInputSchema.safeParse({ ...input, isActive: true })
+
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0].message }
+  }
+
+  const known = await prisma.vendor.findFirst({
+    where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
+    select: { id: true, name: true },
+  })
+
+  if (known) {
+    return { ok: false as const, error: `${known.name} is already a vendor. Pick it from the list.` }
+  }
+
+  const vendor = await prisma.vendor.create({
+    data: parsed.data,
+    select: { id: true, name: true, phone: true, city: true, description: true },
+  })
+
+  revalidatePath('/vendors')
+
+  return {
+    ok: true as const,
+    vendor: {
+      id: vendor.id,
+      name: vendor.name,
+      detail: [vendor.phone, vendor.city].filter(Boolean).join(' · ') || vendor.description || '',
+    },
+  }
+}

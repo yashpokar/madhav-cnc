@@ -12,6 +12,7 @@ import {
   listOrdersForPicker,
 } from '@/lib/queries/accounting'
 import { can } from '@/lib/permissions'
+import { listVendorOptions } from '@/lib/queries/vendors'
 import { requireCapability } from '@/lib/session'
 import { ExpenseForm } from '../expense-form'
 import { DeleteExpense } from './delete-expense'
@@ -26,10 +27,11 @@ export default async function ExpensePage({
   const user = await requireCapability('expense:update')
   const { id } = await params
 
-  const [expense, categories, orders] = await Promise.all([
+  const [expense, categories, orders, vendors] = await Promise.all([
     getExpense(id),
     listExpenseCategories(),
     listOrdersForPicker(),
+    listVendorOptions(),
   ])
 
   if (!expense) {
@@ -56,6 +58,7 @@ export default async function ExpensePage({
           name,
         }))}
         orders={orders}
+        vendors={vendors}
         values={{
           categoryId: expense.categoryId,
           expenseDate: expense.expenseDate.toISOString().slice(0, 10),

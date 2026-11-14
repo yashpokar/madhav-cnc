@@ -6,6 +6,10 @@ import { amountCeiling, readDateRange, readListControls } from '@/lib/list-contr
 import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { SearchField } from '@/components/search-field'
+import { FilterSelect } from '@/components/filter-select'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
+import { PaymentMode } from '@/generated/prisma/enums'
 import { paginate } from '@/lib/pagination'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
@@ -88,7 +92,11 @@ export default async function PaymentsPage({
   const user = await requireCapability('payment:read')
   const params = await searchParams
   const q = (typeof params.q === 'string' ? params.q : '').trim().toLowerCase()
-  const matches = (name: string) => !q || name.toLowerCase().includes(q)
+  const has = (...fields: (string | null | undefined)[]) =>
+    !q || fields.some((field) => field?.toLowerCase().includes(q))
+  const modeParam = typeof params.mode === 'string' ? params.mode : undefined
+  const mode = Object.values(PaymentMode).find((value) => value === modeParam)
+  const age = params.age === 'overdue' || params.age === 'current' ? params.age : undefined
   const [data, ledger] = await Promise.all([getReceivables(new Date(), readDateRange(params)),
     getCustomerLedger(),
   ])
@@ -102,14 +110,41 @@ export default async function PaymentsPage({
   const minPaid = readListControls(params).min
   const maxPaid = readListControls(params).max
   const receiptCeiling = amountCeiling(data.payments, (row) => row.amount)
-  const receipts = data.payments.filter(
+  const receiptsFiltered =
+    from !== undefined ||
+    to !== undefined ||
+    minPaid !== undefined ||
+    maxPaid !== undefined ||
+    mode !== undefined
+  const receiptsMatching = data.payments.filter(
     (row) =>
-      matches(row.customer.name) &&
+      has(
+        row.customer.name,
+        row.number,
+        row.reference,
+        row.invoiceNumbers.join(' '),
+        PAYMENT_MODE_LABELS[row.mode],
+      ) &&
+      (!mode || row.mode === mode) &&
       (minPaid === undefined || row.amount >= minPaid) &&
       (maxPaid === undefined || row.amount <= maxPaid),
   )
-  const receiptsFiltered =
-    from !== undefined || to !== undefined || minPaid !== undefined || maxPaid !== undefined
+  const appliedTo = (row: (typeof data.payments)[number]) =>
+    row.isAdvance
+      ? 'Order advance'
+      : row.invoiceNumbers.length === 0
+        ? 'On account'
+        : row.invoiceNumbers.join(', ')
+  const receipts = sortRows(receiptsMatching, params, {
+    recv_number: (row) => row.number,
+    recv_date: (row) => row.paidOn,
+    recv_customer: (row) => row.customer.name,
+    recv_applied: appliedTo,
+    recv_mode: (row) => PAYMENT_MODE_LABELS[row.mode],
+    recv_reference: (row) => row.reference,
+    recv_amount: (row) => row.amount,
+  })
+  const receiptsPaged = paginate(receipts, params, { pageKey: 'rp', sizeKey: 'rs' })
 
   const TABS = [
     { value: 'recover', label: 'To recover', count: data.invoices.length },
@@ -129,10 +164,73 @@ export default async function PaymentsPage({
     return next.toString() ? `/payments?${next}` : '/payments'
   }
 
-  const byCustomerRows = data.byCustomer.filter((row) => matches(row.name))
-  const openRows = data.invoices.filter((row) => matches(row.customer.name))
+  const clearFilters = (value: string) =>
+    value === 'recover' ? '/payments' : `/payments?tab=${value}`
+  // Column headings keep every filter but start again from the first page.
+  const sortParams = Object.fromEntries(
+    Object.entries(params).filter(([key]) => !['cp', 'ip', 'rp', 'bp'].includes(key)),
+  )
+  const sortKeep = (['sort', 'dir'] as const).flatMap((key) => {
+    const value = params[key]
+
+    return typeof value === 'string' ? [[key, value] as const] : []
+  })
+  const countLine = (shown: number, all: number, noun: string) => (
+    <p className="mt-4 text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+      {shown} of {all} {noun}
+      {all === 1 ? '' : 's'}
+    </p>
+  )
+
+  const byCustomerRows = sortRows(
+    data.byCustomer.filter((row) => has(row.name, row.phone)),
+    params,
+    {
+      cust_name: (row) => row.name,
+      cust_invoices: (row) => row.invoices,
+      cust_due: (row) => row.due,
+      cust_overdue: (row) => row.overdue,
+      cust_onaccount: (row) => row.onAccount,
+      cust_credit: (row) => row.credit,
+      cust_net: (row) => row.net,
+      cust_oldest: (row) => row.oldestDays,
+    },
+  )
+  const openRows = sortRows(
+    data.invoices.filter(
+      (row) =>
+        has(row.customer.name, row.number, row.order?.number) &&
+        (age !== 'overdue' || row.overdueBy > 0) &&
+        (age !== 'current' || row.overdueBy <= 0),
+    ),
+    params,
+    {
+      inv_number: (row) => row.number,
+      inv_customer: (row) => row.customer.name,
+      inv_duedate: (row) => row.dueDate ?? row.invoiceDate,
+      inv_total: (row) => row.total,
+      inv_paid: (row) => row.paid,
+      inv_balance: (row) => row.due,
+      inv_age: (row) => row.overdueBy,
+    },
+  )
+  const toBillRows = sortRows(
+    data.toBill.filter((row) =>
+      has(row.number, row.customer.name, ORDER_STATUS_LABELS[row.status]),
+    ),
+    params,
+    {
+      bill_order: (row) => row.number,
+      bill_customer: (row) => row.customer.name,
+      bill_status: (row) => ORDER_STATUS_LABELS[row.status],
+      bill_date: (row) => row.orderDate,
+      bill_value: (row) => row.total,
+      bill_waiting: (row) => row.waitingDays,
+    },
+  )
   const byCustomerPaged = paginate(byCustomerRows, params, { pageKey: 'cp', sizeKey: 'cs' })
   const openPaged = paginate(openRows, params, { pageKey: 'ip', sizeKey: 'is' })
+  const toBillPaged = paginate(toBillRows, params, { pageKey: 'bp', sizeKey: 'bs' })
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -142,7 +240,7 @@ export default async function PaymentsPage({
           <Text>What is still to be recovered, and what has come in.</Text>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <SearchField placeholder="Search customer…" />
+          <SearchField placeholder="Search customer, invoice, receipt…" />
           <ExportButton kind="payments" />
           {canRecord ? (
             <Button href="/payments/new">Record receipt</Button>
@@ -244,23 +342,36 @@ export default async function PaymentsPage({
         <Subheading level={2}>Outstanding by customer</Subheading>
         <div className="mt-4">
           {byCustomerRows.length === 0 ? (
-            <EmptyState
-              title="Nothing outstanding"
-              description="Every issued invoice is fully settled."
-            />
+            data.byCustomer.length === 0 ? (
+              <EmptyState
+                title="Nothing outstanding"
+                description="Every issued invoice is fully settled."
+              />
+            ) : (
+              <EmptyState
+                title="No matches"
+                description="No customer fits the current search."
+                action={
+                  <Button outline href={clearFilters('recover')}>
+                    Clear filters
+                  </Button>
+                }
+              />
+            )
           ) : (
 <>
+            {q ? countLine(byCustomerRows.length, data.byCustomer.length, 'customer') : null}
             <Table dense grid striped>
               <TableHead>
                 <TableRow>
-                  <TableHeader>Customer</TableHeader>
-                  <TableHeader className="text-right">Invoices</TableHeader>
-                  <TableHeader className="text-right">Due</TableHeader>
-                  <TableHeader className="text-right">Overdue</TableHeader>
-                  <TableHeader className="text-right">On account</TableHeader>
-                  <TableHeader className="text-right">Credit notes</TableHeader>
-                  <TableHeader className="text-right">Net</TableHeader>
-                  <TableHeader className="text-right">Oldest</TableHeader>
+                  <SortHeader column="cust_name" label="Customer" params={sortParams} pathname="/payments" />
+                  <SortHeader column="cust_invoices" label="Invoices" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_due" label="Due" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_overdue" label="Overdue" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_onaccount" label="On account" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_credit" label="Credit notes" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_net" label="Net" params={sortParams} pathname="/payments" align="right" />
+                  <SortHeader column="cust_oldest" label="Oldest" params={sortParams} pathname="/payments" align="right" />
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -315,18 +426,43 @@ export default async function PaymentsPage({
         <>
           <Divider />
           <div>
-            <Subheading level={2}>Open invoices</Subheading>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Subheading level={2}>Open invoices</Subheading>
+              <FilterSelect
+                param="age"
+                label="Invoice age"
+                allLabel="All open invoices"
+                value={age}
+                options={[
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'current', label: 'Not yet due' },
+                ]}
+              />
+            </div>
+            {q || age ? countLine(openRows.length, data.invoices.length, 'invoice') : null}
             <div className="mt-4">
+              {openRows.length === 0 ? (
+                <EmptyState
+                  title="No matches"
+                  description="No open invoice fits the current search and filters."
+                  action={
+                    <Button outline href={clearFilters('recover')}>
+                      Clear filters
+                    </Button>
+                  }
+                />
+              ) : (
+              <>
               <Table dense grid striped>
                 <TableHead>
                   <TableRow>
-                    <TableHeader>Applied to</TableHeader>
-                    <TableHeader>Customer</TableHeader>
-                    <TableHeader>Due date</TableHeader>
-                    <TableHeader className="text-right">Total</TableHeader>
-                    <TableHeader className="text-right">Received</TableHeader>
-                    <TableHeader className="text-right">Balance</TableHeader>
-                    <TableHeader>Age</TableHeader>
+                    <SortHeader column="inv_number" label="Invoice" params={sortParams} pathname="/payments" />
+                    <SortHeader column="inv_customer" label="Customer" params={sortParams} pathname="/payments" />
+                    <SortHeader column="inv_duedate" label="Due date" params={sortParams} pathname="/payments" />
+                    <SortHeader column="inv_total" label="Total" params={sortParams} pathname="/payments" align="right" />
+                    <SortHeader column="inv_paid" label="Received" params={sortParams} pathname="/payments" align="right" />
+                    <SortHeader column="inv_balance" label="Balance" params={sortParams} pathname="/payments" align="right" />
+                    <SortHeader column="inv_age" label="Age" params={sortParams} pathname="/payments" />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -379,6 +515,8 @@ export default async function PaymentsPage({
                 </TableBody>
               </Table>
 <Pagination paged={openPaged} params={params} pathname="/payments" pageKey="ip" sizeKey="is" />
+              </>
+              )}
             </div>
           </div>
         </>
@@ -393,6 +531,16 @@ export default async function PaymentsPage({
             title="Everything delivered is billed"
             description="Completed orders show up here until an invoice is raised for them."
           />
+        ) : toBillRows.length === 0 ? (
+          <EmptyState
+            title="No matches"
+            description="No order fits the current search."
+            action={
+              <Button outline href={clearFilters('tobill')}>
+                Clear filters
+              </Button>
+            }
+          />
         ) : (
         <>
           <div>
@@ -400,20 +548,21 @@ export default async function PaymentsPage({
             <Text className="mt-1">
               Raise an invoice so this becomes recoverable.
             </Text>
+            {q ? countLine(toBillRows.length, data.toBill.length, 'order') : null}
             <div className="mt-4">
               <Table dense grid striped>
                 <TableHead>
                   <TableRow>
-                    <TableHeader>Order</TableHeader>
-                    <TableHeader>Customer</TableHeader>
-                    <TableHeader>Status</TableHeader>
-                    <TableHeader>Order date</TableHeader>
-                    <TableHeader className="text-right">Value</TableHeader>
-                    <TableHeader className="text-right">Waiting</TableHeader>
+                    <SortHeader column="bill_order" label="Order" params={sortParams} pathname="/payments" />
+                    <SortHeader column="bill_customer" label="Customer" params={sortParams} pathname="/payments" />
+                    <SortHeader column="bill_status" label="Status" params={sortParams} pathname="/payments" />
+                    <SortHeader column="bill_date" label="Order date" params={sortParams} pathname="/payments" />
+                    <SortHeader column="bill_value" label="Value" params={sortParams} pathname="/payments" align="right" />
+                    <SortHeader column="bill_waiting" label="Waiting" params={sortParams} pathname="/payments" align="right" />
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.toBill.map((order) => (
+                  {toBillPaged.rows.map((order) => (
                     <TableRow key={order.id} href={`/orders/${order.id}`}>
                       <TableCell className="font-mono text-xs">
                         {order.number}
@@ -439,6 +588,7 @@ export default async function PaymentsPage({
                   ))}
                 </TableBody>
               </Table>
+              <Pagination paged={toBillPaged} params={params} pathname="/payments" pageKey="bp" sizeKey="bs" />
             </div>
           </div>
         </>
@@ -448,7 +598,7 @@ export default async function PaymentsPage({
       {tab === 'received' ? (
       <div>
         <Subheading level={2}>
-          {receiptsFiltered ? 'Payments' : 'Recent payments'}
+          Payments
         </Subheading>
         <form
           method="get"
@@ -457,6 +607,10 @@ export default async function PaymentsPage({
         >
           {q ? <input type="hidden" name="q" value={String(params.q)} /> : null}
           <input type="hidden" name="tab" value="received" />
+          {mode ? <input type="hidden" name="mode" value={mode} /> : null}
+          {sortKeep.map(([key, value]) => (
+            <input key={key} type="hidden" name={key} value={value} />
+          ))}
           <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
           <RangeSlider
             label="Amount received"
@@ -475,33 +629,55 @@ export default async function PaymentsPage({
           ) : null}
         </form>
         <div className="mt-4">
+          <FilterSelect
+            param="mode"
+            label="Payment mode"
+            allLabel="All payment modes"
+            value={mode}
+            options={Object.values(PaymentMode).map((value) => ({
+              value,
+              label: PAYMENT_MODE_LABELS[value],
+            }))}
+          />
+        </div>
+        {receiptsFiltered || q ? countLine(receipts.length, data.payments.length, 'payment') : null}
+        <div className="mt-4">
           {receipts.length === 0 ? (
-            <EmptyState
-              title={receiptsFiltered ? 'No payments match' : 'No payments recorded'}
-              description={
-                receiptsFiltered
-                  ? 'Try a wider date range or amount.'
-                  : 'Payments show up here as you record them against invoices.'
-              }
-            />
+            data.payments.length === 0 && !receiptsFiltered && !q ? (
+              <EmptyState
+                title="No payments recorded"
+                description="Payments show up here as you record them against invoices."
+              />
+            ) : (
+              <EmptyState
+                title="No payments match"
+                description="No payment fits the current search and filters."
+                action={
+                  <Button outline href={clearFilters('received')}>
+                    Clear filters
+                  </Button>
+                }
+              />
+            )
           ) : (
+            <>
             <Table dense grid striped>
               <TableHead>
                 <TableRow>
-                  <TableHeader>Receipt</TableHeader>
-                  <TableHeader>Date</TableHeader>
-                  <TableHeader>Customer</TableHeader>
-                  <TableHeader>Applied to</TableHeader>
-                  <TableHeader>Mode</TableHeader>
-                  <TableHeader>Reference</TableHeader>
-                  <TableHeader className="text-right">Amount</TableHeader>
+                  <SortHeader column="recv_number" label="Receipt" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_date" label="Date" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_customer" label="Customer" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_applied" label="Applied to" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_mode" label="Mode" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_reference" label="Reference" params={sortParams} pathname="/payments" />
+                  <SortHeader column="recv_amount" label="Amount" params={sortParams} pathname="/payments" align="right" />
                   <TableHeader className="w-12">
                     <span className="sr-only">Actions</span>
                   </TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {receipts.map((payment) => (
+                {receiptsPaged.rows.map((payment) => (
                   <TableRow key={payment.id} href={`/payments/${payment.id}`}>
                     <TableCell className="font-mono text-xs">
                       {payment.number}
@@ -513,7 +689,11 @@ export default async function PaymentsPage({
                       {payment.customer.name}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {payment.invoiceNumbers.length === 0 ? (
+                      {payment.isAdvance ? (
+                        <span className="font-sans text-zinc-500 dark:text-zinc-400">
+                          Order advance
+                        </span>
+                      ) : payment.invoiceNumbers.length === 0 ? (
                         <span className="font-sans text-amber-600 dark:text-amber-400">
                           On account
                         </span>
@@ -551,6 +731,8 @@ export default async function PaymentsPage({
                 ))}
               </TableBody>
             </Table>
+            <Pagination paged={receiptsPaged} params={params} pathname="/payments" pageKey="rp" sizeKey="rs" />
+            </>
           )}
         </div>
       </div>

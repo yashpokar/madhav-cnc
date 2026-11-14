@@ -63,7 +63,7 @@ export function emptyLine(materialSupply: MaterialSupply = 'WITH_MATERIAL'): Edi
     quantity: '1',
     rate: '0',
     discountPercent: '0',
-    taxRatePercent: '18',
+    taxRatePercent: '0',
     hsnCode: null,
     notes: null,
   }
@@ -503,6 +503,7 @@ export function LineEditor({
                       step="0.01"
                       min={0}
                       max={100}
+                      placeholder="0"
                       value={line.taxRatePercent}
                       onChange={(event) =>
                         update(index, { taxRatePercent: event.target.value })

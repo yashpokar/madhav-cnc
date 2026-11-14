@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { NumericInput } from '@/components/numeric-input'
 import { Button } from '@/components/catalyst/button'
 import { ConfirmButton } from '@/components/confirm-button'
 import { LocalTime } from '@/components/local-time'
@@ -165,8 +166,7 @@ export function DayTally({
           </th>
           <td className="px-2 text-right text-zinc-300">—</td>
           <td className="py-1 pl-2">
-            <input
-              type="number"
+            <NumericInput
               inputMode="decimal"
               step="0.01"
               value={bankBalances[b.id] ?? ''}
@@ -192,8 +192,7 @@ export function DayTally({
               ₹{d.value} <span className="font-normal text-zinc-400">×</span>
             </th>
               <td className="px-2 py-1">
-                <input
-                  type="number"
+                <NumericInput
                   inputMode="numeric"
                   step="1"
                   min={0}
@@ -218,7 +217,7 @@ export function DayTally({
   return (
     <div className="grid grid-cols-1 gap-8 border-t border-zinc-950/5 p-5 lg:grid-cols-2 dark:border-white/10">
       <div className="min-w-0 overflow-x-auto">
-        <h3 className="mb-3 text-sm/6 font-semibold tracking-wide uppercase">
+        <h3 className="mb-3 text-base/6 font-semibold">
           Banks and cash counted
         </h3>
         <table className="w-full min-w-[20rem] border-collapse text-sm/6">
@@ -249,7 +248,7 @@ export function DayTally({
       </div>
 
       <div className="grid content-start gap-4">
-        <h3 className="text-center text-sm/6 font-bold tracking-wide uppercase">
+        <h3 className="text-base/6 font-semibold">
           End of day check
         </h3>
 

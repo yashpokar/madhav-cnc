@@ -33,6 +33,7 @@ export function ConfirmButton({
   tone = 'danger',
   outline = true,
   disabled,
+  blocked,
   children,
 }: {
   label: string
@@ -45,6 +46,8 @@ export function ConfirmButton({
   tone?: 'danger' | 'neutral'
   outline?: boolean
   disabled?: boolean
+  /** Why it cannot be done right now; the dialog explains instead of confirming. */
+  blocked?: string | null
   children?: React.ReactNode
 }) {
   const router = useRouter()
@@ -92,7 +95,15 @@ export function ConfirmButton({
 
       <Dialog open={open} onClose={close} size="md" role="alertdialog">
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        {blocked ? (
+          <DialogBody>
+            <div role="alert">
+              <FormBanner tone="error">{blocked}</FormBanner>
+            </div>
+          </DialogBody>
+        ) : (
+          <DialogDescription>{description}</DialogDescription>
+        )}
         {error ? (
           <DialogBody>
             <div role="alert">
@@ -102,17 +113,19 @@ export function ConfirmButton({
         ) : null}
         <DialogActions>
           <Button type="button" plain onClick={close} disabled={pending}>
-            Cancel
+            {blocked ? 'Close' : 'Cancel'}
           </Button>
-          <Button
-            type="button"
-            color={tone === 'danger' ? 'red' : 'dark/zinc'}
-            onClick={confirm}
-            disabled={pending}
-            autoFocus
-          >
-            {pending ? 'Working…' : (confirmLabel ?? label)}
-          </Button>
+          {blocked ? null : (
+            <Button
+              type="button"
+              color={tone === 'danger' ? 'red' : 'dark/zinc'}
+              onClick={confirm}
+              disabled={pending}
+              autoFocus
+            >
+              {pending ? 'Working…' : (confirmLabel ?? label)}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>

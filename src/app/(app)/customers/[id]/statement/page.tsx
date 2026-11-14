@@ -19,6 +19,8 @@ import { DateRangeFilter } from '@/components/date-range-filter'
 import { RangeSlider } from '@/components/range-slider'
 import { amountCeiling, inDateRange, readDateRange, readListControls } from '@/lib/list-controls'
 import { EmptyState } from '@/components/form-banner'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
 import { PrintButton } from '@/components/print-button'
 import { DocumentLetterhead } from '@/components/document-letterhead'
 import { customerAccount } from '@/lib/queries/payments'
@@ -62,14 +64,31 @@ export default async function CustomerStatementPage({
 
   const { from, to } = readDateRange(query)
   const { min, max } = readListControls(query)
-  const receipts = account.receipts.filter(
+  const matching = account.receipts.filter(
     (receipt) =>
       inDateRange(receipt.paidOn, query) &&
       (min === undefined || receipt.amount >= min) &&
       (max === undefined || receipt.amount <= max),
   )
-  const filtered = receipts.length !== account.receipts.length ||
+  const receipts = sortRows(matching, query, {
+    receipt: (row) => row.number,
+    date: (row) => row.paidOn,
+    mode: (row) => PAYMENT_MODE_LABELS[row.mode],
+    reference: (row) => row.reference,
+    amount: (row) => row.amount,
+    applied: (row) => row.allocated,
+    onaccount: (row) => row.unallocated,
+  })
+  const filtered =
     from !== undefined || to !== undefined || min !== undefined || max !== undefined
+  const pathname = `/customers/${id}/statement`
+  const sortParams = query
+  const sortKeep = (['sort', 'dir'] as const).flatMap((key) => {
+    const value = query[key]
+    const single = Array.isArray(value) ? value[0] : value
+
+    return single ? [[key, single] as const] : []
+  })
 
   const owing = account.net > 0
   const settled = Math.abs(account.net) < 0.005
@@ -207,6 +226,9 @@ export default async function CustomerStatementPage({
             method="get"
             className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
           >
+            {sortKeep.map(([key, value]) => (
+              <input key={key} type="hidden" name={key} value={value} />
+            ))}
             <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
             <RangeSlider
               label="Amount received"
@@ -219,9 +241,15 @@ export default async function CustomerStatementPage({
               Apply
             </Button>
             {filtered ? (
-              <Button plain href={`/customers/${account.customer.id}/statement`}>
+              <Button plain href={pathname}>
                 Clear
               </Button>
+            ) : null}
+            {filtered ? (
+              <span className="pb-2 text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+                {receipts.length} of {account.receipts.length} receipt
+                {account.receipts.length === 1 ? '' : 's'}
+              </span>
             ) : null}
           </form>
         ) : null}
@@ -234,18 +262,25 @@ export default async function CustomerStatementPage({
                   ? 'Nothing has been received from this customer yet.'
                   : 'Try a wider date range or amount.'
               }
+              action={
+                account.receipts.length === 0 ? null : (
+                  <Button outline href={pathname}>
+                    Clear filters
+                  </Button>
+                )
+              }
             />
           ) : (
             <Table dense grid striped>
               <TableHead>
                 <TableRow>
-                  <TableHeader>Receipt</TableHeader>
-                  <TableHeader>Date</TableHeader>
-                  <TableHeader>Mode</TableHeader>
-                  <TableHeader>Reference</TableHeader>
-                  <TableHeader className="text-right">Amount</TableHeader>
-                  <TableHeader className="text-right">Applied</TableHeader>
-                  <TableHeader className="text-right">On account</TableHeader>
+                  <SortHeader column="receipt" label="Receipt" params={sortParams} pathname={pathname} />
+                  <SortHeader column="date" label="Date" params={sortParams} pathname={pathname} />
+                  <SortHeader column="mode" label="Mode" params={sortParams} pathname={pathname} />
+                  <SortHeader column="reference" label="Reference" params={sortParams} pathname={pathname} />
+                  <SortHeader column="amount" label="Amount" params={sortParams} pathname={pathname} align="right" />
+                  <SortHeader column="applied" label="Applied" params={sortParams} pathname={pathname} align="right" />
+                  <SortHeader column="onaccount" label="On account" params={sortParams} pathname={pathname} align="right" />
                   <TableHeader className="w-12 print:hidden">
                     <span className="sr-only">Actions</span>
                   </TableHeader>

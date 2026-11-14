@@ -99,7 +99,7 @@ export async function getReceivables(
     prisma.payment.findMany({
       where: paidOn ? { paidOn } : undefined,
       orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }],
-      take: ranged ? 500 : 25,
+      take: 500,
       select: {
         id: true,
         number: true,

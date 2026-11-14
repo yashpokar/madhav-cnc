@@ -39,7 +39,7 @@ export function SearchField({ placeholder }: { placeholder: string }) {
   }, [value, pathname, router, searchParams])
 
   return (
-    <InputGroup className="w-full sm:w-72">
+    <InputGroup className="w-full sm:w-96 sm:shrink-0">
       <MagnifyingGlassIcon />
       <Input
         type="search"

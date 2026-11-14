@@ -96,7 +96,7 @@ export function RelatedTable({
         </p>
       ) : (
         <>
-          <Table dense>
+          <Table plain dense>
             <TableHead>
               <TableRow>
                 {columns.map((column) => (

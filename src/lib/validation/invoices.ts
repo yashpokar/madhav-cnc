@@ -68,7 +68,7 @@ export const invoiceInputSchema = z.object({
   discountType: z.enum(DiscountType).default('NONE'),
   discountValue: z.coerce.number().min(0).max(99_999_999).default(0),
   transportCharge: z.coerce.number().min(0).max(9_999_999).default(0),
-  transportTaxRatePercent: z.coerce.number().min(0).max(100).default(18),
+  transportTaxRatePercent: z.coerce.number().min(0).max(100).default(0),
   advanceAdjusted: z.coerce.number().min(0).max(99_999_999).default(0),
   notes: optionalText(2000),
   terms: optionalText(2000),

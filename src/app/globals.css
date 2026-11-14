@@ -21,8 +21,9 @@ html[data-theme='dark'] {
   --color-zinc-200: #e3e6ef;
   --color-zinc-300: #bfc5d8;
   --color-zinc-400: #8b94b0;
-  --color-zinc-500: #646e8c;
-  --color-zinc-600: #4b5472;
+  /* Secondary text: 5.6:1 on white (was 4.9:1), so dates and hints read easily. */
+  --color-zinc-500: #565f7d;
+  --color-zinc-600: #434b68;
   --color-zinc-700: #394161;
   --color-zinc-800: #252c4b;
   --color-zinc-900: #1b2350;
@@ -36,6 +37,25 @@ html[data-theme='dark'] {
   --color-gold-500: #c9962b;
   --color-gold-600: #a77a1e;
   --color-gold-700: #82601a;
+  --color-gold-800: #664c17;
+  --color-gold-900: #4f3b14;
+
+  /*
+   * No stock blue anywhere: every link, focus ring, selection and highlight
+   * that used blue now speaks the brand's antique gold. Deeper steps carry
+   * text so it stays readable on white (gold-700 on white is about 5.9:1).
+   */
+  --color-blue-50: #fbf6e9;
+  --color-blue-100: #f5e9c6;
+  --color-blue-200: #ecd48f;
+  --color-blue-300: #e2bd5f;
+  --color-blue-400: #d6a842;
+  --color-blue-500: #c9962b;
+  --color-blue-600: #a77a1e;
+  --color-blue-700: #82601a;
+  --color-blue-800: #664c17;
+  --color-blue-900: #4f3b14;
+  --color-blue-950: #2e220b;
 }
 
 ::selection {
@@ -44,7 +64,26 @@ html[data-theme='dark'] {
 }
 
 @theme inline {
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-plex);
+}
+
+/*
+ * The app frame: a navy surround (the brand) holding one paper-coloured
+ * sheet of work. Cards inside the sheet are white; in dark mode the sheet is
+ * the deepest navy and cards lift one step lighter.
+ */
+@theme {
+  --color-paper: #f6f7fb;
+  --color-frame: #0f1536;
+  --color-frame-deep: #0a0f2a;
+}
+
+body {
+  background: var(--color-paper);
+}
+
+[data-theme='dark'] body {
+  background: var(--color-zinc-950);
 }
 
 @media print {
@@ -192,6 +231,26 @@ html[data-theme='dark'] {
 
 .date-picker .rdp-months {
   gap: 1.5rem;
+}
+
+.date-picker .rdp-chevron {
+  fill: currentColor;
+}
+
+.date-picker .rdp-button_previous,
+.date-picker .rdp-button_next {
+  color: var(--color-zinc-600);
+  border-radius: 9999px;
+}
+
+.date-picker .rdp-button_previous:hover,
+.date-picker .rdp-button_next:hover {
+  background: var(--rdp-accent-background-color);
+}
+
+[data-theme='dark'] .date-picker .rdp-button_previous,
+[data-theme='dark'] .date-picker .rdp-button_next {
+  color: var(--color-zinc-300);
 }
 
 /*

@@ -42,7 +42,7 @@ export default async function NewExpensePage() {
           payeeName: '',
           description: null,
           amount: 0,
-          taxRatePercent: 18,
+          taxRatePercent: 0,
           isInputCredit: false,
           vendorGstin: null,
           billNumber: null,

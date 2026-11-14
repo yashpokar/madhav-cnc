@@ -6,7 +6,6 @@ import { deleteDispatch } from '@/lib/actions/dispatches'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -16,9 +15,19 @@ import {
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
-import { EmptyState } from '@/components/form-banner'
 import { SearchField } from '@/components/search-field'
-import { listDispatches } from '@/lib/queries/dispatches'
+import { StatusFilter } from '@/components/status-filter'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
+import { inDateRange } from '@/lib/list-controls'
+import {
+  DateFilter,
+  ListEmpty,
+  ResultCount,
+  isFiltered,
+
+} from '@/components/list-filter-ui'
+import { countDispatches, listDispatches } from '@/lib/queries/dispatches'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { DISPATCH_STATUS_COLORS, DISPATCH_STATUS_LABELS } from '@/lib/labels'
@@ -51,12 +60,26 @@ export default async function DispatchPage({
   const activeTab = TABS.find((tab) => tab.value === tabValue) ?? TABS[0]
   const search = typeof params.q === 'string' ? params.q : undefined
 
-  const dispatches = await listDispatches({ status: activeTab.status, search })
+  const [dispatches, totalCount] = await Promise.all([
+    listDispatches({ status: activeTab.status, search }),
+    countDispatches(),
+  ])
   const canCreate = can(user.role, 'dispatch:create')
   const canEdit = can(user.role, 'dispatch:update')
   const canDelete = can(user.role, 'dispatch:delete')
 
-  const paged = paginate(dispatches, params)
+  const filtered = dispatches.filter((row) => inDateRange(row.dispatchDate, params))
+  const sorted = sortRows(filtered, params, {
+    number: (row) => row.number,
+    order: (row) => row.order.number,
+    customer: (row) => row.order.customer.name,
+    date: (row) => row.dispatchDate,
+    vehicle: (row) => row.vehicleNumber,
+    lines: (row) => row._count.lines,
+    status: (row) => DISPATCH_STATUS_LABELS[row.status],
+  })
+  const paged = paginate(sorted, params)
+  const isNarrowed = isFiltered(params, activeTab.value)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -71,62 +94,40 @@ export default async function DispatchPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {TABS.map((tab) => {
-            const isActive = tab.value === activeTab.value
-            const query = new URLSearchParams()
-
-            if (tab.value !== 'all') query.set('tab', tab.value)
-            if (search) query.set('q', search)
-
-            const href = query.toString()
-              ? `/dispatch?${query.toString()}`
-              : '/dispatch'
-
-            return (
-              <Link
-                key={tab.value}
-                href={href}
-                className={
-                  isActive
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search challan, order, vehicle…" />
+        <StatusFilter
+          options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          value={activeTab.value}
+          params={params}
+          pathname="/dispatch"
+        />
+        <SearchField placeholder="Search challan, order, customer, vehicle, driver…" />
       </div>
 
-      {dispatches.length === 0 ? (
-        <EmptyState
-          title={search ? 'No matches' : 'No challans yet'}
-          description={
-            search
-              ? 'Try a different challan, order number or vehicle.'
-              : 'Raise a delivery challan when an order is ready to leave.'
-          }
-          action={
-            canCreate && !search ? (
-              <Button href="/dispatch/new">New challan</Button>
-            ) : null
-          }
+      <DateFilter params={params} pathname="/dispatch" />
+
+      {sorted.length === 0 ? (
+        <ListEmpty
+          filtered={isNarrowed}
+          pathname="/dispatch"
+          params={params}
+          noun="challan"
+          emptyTitle="No challans yet"
+          emptyDescription="Raise a delivery challan when an order is ready to leave."
+          action={canCreate ? <Button href="/dispatch/new">New challan</Button> : null}
         />
       ) : (
 <>
+        <ResultCount shown={sorted.length} total={totalCount} noun="challan" filtered={isNarrowed} />
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Challan</TableHeader>
-              <TableHeader>Order</TableHeader>
-              <TableHeader>Customer</TableHeader>
-              <TableHeader>Date</TableHeader>
-              <TableHeader>Vehicle</TableHeader>
-              <TableHeader className="text-right">Lines</TableHeader>
-              <TableHeader>Status</TableHeader>
+              <SortHeader column="number" label="Challan" params={params} pathname="/dispatch" />
+              <SortHeader column="order" label="Order" params={params} pathname="/dispatch" />
+              <SortHeader column="customer" label="Customer" params={params} pathname="/dispatch" />
+              <SortHeader column="date" label="Date" params={params} pathname="/dispatch" />
+              <SortHeader column="vehicle" label="Vehicle" params={params} pathname="/dispatch" />
+              <SortHeader column="lines" label="Lines" params={params} pathname="/dispatch" align="right" />
+              <SortHeader column="status" label="Status" params={params} pathname="/dispatch" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>

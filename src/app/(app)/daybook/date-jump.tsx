@@ -9,7 +9,6 @@ export function DateJump({ date, view, cashOnly }: { date: string; view: string;
 
   return (
     <DatePicker
-      className="w-44"
       value={date}
       required
       aria-label="Go to date"

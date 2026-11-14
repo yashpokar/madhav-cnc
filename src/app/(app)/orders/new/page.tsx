@@ -53,7 +53,7 @@ export default async function NewOrderPage() {
           advanceAmount: 0,
           advanceMode: 'CASH',
           transportCharge: 0,
-          transportTaxRatePercent: 18,
+          transportTaxRatePercent: 0,
           notes: null,
           terms: null,
           lines: [],

@@ -22,6 +22,8 @@ export async function listCustomers({
               { altPhone: { contains: term } },
               { city: { contains: term, mode: 'insensitive' } },
               { email: { contains: term, mode: 'insensitive' } },
+              { preferredArchitect: { name: { contains: term, mode: 'insensitive' } } },
+              { preferredCarpenter: { name: { contains: term, mode: 'insensitive' } } },
             ],
           }
         : {}),

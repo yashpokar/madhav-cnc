@@ -13,6 +13,7 @@ import { can } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { listCashCreditSources } from '@/lib/queries/accounting'
 import { listVendorOptions } from '@/lib/queries/vendors'
+import { listCustomerOptions } from '@/lib/queries/quotations'
 import {
   getDayClose,
   getDaybookLayout,
@@ -152,7 +153,7 @@ function Ledger({
     <div className="min-w-0 p-4 sm:p-5">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h3 className="flex items-center gap-2 text-sm/6 font-semibold tracking-wide uppercase">
+          <h3 className="flex items-center gap-2 text-base/6 font-semibold">
             <span aria-hidden="true" className={`size-2 rounded-full ${dot}`} />
             {title}
           </h3>
@@ -272,6 +273,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
     priorReceipts,
     priorCredits,
     vendors,
+    customerOptions,
     sources,
     channels,
   ] = await Promise.all([
@@ -300,6 +302,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
             amount: true,
             reference: true,
             isChecked: true,
+            channel: { select: { name: true } },
             customer: { select: { name: true } },
           },
         })
@@ -344,6 +347,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       _sum: { amount: true },
     }),
     canCreate ? listVendorOptions() : [],
+    canCreate && canSeeReceipts && can(user.role, 'customer:read') ? listCustomerOptions() : null,
     canCreate ? listCashCreditSources() : [],
     canCreate ? listChannels(true) : [],
   ])
@@ -371,6 +375,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
       note: p.reference ? `Customer receipt · ${p.reference}` : 'Customer receipt',
       href: `/payments/${p.id}`,
       checked: p.isChecked,
+      channelName: p.channel?.name,
     })
   }
   for (const c of credits) {
@@ -522,18 +527,23 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
             Month
           </Link>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button outline href={link({ date: range.prev })} aria-label="Previous">
             ←
           </Button>
-          <span className="min-w-44 text-center text-sm/6 font-medium">{range.label}</span>
+          {range.view === 'day' ? (
+            <div className="w-48">
+              <DateJump date={iso(range.anchor)} view={range.view} cashOnly={cashOnly} />
+            </div>
+          ) : (
+            <span className="min-w-40 px-2 text-center text-sm/6 font-medium">{range.label}</span>
+          )}
           <Button outline href={link({ date: range.next })} aria-label="Next">
             →
           </Button>
           <Button plain href={link({ date: iso(new Date()) })}>
             Today
           </Button>
-          <DateJump date={iso(range.anchor)} view={range.view} cashOnly={cashOnly} />
         </div>
         <div className="flex gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
           <Link href={link({ mode: null })} className={pill(!cashOnly)}>
@@ -613,6 +623,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                           kind="credit"
                           date={day.key}
                           suggestions={sources}
+                          customers={customerOptions ?? undefined}
                           channels={channels}
                         />
                       ) : undefined
@@ -691,7 +702,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
           Summary · {range.label}
           {cashOnly ? ' · cash only' : ''}
         </h2>
-        <dl className="grid grid-cols-2 gap-px bg-zinc-950/10 sm:grid-cols-4 dark:bg-white/10">
+        <dl className="grid grid-cols-2 overflow-hidden sm:grid-cols-4 [&>*]:border-r [&>*]:border-b [&>*]:border-zinc-950/5 dark:[&>*]:border-white/10">
           {[
             { label: 'Brought forward', value: opening, tone: '' },
             {

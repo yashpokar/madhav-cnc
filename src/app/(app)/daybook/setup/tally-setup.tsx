@@ -22,6 +22,7 @@ import {
   setDenominationActive,
   updateChannel,
 } from '@/lib/actions/tally'
+import { SelectMenu } from '@/components/select-menu'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { PaymentMode } from '@/generated/prisma/enums'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -36,8 +37,10 @@ type Channel = {
   isActive: boolean
 }
 
-const pick =
-  'rounded-md border border-zinc-950/10 bg-transparent px-2 py-1.5 text-sm/6 dark:border-white/15 dark:bg-zinc-900'
+const MODE_OPTIONS = Object.values(PaymentMode).map((mode) => ({
+  value: mode,
+  label: PAYMENT_MODE_LABELS[mode],
+}))
 
 const row =
   'flex flex-wrap items-center gap-3 border-b border-zinc-950/5 px-3 py-2 last:border-b-0 dark:border-white/10'
@@ -175,51 +178,41 @@ export function TallySetup({
                   }
                 }}
               />
-              <select
+              <SelectMenu
                 aria-label={`Kind of payment for ${channel.name}`}
                 value={channel.mode}
                 disabled={pending}
-                className={pick}
-                onChange={(event) =>
+                className="w-44"
+                options={MODE_OPTIONS}
+                onChange={(mode) =>
                   run(() =>
                     updateChannel(channel.id, {
                       name: channel.name,
-                      mode: event.target.value,
-                      bankAccountId: event.target.value === 'CASH' ? null : channel.bankAccountId,
+                      mode,
+                      bankAccountId: mode === 'CASH' ? null : channel.bankAccountId,
                     }),
                   )
                 }
-              >
-                {Object.values(PaymentMode).map((mode) => (
-                  <option key={mode} value={mode}>
-                    {PAYMENT_MODE_LABELS[mode]}
-                  </option>
-                ))}
-              </select>
-              <select
+              />
+              <SelectMenu
                 aria-label={`Bank account for ${channel.name}`}
                 value={channel.bankAccountId ?? ''}
                 disabled={pending || channel.mode === 'CASH'}
-                className={pick}
-                onChange={(event) =>
+                className="w-52"
+                options={[
+                  { value: '', label: channel.mode === 'CASH' ? 'No bank (cash)' : 'No bank account' },
+                  ...banks.map((bank) => ({ value: bank.id, label: bank.name })),
+                ]}
+                onChange={(bankAccountId) =>
                   run(() =>
                     updateChannel(channel.id, {
                       name: channel.name,
                       mode: channel.mode,
-                      bankAccountId: event.target.value || null,
+                      bankAccountId: bankAccountId || null,
                     }),
                   )
                 }
-              >
-                <option value="">
-                  {channel.mode === 'CASH' ? 'No bank (cash)' : 'No bank account'}
-                </option>
-                {banks.map((bank) => (
-                  <option key={bank.id} value={bank.id}>
-                    {bank.name}
-                  </option>
-                ))}
-              </select>
+              />
               <Shown
                 checked={channel.isActive}
                 label={`Show ${channel.name}`}
@@ -264,32 +257,24 @@ export function TallySetup({
             className="max-w-48"
             onChange={(event) => setNewChannel(event.target.value)}
           />
-          <select
+          <SelectMenu
             aria-label="Kind of payment"
             value={newMode}
-            className={pick}
-            onChange={(event) => setNewMode(event.target.value as PaymentMode)}
-          >
-            {Object.values(PaymentMode).map((mode) => (
-              <option key={mode} value={mode}>
-                {PAYMENT_MODE_LABELS[mode]}
-              </option>
-            ))}
-          </select>
-          <select
+            className="w-44"
+            options={MODE_OPTIONS}
+            onChange={(mode) => setNewMode(mode as PaymentMode)}
+          />
+          <SelectMenu
             aria-label="Bank account"
             value={newMode === 'CASH' ? '' : newBankId}
             disabled={newMode === 'CASH'}
-            className={pick}
-            onChange={(event) => setNewBankId(event.target.value)}
-          >
-            <option value="">No bank account</option>
-            {banks.map((bank) => (
-              <option key={bank.id} value={bank.id}>
-                {bank.name}
-              </option>
-            ))}
-          </select>
+            className="w-52"
+            options={[
+              { value: '', label: 'No bank account' },
+              ...banks.map((bank) => ({ value: bank.id, label: bank.name })),
+            ]}
+            onChange={setNewBankId}
+          />
           <Button type="submit" disabled={pending || !newChannel.trim()}>
             Add payment mode
           </Button>

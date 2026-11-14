@@ -44,6 +44,7 @@ export function RowActions({
   deleteAction,
   deleteTitle,
   deleteDescription,
+  deleteBlocked,
 }: {
   /** What the row is, e.g. "QT-0042"; used for the menu label and dialog. */
   name: string
@@ -53,7 +54,9 @@ export function RowActions({
   items?: { label: string; href: string }[]
   deleteAction?: () => Promise<DeleteResult | { ok: boolean }>
   deleteTitle?: string
-  deleteDescription?: string
+  deleteDescription?: React.ReactNode
+  /** Why it cannot be deleted yet; the dialog explains instead of deleting. */
+  deleteBlocked?: string | null
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -91,7 +94,7 @@ export function RowActions({
         <DropdownButton plain aria-label={`Actions for ${name}`}>
           <EllipsisHorizontalIcon />
         </DropdownButton>
-        <DropdownMenu anchor="bottom end">
+        <DropdownMenu anchor="bottom end" className="min-w-44">
           {viewHref ? (
             <DropdownItem href={viewHref}>
               <EyeIcon data-slot="icon" />
@@ -114,7 +117,7 @@ export function RowActions({
               {viewHref || editHref || items.length > 0 ? <DropdownDivider /> : null}
               <DropdownItem
                 onClick={() => setOpen(true)}
-                className="text-red-600! dark:text-red-400! data-focus:bg-red-600! data-focus:text-white! dark:data-focus:text-white!"
+                className="text-red-600! *:data-[slot=icon]:text-red-500! data-focus:bg-red-600! data-focus:text-white! data-focus:*:data-[slot=icon]:text-white! dark:text-red-400! dark:*:data-[slot=icon]:text-red-400!"
               >
                 <TrashIcon data-slot="icon" />
                 <DropdownLabel>Delete</DropdownLabel>
@@ -127,10 +130,18 @@ export function RowActions({
       {deleteAction ? (
         <Dialog open={open} onClose={close} size="md" role="alertdialog">
           <DialogTitle>{deleteTitle ?? `Delete ${name}?`}</DialogTitle>
-          <DialogDescription>
-            {deleteDescription ??
-              'This permanently removes the record. This cannot be undone.'}
-          </DialogDescription>
+          {deleteBlocked ? (
+            <DialogBody>
+              <div role="alert">
+                <FormBanner tone="error">{deleteBlocked}</FormBanner>
+              </div>
+            </DialogBody>
+          ) : (
+            <DialogDescription>
+              {deleteDescription ??
+                'This permanently removes the record. This cannot be undone.'}
+            </DialogDescription>
+          )}
           {error ? (
             <DialogBody>
               <div role="alert">
@@ -140,11 +151,13 @@ export function RowActions({
           ) : null}
           <DialogActions>
             <Button type="button" plain onClick={close} disabled={pending}>
-              Cancel
+              {deleteBlocked ? 'Close' : 'Cancel'}
             </Button>
-            <Button type="button" color="red" onClick={confirm} disabled={pending} autoFocus>
-              {pending ? 'Working…' : 'Delete'}
-            </Button>
+            {deleteBlocked ? null : (
+              <Button type="button" color="red" onClick={confirm} disabled={pending} autoFocus>
+                {pending ? 'Working…' : 'Delete'}
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       ) : null}

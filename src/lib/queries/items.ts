@@ -30,6 +30,7 @@ export async function listItems({
               { brand: { contains: term, mode: 'insensitive' } },
               { shade: { contains: term, mode: 'insensitive' } },
               { hsnCode: { contains: term } },
+              { material: { name: { contains: term, mode: 'insensitive' } } },
             ],
           }
         : {}),

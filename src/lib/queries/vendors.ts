@@ -20,6 +20,8 @@ export async function listVendors({
                 { contactName: { contains: term, mode: 'insensitive' } },
                 { phone: { contains: term } },
                 { gstin: { contains: term, mode: 'insensitive' } },
+                { city: { contains: term, mode: 'insensitive' } },
+                { email: { contains: term, mode: 'insensitive' } },
                 { description: { contains: term, mode: 'insensitive' } },
               ],
             }

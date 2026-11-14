@@ -1,5 +1,17 @@
 import type { Metadata } from 'next'
+import { FilterSelect } from '@/components/filter-select'
+import { ListControls } from '@/components/list-controls'
+import { ListSummary } from '@/components/list-summary'
+import { SortHeader } from '@/components/sort-header'
 import { Pagination } from '@/components/pagination'
+import { clearHref } from '@/lib/list-href'
+import {
+  amountCeiling,
+  applyListControls,
+  readDateRange,
+  readListControls,
+} from '@/lib/list-controls'
+import { sortRows } from '@/lib/table-sort'
 import { paginate } from '@/lib/pagination'
 import { RowActions } from '@/components/row-actions'
 import { deleteVendor } from '@/lib/actions/vendors'
@@ -42,9 +54,43 @@ export default async function VendorsPage({ searchParams }: PageProps<'/vendors'
   const user = await requireCapability('expense:read')
   const params = await searchParams
   const search = typeof params.q === 'string' ? params.q : undefined
-  const includeInactive = params.inactive === '1'
+  // Active vendors by default; `inactive=1` is the older spelling of show=all.
+  const show =
+    params.show === 'all' || params.show === 'inactive'
+      ? params.show
+      : params.inactive === '1'
+        ? 'all'
+        : undefined
 
-  const vendors = await listVendors({ search, includeInactive })
+  const [everyone, matched] = await Promise.all([
+    listVendors({ includeInactive: true }),
+    search ? listVendors({ search, includeInactive: true }) : null,
+  ])
+  const visible = (vendor: (typeof everyone)[number]) =>
+    show === 'all' ? true : show === 'inactive' ? !vendor.isActive : vendor.isActive
+  const scope = (matched ?? everyone).filter(visible)
+  const total = everyone.filter(visible).length
+
+  // Last-paid dates and paid totals narrow the list; vendors never paid have
+  // no date, so a date range leaves them out.
+  const { from, to } = readDateRange(params)
+  const { min, max } = readListControls(params)
+  const ranged = applyListControls(
+    from || to ? scope.filter((vendor) => vendor.lastPaid) : scope,
+    params,
+    {
+      date: (vendor) => vendor.lastPaid ?? new Date(0),
+      amount: (vendor) => vendor.spent,
+    },
+  )
+  const filtered = Boolean(search || show || from || to || min !== undefined || max !== undefined)
+  const vendors = sortRows(ranged, params, {
+    name: (vendor) => vendor.name,
+    contact: (vendor) => vendor.contactName ?? vendor.phone,
+    gstin: (vendor) => vendor.gstin,
+    paid: (vendor) => (vendor.bills > 0 ? vendor.spent : null),
+    lastPaid: (vendor) => vendor.lastPaid,
+  })
   const paged = paginate(vendors, params)
   const canEdit = can(user.role, 'expense:update')
   const canDelete = can(user.role, 'expense:delete')
@@ -57,21 +103,58 @@ export default async function VendorsPage({ searchParams }: PageProps<'/vendors'
           <Text>Everyone you pay: suppliers, contractors and utilities.</Text>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <SearchField placeholder="Search name, phone, GSTIN…" />
-          <Button outline href={includeInactive ? '/vendors' : '/vendors?inactive=1'}>
-            {includeInactive ? 'Hide inactive' : 'Show inactive'}
-          </Button>
           {can(user.role, 'expense:create') ? <Button href="/vendors/new">Add vendor</Button> : null}
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search name, phone, GSTIN, city…" />
+        <FilterSelect
+          param="show"
+          label="Status"
+          allLabel="Active only"
+          value={show}
+          options={[
+            { value: 'all', label: 'Active and inactive' },
+            { value: 'inactive', label: 'Inactive only' },
+          ]}
+        />
+      </div>
+
+      {total > 0 ? (
+        <>
+          <ListControls
+            params={params}
+            pathname="/vendors"
+            amountLabel="Paid"
+            ceiling={amountCeiling(scope, (vendor) => vendor.spent)}
+          />
+          <ListSummary
+            shown={vendors.length}
+            total={total}
+            singular="vendor"
+            plural="vendors"
+            filtered={filtered}
+            params={params}
+            pathname="/vendors"
+          />
+        </>
+      ) : null}
+
       {vendors.length === 0 ? (
         <EmptyState
-          title={search ? 'No vendors match' : 'No vendors yet'}
+          title={filtered ? 'No vendors match' : 'No vendors yet'}
           description={
-            search
-              ? 'Try a different name, phone or GSTIN.'
+            filtered
+              ? 'No vendor matches the current search and filters.'
               : 'Vendors appear here as you add expenses, or add one yourself.'
+          }
+          action={
+            filtered ? (
+              <Button outline href={clearHref('/vendors', params)}>
+                Clear filters
+              </Button>
+            ) : null
           }
         />
       ) : (
@@ -79,11 +162,11 @@ export default async function VendorsPage({ searchParams }: PageProps<'/vendors'
           <Table dense grid striped>
             <TableHead>
               <TableRow>
-                <TableHeader>Vendor</TableHeader>
-                <TableHeader>Contact</TableHeader>
-                <TableHeader>GSTIN</TableHeader>
-                <TableHeader className="text-right">Paid</TableHeader>
-                <TableHeader>Last paid</TableHeader>
+                <SortHeader column="name" label="Vendor" params={params} pathname="/vendors" />
+                <SortHeader column="contact" label="Contact" params={params} pathname="/vendors" />
+                <SortHeader column="gstin" label="GSTIN" params={params} pathname="/vendors" />
+                <SortHeader column="paid" label="Paid" params={params} pathname="/vendors" align="right" />
+                <SortHeader column="lastPaid" label="Last paid" params={params} pathname="/vendors" />
                 <TableHeader>
                   <span className="sr-only">Actions</span>
                 </TableHeader>

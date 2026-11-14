@@ -62,7 +62,7 @@ export const orderInputSchema = z.object({
   advanceAmount: z.coerce.number().min(0).max(99_999_999).default(0),
   advanceMode: z.enum(PaymentMode).default('CASH'),
   transportCharge: z.coerce.number().min(0).max(9_999_999).default(0),
-  transportTaxRatePercent: z.coerce.number().min(0).max(100).default(18),
+  transportTaxRatePercent: z.coerce.number().min(0).max(100).default(0),
   notes: optionalText(2000),
   terms: optionalText(2000),
   lines: z.array(orderLineSchema).min(1, 'Add at least one line'),

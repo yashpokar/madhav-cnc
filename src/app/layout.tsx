@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { IBM_Plex_Sans } from 'next/font/google'
 import './globals.css'
 import { THEME_SCRIPT } from '@/lib/theme'
 
-const inter = Inter({
-  variable: '--font-inter',
+// Engineered, workshop-like letterforms with tabular figures for money columns.
+const plex = IBM_Plex_Sans({
+  variable: '--font-plex',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 })
 
 export const metadata: Metadata = {
@@ -23,7 +25,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: light)', color: '#0f1536' },
     { media: '(prefers-color-scheme: dark)', color: '#0f1536' },
   ],
 }
@@ -32,7 +34,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} font-sans antialiased`}
+      className={`${plex.variable} font-sans antialiased`}
       suppressHydrationWarning
     >
       <head>

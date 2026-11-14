@@ -9,7 +9,6 @@ import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -19,9 +18,12 @@ import {
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
-import { EmptyState } from '@/components/form-banner'
 import { SearchField } from '@/components/search-field'
-import { listQuotations } from '@/lib/queries/quotations'
+import { StatusFilter } from '@/components/status-filter'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
+import { ListEmpty, ResultCount, isFiltered } from '@/components/list-filter-ui'
+import { countQuotations, listQuotations } from '@/lib/queries/quotations'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -65,16 +67,30 @@ export default async function QuotationsPage({
   const activeTab = TABS.find((tab) => tab.value === tabValue) ?? TABS[0]
   const search = typeof params.q === 'string' ? params.q : undefined
 
-  const quotations = await listQuotations({ status: activeTab.status, search })
+  const [quotations, totalCount] = await Promise.all([
+    listQuotations({ status: activeTab.status, search }),
+    countQuotations(),
+  ])
   const canCreate = can(user.role, 'quotation:create')
   const canEdit = can(user.role, 'quotation:update')
   const canDelete = can(user.role, 'quotation:delete')
 
-  const sorted = applyListControls(quotations, params, {
+  const filtered = applyListControls(quotations, params, {
     date: (row) => row.quotationDate,
     amount: (row) => row.total,
   })
+  const sorted = sortRows(filtered, params, {
+    number: (row) => row.number,
+    customer: (row) => row.customer.name,
+    subject: (row) => row.subject,
+    material: (row) => MATERIAL_SUMMARY_LABELS[row.materialSummary],
+    date: (row) => row.quotationDate,
+    lines: (row) => row._count.lines,
+    total: (row) => row.total,
+    status: (row) => QUOTATION_STATUS_LABELS[row.status],
+  })
   const paged = paginate(sorted, params)
+  const isNarrowed = isFiltered(params, activeTab.value)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -82,7 +98,7 @@ export default async function QuotationsPage({
         <div className="grid grid-cols-1 gap-2">
           <Heading>Quotations</Heading>
           <Text>
-            {quotations.length} quotation{quotations.length === 1 ? '' : 's'}
+            {totalCount} quotation{totalCount === 1 ? '' : 's'}
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -94,72 +110,43 @@ export default async function QuotationsPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {TABS.map((tab) => {
-            const isActive = tab.value === activeTab.value
-            const query = new URLSearchParams()
-
-            if (tab.value !== 'all') query.set('tab', tab.value)
-            if (search) query.set('q', search)
-
-            const href = query.toString()
-              ? `/quotations?${query.toString()}`
-              : '/quotations'
-
-            return (
-              <Link
-                key={tab.value}
-                href={href}
-                className={
-                  isActive
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search number, customer, subject…" />
+        <StatusFilter
+          options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          value={activeTab.value}
+          params={params}
+          pathname="/quotations"
+        />
+        <SearchField placeholder="Search number, customer, subject, architect…" />
       </div>
 
       <ListControls
         ceiling={amountCeiling(quotations, (row) => row.total)}
         params={params} pathname="/quotations" amountLabel="Total" />
 
-      {quotations.length > 0 && sorted.length === 0 ? (
-        <EmptyState
-          title="No matches"
-          description="Nothing falls in this amount range. Widen it or clear the filter."
-        />
-      ) : quotations.length === 0 ? (
-        <EmptyState
-          title={search ? 'No matches' : 'No quotations yet'}
-          description={
-            search
-              ? 'Try a different number, customer or subject.'
-              : 'Raise your first quotation against a customer.'
-          }
-          action={
-            canCreate && !search ? (
-              <Button href="/quotations/new">New quotation</Button>
-            ) : null
-          }
+      {sorted.length === 0 ? (
+        <ListEmpty
+          filtered={isNarrowed}
+          pathname="/quotations"
+          params={params}
+          noun="quotation"
+          emptyTitle="No quotations yet"
+          emptyDescription="Raise your first quotation against a customer."
+          action={canCreate ? <Button href="/quotations/new">New quotation</Button> : null}
         />
       ) : (
 <>
+        <ResultCount shown={sorted.length} total={totalCount} noun="quotation" filtered={isNarrowed} />
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Number</TableHeader>
-              <TableHeader>Customer</TableHeader>
-              <TableHeader>Subject</TableHeader>
-              <TableHeader>Material</TableHeader>
-              <TableHeader>Date</TableHeader>
-              <TableHeader className="text-right">Lines</TableHeader>
-              <TableHeader className="text-right">Total</TableHeader>
-              <TableHeader>Status</TableHeader>
+              <SortHeader column="number" label="Number" params={params} pathname="/quotations" />
+              <SortHeader column="customer" label="Customer" params={params} pathname="/quotations" />
+              <SortHeader column="subject" label="Subject" params={params} pathname="/quotations" />
+              <SortHeader column="material" label="Material" params={params} pathname="/quotations" />
+              <SortHeader column="date" label="Date" params={params} pathname="/quotations" />
+              <SortHeader column="lines" label="Lines" params={params} pathname="/quotations" align="right" />
+              <SortHeader column="total" label="Total" params={params} pathname="/quotations" align="right" />
+              <SortHeader column="status" label="Status" params={params} pathname="/quotations" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>

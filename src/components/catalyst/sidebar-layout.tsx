@@ -31,7 +31,10 @@ function MobileSidebar({ open, close, children }: React.PropsWithChildren<{ open
         transition
         className="fixed inset-y-0 w-full max-w-80 p-2 transition duration-300 ease-in-out data-closed:-translate-x-full"
       >
-        <div className="flex h-full flex-col rounded-lg bg-white shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:ring-white/10">
+        <div
+          data-theme="dark"
+          className="flex h-full flex-col rounded-xl bg-frame text-white shadow-xl ring-1 ring-white/10"
+        >
           <div className="-mb-3 px-4 pt-3">
             <Headless.CloseButton as={NavbarItem} aria-label="Close navigation">
               <CloseMenuIcon />
@@ -52,9 +55,11 @@ export function SidebarLayout({
   let [showSidebar, setShowSidebar] = useState(false)
 
   return (
-    <div className="relative isolate flex min-h-svh w-full bg-white max-lg:flex-col lg:bg-zinc-100 print:block print:min-h-0 print:bg-white dark:bg-zinc-900 dark:lg:bg-zinc-950">
+    <div className="relative isolate flex min-h-svh w-full bg-paper max-lg:flex-col lg:bg-frame print:block print:min-h-0 print:bg-white dark:bg-zinc-950 dark:lg:bg-frame-deep">
       {/* Sidebar on desktop */}
-      <div className="fixed inset-y-0 left-0 w-64 max-lg:hidden print:hidden">{sidebar}</div>
+      <div data-theme="dark" className="fixed inset-y-0 left-0 w-64 max-lg:hidden print:hidden">
+        {sidebar}
+      </div>
 
       {/* Sidebar on mobile */}
       <MobileSidebar open={showSidebar} close={() => setShowSidebar(false)}>
@@ -73,7 +78,7 @@ export function SidebarLayout({
 
       {/* Content */}
       <main className="flex flex-1 flex-col pb-2 lg:min-w-0 lg:pt-2 lg:pr-2 lg:pl-64 print:block print:p-0">
-        <div className="grow p-3 sm:p-5 lg:rounded-lg lg:bg-white lg:p-6 lg:ring-1 lg:ring-zinc-950/5 print:rounded-none print:p-0 print:shadow-none print:ring-0 dark:lg:bg-zinc-900 dark:lg:ring-white/10">
+        <div className="grow p-3 sm:p-5 lg:rounded-2xl lg:bg-paper lg:p-8 lg:ring-1 lg:ring-black/5 print:rounded-none print:bg-white print:p-0 print:shadow-none print:ring-0 dark:lg:bg-zinc-950 dark:lg:ring-white/10">
           <div className="mx-auto max-w-7xl print:max-w-none">{children}</div>
         </div>
       </main>

@@ -3,7 +3,9 @@ import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
-import { amountCeiling, applyListControls } from '@/lib/list-controls'
+import { amountCeiling, applyListControls, readDateRange, readListControls } from '@/lib/list-controls'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
 import { RowActions } from '@/components/row-actions'
 import { deleteExpense } from '@/lib/actions/expenses'
 import { Badge } from '@/components/catalyst/badge'
@@ -29,6 +31,7 @@ import {
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { PaymentMode } from '@/generated/prisma/enums'
 
 export const metadata: Metadata = {
   title: 'Expenses',
@@ -58,6 +61,9 @@ export default async function ExpensesPage({
       ? params.category
       : undefined
 
+  const modeParam = typeof params.mode === 'string' ? params.mode : undefined
+  const mode = Object.values(PaymentMode).find((value) => value === modeParam)
+
   const [expenses, categories, summary] = await Promise.all([
     listExpenses({ search, categoryId }),
     listExpenseCategories(),
@@ -72,9 +78,43 @@ export default async function ExpensesPage({
     .filter((expense) => expense.isInputCredit)
     .reduce((sum, expense) => sum + expense.taxAmount, 0)
 
-  const sorted = applyListControls(expenses, params, {
+  const everything = summary.reduce((sum, row) => sum + row.count, 0)
+  const { min, max } = readListControls(params)
+  const { from, to } = readDateRange(params)
+  const filtered = Boolean(
+    search ||
+      categoryId ||
+      mode ||
+      min !== undefined ||
+      max !== undefined ||
+      from ||
+      to,
+  )
+  const clearHref = (() => {
+    const keep = new URLSearchParams()
+    for (const key of ['sort', 'dir', 'size']) {
+      const value = params[key]
+      if (typeof value === 'string') keep.set(key, value)
+    }
+    return keep.toString() ? `/expenses?${keep}` : '/expenses'
+  })()
+
+  const matching = applyListControls(
+    mode ? expenses.filter((row) => row.paymentMode === mode) : expenses,
+    params,
+    {
+      date: (row) => row.expenseDate,
+      amount: (row) => row.total,
+    },
+  )
+  const sorted = sortRows(matching, params, {
+    number: (row) => row.number,
     date: (row) => row.expenseDate,
-    amount: (row) => row.total,
+    payee: (row) => row.payeeName,
+    category: (row) => row.category?.name,
+    mode: (row) => PAYMENT_MODE_LABELS[row.paymentMode],
+    tax: (row) => row.taxAmount,
+    total: (row) => row.total,
   })
   const paged = paginate(sorted, params)
 
@@ -123,7 +163,7 @@ export default async function ExpensesPage({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <FilterSelect
           param="category"
           label="Category"
@@ -131,44 +171,60 @@ export default async function ExpensesPage({
           value={categoryId}
           options={categories.map((c) => ({ value: c.id, label: c.name }))}
         />
-        <SearchField placeholder="Search payee, bill, note…" />
+        <FilterSelect
+          param="mode"
+          label="Payment mode"
+          allLabel="All payment modes"
+          value={mode}
+          options={Object.values(PaymentMode).map((value) => ({
+            value,
+            label: PAYMENT_MODE_LABELS[value],
+          }))}
+        />
+        <div className="sm:ml-auto">
+          <SearchField placeholder="Search number, payee, bill, note…" />
+        </div>
       </div>
 
       <ListControls
         ceiling={amountCeiling(expenses, (row) => row.total)}
         params={params} pathname="/expenses" amountLabel="Total" />
 
-      {expenses.length > 0 && sorted.length === 0 ? (
-        <EmptyState
-          title="No matches"
-          description="Nothing falls in this amount range. Widen it or clear the filter."
-        />
-      ) : expenses.length === 0 ? (
-        <EmptyState
-          title={search ? 'No matches' : 'No expenses yet'}
-          description={
-            search
-              ? 'Try a different payee or bill number.'
-              : 'Record purchases, rent, salaries and job-work bills here.'
-          }
-          action={
-            canCreate && !search ? (
-              <Button href="/expenses/new">New expense</Button>
-            ) : null
-          }
-        />
+      {sorted.length === 0 ? (
+        filtered ? (
+          <EmptyState
+            title="No matches"
+            description="No expenses fit the current search and filters."
+            action={
+              <Button outline href={clearHref}>
+                Clear filters
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="No expenses yet"
+            description="Record purchases, rent, salaries and job-work bills here."
+            action={canCreate ? <Button href="/expenses/new">New expense</Button> : null}
+          />
+        )
       ) : (
 <>
+        {filtered ? (
+          <p className="text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+            {sorted.length} of {everything} expense{everything === 1 ? '' : 's'}
+          </p>
+        ) : null}
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Number</TableHeader>
-              <TableHeader>Date</TableHeader>
-              <TableHeader>Paid to</TableHeader>
-              <TableHeader>Category</TableHeader>
-              <TableHeader>Mode</TableHeader>
-              <TableHeader className="text-right">Tax</TableHeader>
-              <TableHeader className="text-right">Total</TableHeader>
+              <SortHeader column="number" label="Number" params={params} pathname="/expenses" />
+              <SortHeader column="date" label="Date" params={params} pathname="/expenses" />
+              <SortHeader column="payee" label="Paid to" params={params} pathname="/expenses" />
+              <SortHeader column="category" label="Category" params={params} pathname="/expenses" />
+              <SortHeader column="mode" label="Mode" params={params} pathname="/expenses" />
+              <SortHeader column="tax" label="Tax" params={params} pathname="/expenses" align="right" />
+              <SortHeader column="total" label="Total" params={params} pathname="/expenses" align="right" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>

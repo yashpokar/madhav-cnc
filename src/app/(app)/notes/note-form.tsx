@@ -85,7 +85,7 @@ function blankLine(): NoteLineValue {
     unit: 'NOS',
     quantity: '1',
     rate: '',
-    taxRatePercent: '18',
+    taxRatePercent: '0',
   }
 }
 

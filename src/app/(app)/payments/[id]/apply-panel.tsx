@@ -1,5 +1,6 @@
 'use client'
 
+import { date as dateFormat, money as currency } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
@@ -9,18 +10,6 @@ import { FormBanner } from '@/components/form-banner'
 import { deleteReceipt, updateAllocations } from '@/lib/actions/payments'
 import type { SimpleResult } from '@/lib/actions/payments'
 import type { OpenInvoice } from '@/lib/queries/payments'
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 const num = (value: string) => {
   const parsed = Number(value)

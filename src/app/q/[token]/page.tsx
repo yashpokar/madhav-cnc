@@ -1,3 +1,4 @@
+import { date as dateFormat, dateTimeShort as timeFormat, money as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -16,25 +17,6 @@ export const metadata: Metadata = {
   title: 'Quotation',
   robots: { index: false, follow: false },
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
-
-const timeFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export default async function SharedQuotationPage({
   params,

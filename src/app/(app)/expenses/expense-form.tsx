@@ -1,5 +1,6 @@
 'use client'
 
+import { money as currency } from '@/lib/format'
 import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
@@ -39,12 +40,6 @@ export type ExpenseFormValues = {
   notes: string | null
   orderId: string | null
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 export function ExpenseForm({
   action,

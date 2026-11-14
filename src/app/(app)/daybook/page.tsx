@@ -1,3 +1,4 @@
+import { money } from '@/lib/format'
 import type { Metadata } from 'next'
 import { TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
@@ -33,12 +34,6 @@ import { EntryRow } from './entry-row'
 export const metadata: Metadata = {
   title: 'Day book',
 }
-
-const money = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 const longDay = new Intl.DateTimeFormat('en-IN', {
   weekday: 'long',

@@ -1,3 +1,4 @@
+import { date, money } from '@/lib/format'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -25,19 +26,6 @@ import { VendorForm } from '../vendor-form'
 export const metadata: Metadata = {
   title: 'Vendor',
 }
-
-const money = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const date = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
 
 export default async function VendorPage({
   params,

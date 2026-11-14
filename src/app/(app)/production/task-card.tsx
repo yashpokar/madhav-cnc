@@ -1,5 +1,6 @@
 'use client'
 
+import { dateShort as dateFormat } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -28,11 +29,6 @@ const STATUS_COLORS: Record<
   DONE: 'lime',
   SKIPPED: 'zinc',
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-})
 
 export function TaskCard({
   task,

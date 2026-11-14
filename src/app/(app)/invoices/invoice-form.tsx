@@ -1,5 +1,6 @@
 'use client'
 
+import { money as currency } from '@/lib/format'
 import { useActionState, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
@@ -71,12 +72,6 @@ const DISCOUNT_LABELS: Record<DiscountType, string> = {
   PERCENT: 'Percent of subtotal',
   AMOUNT: 'Flat amount',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 const num = (value: string) => {
   const parsed = Number(value)

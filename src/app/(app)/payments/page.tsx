@@ -1,3 +1,4 @@
+import { date as dateFormat, money as exact, moneyWhole as currency } from '@/lib/format'
 import { RowActions } from '@/components/row-actions'
 import { deleteReceipt } from '@/lib/actions/payments'
 import { DateRangeFilter } from '@/components/date-range-filter'
@@ -35,24 +36,6 @@ import { PAYMENT_MODE_LABELS, ORDER_STATUS_LABELS } from '@/lib/labels'
 export const metadata: Metadata = {
   title: 'Payments',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-const exact = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 function Tile({
   label,

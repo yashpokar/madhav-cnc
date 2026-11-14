@@ -1,5 +1,6 @@
 'use client'
 
+import { dateTimeShort as timeFormat } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -38,13 +39,6 @@ const STATUS_COLORS: Record<
   DONE: 'lime',
   SKIPPED: 'zinc',
 }
-
-const timeFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export function ProductionPanel({
   orderId,

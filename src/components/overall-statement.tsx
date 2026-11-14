@@ -1,3 +1,4 @@
+import { date as dateFormat } from '@/lib/format'
 import { Badge } from '@/components/catalyst/badge'
 import { ListControls } from '@/components/list-controls'
 import { FilterSelect } from '@/components/filter-select'
@@ -30,13 +31,6 @@ const one = (params: Params, key: string) => {
 
   return single && single !== 'all' ? single : undefined
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
 
 const amountParam = (params: Params, key: string) => {
   const text = one(params, key)
@@ -136,7 +130,6 @@ export async function OverallStatement({
       from ||
       to,
   )
-
 
   const renderTable = (list: typeof rows) => (
     <Table plain dense grid striped>

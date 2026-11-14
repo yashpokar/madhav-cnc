@@ -1,3 +1,4 @@
+import { date as dateFormat, moneyWhole as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
@@ -44,18 +45,6 @@ const TABS: { label: string; value: string; status?: QuotationStatus }[] = [
   { label: 'Sent', value: 'sent', status: 'SENT' },
   { label: 'Accepted', value: 'accepted', status: 'ACCEPTED' },
 ]
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function QuotationsPage({
   searchParams,

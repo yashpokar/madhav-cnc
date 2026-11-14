@@ -1,3 +1,4 @@
+import { money as inr } from '@/lib/format'
 /** Everything an order is tied to, so deleting it can be explained first. */
 export type OrderImpact = {
   lines: number
@@ -8,12 +9,6 @@ export type OrderImpact = {
   advance: { number: string; amount: number } | null
   quotation: string | null
 }
-
-const inr = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 2,
-})
 
 const list = (items: string[]) =>
   items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`

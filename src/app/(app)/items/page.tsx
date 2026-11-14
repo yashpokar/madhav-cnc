@@ -1,3 +1,4 @@
+import { money as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { ListSummary } from '@/components/list-summary'
@@ -51,12 +52,6 @@ const TYPE_COLORS: Record<ItemType, 'blue' | 'purple' | 'amber' | 'green'> = {
   SERVICE: 'amber',
   FINISHED_GOOD: 'green',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 2,
-})
 
 export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
   const user = await requireCapability('item:read')

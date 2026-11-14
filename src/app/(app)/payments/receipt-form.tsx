@@ -1,5 +1,6 @@
 'use client'
 
+import { date as dateFormat, money as currency } from '@/lib/format'
 import { useActionState, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { QuickCustomerDialog } from '@/components/quick-customer-dialog'
@@ -24,18 +25,6 @@ import type { FormState } from '@/lib/actions/payments'
 import type { OpenInvoice } from '@/lib/queries/payments'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { PaymentMode } from '@/generated/prisma/enums'
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 const num = (value: string) => {
   const parsed = Number(value)

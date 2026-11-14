@@ -1,5 +1,6 @@
 'use client'
 
+import { money } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { NumericInput } from '@/components/numeric-input'
@@ -8,12 +9,6 @@ import { ConfirmButton } from '@/components/confirm-button'
 import { LocalTime } from '@/components/local-time'
 import { closeDay, reopenDay, setTallyBank, setTallyCount } from '@/lib/actions/tally'
 import type { DaybookLayout } from '@/lib/daybook-layout'
-
-const money = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 const input =
   'w-full rounded-md bg-transparent px-2.5 py-1.5 text-right text-sm/6 tabular-nums outline-none ring-1 ring-transparent hover:ring-zinc-950/10 focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-60 dark:hover:ring-white/15 dark:focus:bg-zinc-900'

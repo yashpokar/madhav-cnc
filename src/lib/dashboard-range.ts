@@ -1,3 +1,4 @@
+import { dateShort as short } from '@/lib/format'
 type Params = Record<string, string | string[] | undefined>
 
 export type RangeKey = 'today' | 'week' | 'month' | 'custom'
@@ -19,11 +20,6 @@ export const toIso = (date: Date) => date.toISOString().slice(0, 10)
 
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * DAY)
 
-const short = new Intl.DateTimeFormat('en-IN', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
 const full = new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
   month: 'short',

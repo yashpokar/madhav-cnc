@@ -1,5 +1,6 @@
 'use client'
 
+import { dateShort as short } from '@/lib/format'
 import { useRef, useState } from 'react'
 import * as Headless from '@headlessui/react'
 import clsx from 'clsx'
@@ -16,7 +17,6 @@ function parseIso(value: string | undefined) {
   return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : undefined
 }
 
-const short = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' })
 const full = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
 /** Common periods, Indian financial year included (1 April to 31 March). */

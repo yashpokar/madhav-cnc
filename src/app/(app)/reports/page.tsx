@@ -1,3 +1,4 @@
+import { moneyWhole as inr } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Heading, Subheading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
@@ -17,11 +18,6 @@ import { ORDER_STATUS_LABELS, QUOTATION_STATUS_LABELS } from '@/lib/labels'
 
 export const metadata: Metadata = { title: 'Reports' }
 
-const inr = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
 const compact = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',

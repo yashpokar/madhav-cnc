@@ -1,5 +1,6 @@
 'use client'
 
+import { dateTime as timeFormat } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClipboardIcon, LinkIcon } from '@heroicons/react/16/solid'
@@ -17,14 +18,6 @@ import {
 } from '@/lib/actions/share'
 import { whatsappLink } from '@/lib/whatsapp'
 import type { ShareDecision } from '@/generated/prisma/enums'
-
-const timeFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export function SharePanel({
   quotationId,

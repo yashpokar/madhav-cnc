@@ -1,10 +1,5 @@
+import { money as currency } from '@/lib/format'
 import { paymentSplit } from '@/lib/pricing'
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 export type PaymentCompany = {
   bankAccountName: string | null

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import * as Headless from '@headlessui/react'
 import { NumericInput } from '@/components/numeric-input'
 import clsx from 'clsx'
@@ -39,6 +39,7 @@ export function RangeSlider({
   defaultMin,
   defaultMax,
   className,
+  autoSubmit = false,
 }: {
   label: string
   /** The largest amount in the list, which is the slider's right end. */
@@ -46,7 +47,13 @@ export function RangeSlider({
   defaultMin?: number
   defaultMax?: number
   className?: string
+  /** Submit the surrounding form when the range is set or cleared. */
+  autoSubmit?: boolean
 }) {
+  const root = useRef<HTMLDivElement>(null)
+  const submit = () => {
+    if (autoSubmit) setTimeout(() => root.current?.closest('form')?.requestSubmit(), 0)
+  }
   const step = stepFor(ceiling)
   const top = Math.max(step, Math.ceil(ceiling / step) * step)
   const [low, setLow] = useState(Math.min(defaultMin ?? 0, top))
@@ -64,10 +71,11 @@ export function RangeSlider({
   const reset = () => {
     setLow(0)
     setHigh(top)
+    submit()
   }
 
   return (
-    <div className={clsx('min-w-0', className)}>
+    <div ref={root} className={clsx('min-w-0', className)}>
       {low > 0 ? <input type="hidden" name="min" value={low} /> : null}
       {high < top ? <input type="hidden" name="max" value={high} /> : null}
       <Headless.Popover className="relative">
@@ -182,7 +190,10 @@ export function RangeSlider({
                 </button>
                 <button
                   type="button"
-                  onClick={() => close()}
+                  onClick={() => {
+                    close()
+                    if (narrowed) submit()
+                  }}
                   className="rounded-lg bg-zinc-950 px-3 py-1.5 text-sm/6 font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
                 >
                   Done

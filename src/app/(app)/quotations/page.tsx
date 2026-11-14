@@ -109,19 +109,18 @@ export default async function QuotationsPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search number, customer, subject, architect…" />
         <StatusFilter
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
           pathname="/quotations"
         />
-        <SearchField placeholder="Search number, customer, subject, architect…" />
+        <ListControls
+          ceiling={amountCeiling(quotations, (row) => row.total)}
+          params={params} pathname="/quotations" amountLabel="Total" />
       </div>
-
-      <ListControls
-        ceiling={amountCeiling(quotations, (row) => row.total)}
-        params={params} pathname="/quotations" amountLabel="Total" />
 
       {sorted.length === 0 ? (
         <ListEmpty

@@ -52,7 +52,7 @@ export function StatusFilter({
 
   return (
     <Dropdown>
-      <DropdownButton outline className="min-w-52 justify-between whitespace-nowrap">
+      <DropdownButton outline className="justify-start gap-3 whitespace-nowrap">
         <span className="flex items-center gap-2 whitespace-nowrap">
           <FunnelIcon aria-hidden="true" className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
           <span className="text-zinc-500 dark:text-zinc-400">{label}</span>

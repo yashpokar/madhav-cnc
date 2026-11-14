@@ -116,14 +116,11 @@ export function DateFilter({ params, pathname }: { params: Params; pathname: str
   const clear = new URLSearchParams(keep).toString()
 
   return (
-    <form method="get" action={pathname} className="flex flex-wrap items-end gap-3 print:hidden">
+    <form method="get" action={pathname} className="contents print:hidden">
       {keep.map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={value} />
       ))}
       <DateRangeFilter defaultFrom={from} defaultTo={to} autoSubmit className="w-full sm:w-auto" />
-      <Button type="submit" outline>
-        Apply
-      </Button>
       {from || to ? (
         <Button plain href={clear ? `${pathname}?${clear}` : pathname}>
           Clear

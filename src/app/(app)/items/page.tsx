@@ -136,8 +136,10 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
         <FormBanner tone="success">Item {created} saved</FormBanner>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search name, code, brand, HSN, material…" />
         <StatusFilter
+          label="Type"
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
@@ -145,27 +147,25 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
           paramKey="tab"
           defaultValue="all"
         />
-        <SearchField placeholder="Search name, code, brand, HSN, material…" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterSelect
-          param="material"
-          label="Material"
-          allLabel="All materials"
-          value={materialId}
-          options={materials.map(([value, label]) => ({ value, label }))}
-        />
-        <FilterSelect
-          param="show"
-          label="Status"
-          allLabel="Active only"
-          value={show}
-          options={[
-            { value: 'all', label: 'Active and inactive' },
-            { value: 'inactive', label: 'Inactive only' },
-          ]}
-        />
+        <div className="contents">
+          <FilterSelect
+            param="material"
+            label="Material"
+            allLabel="All"
+            value={materialId}
+            options={materials.map(([value, label]) => ({ value, label }))}
+          />
+          <FilterSelect
+            param="show"
+            label="Status"
+            allLabel="Active only"
+            value={show}
+            options={[
+              { value: 'all', label: 'Active and inactive' },
+              { value: 'inactive', label: 'Inactive only' },
+            ]}
+          />
+        </div>
       </div>
 
       {total > 0 ? (

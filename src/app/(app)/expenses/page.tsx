@@ -164,31 +164,31 @@ export default async function ExpensesPage({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search number, payee, bill, note…" />
         <FilterSelect
           param="category"
           label="Category"
-          allLabel="All categories"
+          allLabel="All"
           value={categoryId}
           options={categories.map((c) => ({ value: c.id, label: c.name }))}
         />
         <FilterSelect
           param="mode"
           label="Payment mode"
-          allLabel="All payment modes"
+          allLabel="All"
           value={mode}
           options={Object.values(PaymentMode).map((value) => ({
             value,
             label: PAYMENT_MODE_LABELS[value],
           }))}
         />
-        <div className="sm:ml-auto">
-          <SearchField placeholder="Search number, payee, bill, note…" />
-        </div>
+        <ListControls
+          ceiling={amountCeiling(expenses, (row) => row.total)}
+          params={params}
+          pathname="/expenses"
+          amountLabel="Total"
+        />
       </div>
-
-      <ListControls
-        ceiling={amountCeiling(expenses, (row) => row.total)}
-        params={params} pathname="/expenses" amountLabel="Total" />
 
       {sorted.length === 0 ? (
         filtered ? (

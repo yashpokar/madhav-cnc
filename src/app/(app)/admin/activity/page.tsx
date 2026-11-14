@@ -150,12 +150,13 @@ export default async function ActivityLogPage({
         </Text>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search person, area, what happened…" />
+        <div className="contents">
           <FilterSelect
             param="entity"
             label="Area"
-            allLabel="All areas"
+            allLabel="All"
             value={entity}
             options={Object.entries(AREAS).map(([value, { label }]) => ({ value, label }))}
           />
@@ -171,12 +172,11 @@ export default async function ActivityLogPage({
           <FilterSelect
             param="action"
             label="Action"
-            allLabel="Any action"
+            allLabel="Any"
             value={action}
             options={actions.map((a) => ({ value: a.action, label: sentence(a.action) }))}
           />
         </div>
-        <SearchField placeholder="Search person, area, what happened…" />
       </div>
 
       {rows.length === 0 ? (

@@ -224,22 +224,20 @@ export default async function CustomerStatementPage({
         {account.receipts.length > 0 ? (
           <form
             method="get"
-            className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
+            className="mt-4 flex flex-wrap items-center gap-3 print:hidden"
           >
             {sortKeep.map(([key, value]) => (
               <input key={key} type="hidden" name={key} value={value} />
             ))}
-            <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
+            <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} autoSubmit />
             <RangeSlider
               label="Amount received"
               ceiling={amountCeiling(account.receipts, (row) => row.amount)}
               defaultMin={min}
               defaultMax={max}
+              autoSubmit
               className="w-full sm:w-72"
             />
-            <Button type="submit" outline>
-              Apply
-            </Button>
             {filtered ? (
               <Button plain href={pathname}>
                 Clear

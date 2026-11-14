@@ -2,12 +2,14 @@ import * as Headless from '@headlessui/react'
 import clsx from 'clsx'
 import React, { forwardRef } from 'react'
 import { DatePicker } from './date-picker'
+import { NumericField } from '../numeric-input'
 
-export function InputGroup({ children }: React.ComponentPropsWithoutRef<'span'>) {
+export function InputGroup({ children, className }: React.ComponentPropsWithoutRef<'span'>) {
   return (
     <span
       data-slot="control"
       className={clsx(
+        className,
         'relative isolate block',
         'has-[[data-slot=icon]:first-child]:[&_input]:pl-10 has-[[data-slot=icon]:last-child]:[&_input]:pr-10 sm:has-[[data-slot=icon]:first-child]:[&_input]:pl-8 sm:has-[[data-slot=icon]:last-child]:[&_input]:pr-8',
         '*:data-[slot=icon]:pointer-events-none *:data-[slot=icon]:absolute *:data-[slot=icon]:top-3 *:data-[slot=icon]:z-10 *:data-[slot=icon]:size-5 sm:*:data-[slot=icon]:top-2.5 sm:*:data-[slot=icon]:size-4',
@@ -33,6 +35,11 @@ export const Input = forwardRef(function Input(
   } & Omit<Headless.InputProps, 'as' | 'className'>,
   ref: React.ForwardedRef<HTMLInputElement>
 ) {
+  // Numbers use an exact numeric text field, not the browser's spinner box.
+  if (props.type === 'number') {
+    return <NumericField {...(props as React.ComponentProps<typeof NumericField>)} className={className} />
+  }
+
   // Replace the browser's native date control with the themed calendar.
   if (props.type === 'date') {
     return (

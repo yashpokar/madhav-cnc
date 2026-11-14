@@ -60,7 +60,7 @@ function describe(range: DateRange | undefined) {
 export function DateRangeFilter({
   defaultFrom,
   defaultTo,
-  label = 'Date range',
+  label = 'Date',
   className,
   autoSubmit = false,
   placeholder = 'Any date',
@@ -91,8 +91,7 @@ export function DateRangeFilter({
   const active = options.find(matches)
 
   return (
-    <div className={clsx('grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400', className)}>
-      {label ? <span>{label}</span> : null}
+    <div className={clsx('min-w-0', className)}>
       <input ref={fromRef} type="hidden" name="from" value={range?.from ? toIso(range.from) : ''} />
       <input
         type="hidden"
@@ -105,24 +104,23 @@ export function DateRangeFilter({
             <span className="relative block">
               <Headless.PopoverButton
                 className={clsx(
-                  'flex min-h-9 w-full min-w-60 items-center gap-2 rounded-lg border bg-white px-3 py-1.5 pr-9 text-left text-sm/6 shadow-xs dark:bg-white/5',
-                  'border-zinc-950/10 hover:border-zinc-950/20 focus:outline-2 focus:outline-blue-500 dark:border-white/10 dark:hover:border-white/20',
-                  text ? 'text-zinc-950 dark:text-white' : 'text-zinc-500',
+                  'flex h-9 w-full min-w-60 items-center gap-2 rounded-lg border bg-white px-3 pr-9 text-left text-sm/6 shadow-xs dark:bg-white/5',
+                  'border-zinc-950/10 hover:border-zinc-950/20 focus:outline-2 focus:outline-gold-400 dark:border-white/10 dark:hover:border-white/20',
                 )}
               >
                 <CalendarDaysIcon className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 <span className="min-w-0 flex-1 truncate">
+                  {label ? <span className="mr-1.5 text-zinc-500 dark:text-zinc-400">{label}</span> : null}
                   {text ? (
                     <>
-                      {active ? (
-                        <span className="mr-1.5 font-medium">{active.label}</span>
-                      ) : null}
-                      <span className={active ? 'text-zinc-500 dark:text-zinc-400' : undefined}>
-                        {active ? `· ${text}` : text}
+                      <span className="font-medium text-zinc-950 dark:text-white">
+                        {active ? active.label : text}
                       </span>
                     </>
                   ) : (
-                    placeholder
+                    <span className={label ? 'font-medium text-zinc-950 dark:text-white' : 'text-zinc-500'}>
+                      {label ? 'Any' : placeholder}
+                    </span>
                   )}
                 </span>
               </Headless.PopoverButton>

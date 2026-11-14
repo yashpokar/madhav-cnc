@@ -23,6 +23,10 @@ export function paymentState(
   return 'UNPAID'
 }
 
+export function countInvoices() {
+  return prisma.invoice.count()
+}
+
 export async function listInvoices({
   search,
   status,
@@ -42,6 +46,11 @@ export async function listInvoices({
               { customer: { name: { contains: term, mode: 'insensitive' } } },
               { customer: { phone: { contains: term } } },
               { order: { number: { contains: term, mode: 'insensitive' } } },
+              {
+                order: {
+                  customerPoNumber: { contains: term, mode: 'insensitive' },
+                },
+              },
             ],
           }
         : {}),

@@ -62,7 +62,7 @@ function QuickItemForm({
   const [name, setName] = useState(initialName)
   const [unit, setUnit] = useState<UnitOfMeasure>('NOS')
   const [rate, setRate] = useState('')
-  const [tax, setTax] = useState('18')
+  const [tax, setTax] = useState('0')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 

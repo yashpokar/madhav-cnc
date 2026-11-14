@@ -42,7 +42,7 @@ export default async function NewItemPage() {
           length: null,
           width: null,
           hsnCode: null,
-          taxRatePercent: 18,
+          taxRatePercent: 0,
           isActive: true,
           notes: null,
         }}

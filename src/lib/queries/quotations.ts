@@ -27,6 +27,10 @@ export function summariseMaterial(
   return 'MIXED'
 }
 
+export function countQuotations() {
+  return prisma.quotation.count()
+}
+
 export async function listQuotations({
   search,
   status,
@@ -46,6 +50,7 @@ export async function listQuotations({
               { subject: { contains: term, mode: 'insensitive' } },
               { customer: { name: { contains: term, mode: 'insensitive' } } },
               { customer: { phone: { contains: term } } },
+              { architect: { name: { contains: term, mode: 'insensitive' } } },
             ],
           }
         : {}),

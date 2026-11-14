@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
+import { FilterSelect } from '@/components/filter-select'
+import { ListSummary } from '@/components/list-summary'
+import { SortHeader } from '@/components/sort-header'
 import { Pagination } from '@/components/pagination'
+import { clearHref } from '@/lib/list-href'
+import { sortRows } from '@/lib/table-sort'
 import { paginate } from '@/lib/pagination'
 import { RowActions } from '@/components/row-actions'
 import { deleteItem } from '@/lib/actions/items'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -18,6 +22,7 @@ import {
 import { Text } from '@/components/catalyst/text'
 import { EmptyState, FormBanner } from '@/components/form-banner'
 import { SearchField } from '@/components/search-field'
+import { StatusFilter } from '@/components/status-filter'
 import { listItems } from '@/lib/queries/items'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
@@ -62,7 +67,45 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
   const search = typeof params.q === 'string' ? params.q : undefined
   const created = typeof params.created === 'string' ? params.created : undefined
 
-  const items = await listItems({ type: activeTab.type, search })
+  const show =
+    params.show === 'all' || params.show === 'inactive' ? params.show : undefined
+
+  // Everything, to offer the materials and to count against; and the search matches.
+  const [everyone, matched] = await Promise.all([
+    listItems({ includeInactive: true }),
+    search ? listItems({ search, includeInactive: true }) : null,
+  ])
+  const materials = [
+    ...new Map(
+      everyone.flatMap((item) => (item.material ? [[item.material.id, item.material.name]] : [])),
+    ),
+  ].sort((a, b) => a[1].localeCompare(b[1], 'en', { sensitivity: 'base' }))
+  const materialId =
+    typeof params.material === 'string' && materials.some(([id]) => id === params.material)
+      ? params.material
+      : undefined
+
+  const visible = (item: (typeof everyone)[number]) =>
+    show === 'all' ? true : show === 'inactive' ? !item.isActive : item.isActive
+  const total = everyone.filter(visible).length
+  const filtered = Boolean(search || activeTab.type || materialId || show)
+  const items = sortRows(
+    (matched ?? everyone).filter(
+      (item) =>
+        visible(item) &&
+        (!activeTab.type || item.type === activeTab.type) &&
+        (!materialId || item.material?.id === materialId),
+    ),
+    params,
+    {
+      code: (item) => item.code,
+      name: (item) => item.name,
+      type: (item) => ITEM_TYPE_SHORT[item.type],
+      material: (item) => item.material?.name,
+      rate: (item) => item.rate,
+      gst: (item) => item.taxRatePercent,
+    },
+  )
   const canCreate = can(user.role, 'item:create')
   const canEdit = can(user.role, 'item:update')
   const canDelete = can(user.role, 'item:delete')
@@ -94,44 +137,65 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {TABS.map((tab) => {
-            const isActive = tab.value === activeTab.value
-            const query = new URLSearchParams()
-
-            if (tab.value !== 'all') query.set('tab', tab.value)
-            if (search) query.set('q', search)
-
-            const href = query.toString() ? `/items?${query.toString()}` : '/items'
-
-            return (
-              <Link
-                key={tab.value}
-                href={href}
-                className={
-                  isActive
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search name, brand, HSN…" />
+        <StatusFilter
+          options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          value={activeTab.value}
+          params={params}
+          pathname="/items"
+          paramKey="tab"
+          defaultValue="all"
+        />
+        <SearchField placeholder="Search name, code, brand, HSN, material…" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <FilterSelect
+          param="material"
+          label="Material"
+          allLabel="All materials"
+          value={materialId}
+          options={materials.map(([value, label]) => ({ value, label }))}
+        />
+        <FilterSelect
+          param="show"
+          label="Status"
+          allLabel="Active only"
+          value={show}
+          options={[
+            { value: 'all', label: 'Active and inactive' },
+            { value: 'inactive', label: 'Inactive only' },
+          ]}
+        />
+      </div>
+
+      {total > 0 ? (
+        <ListSummary
+          shown={items.length}
+          total={total}
+          singular="item"
+          plural="items"
+          filtered={filtered}
+          params={params}
+          pathname="/items"
+        />
+      ) : null}
 
       {items.length === 0 ? (
         <EmptyState
-          title={search ? 'No matches' : 'No items yet'}
+          title={filtered ? 'No matches' : 'No items yet'}
           description={
-            search
-              ? 'Try a different name, brand or code.'
+            filtered
+              ? 'No item matches the current search and filters.'
               : 'Add the materials, hardware and services you quote for.'
           }
           action={
-            canCreate && !search ? <Button href="/items/new">Add item</Button> : null
+            filtered ? (
+              <Button outline href={clearHref('/items', params)}>
+                Clear filters
+              </Button>
+            ) : canCreate ? (
+              <Button href="/items/new">Add item</Button>
+            ) : null
           }
         />
       ) : (
@@ -139,12 +203,12 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Code</TableHeader>
-              <TableHeader>Name</TableHeader>
-              <TableHeader>Type</TableHeader>
-              <TableHeader>Material</TableHeader>
-              <TableHeader className="text-right">Rate</TableHeader>
-              <TableHeader className="text-right">GST</TableHeader>
+              <SortHeader column="code" label="Code" params={params} pathname="/items" />
+              <SortHeader column="name" label="Name" params={params} pathname="/items" />
+              <SortHeader column="type" label="Type" params={params} pathname="/items" />
+              <SortHeader column="material" label="Material" params={params} pathname="/items" />
+              <SortHeader column="rate" label="Rate" params={params} pathname="/items" align="right" />
+              <SortHeader column="gst" label="GST" params={params} pathname="/items" align="right" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
@@ -171,6 +235,11 @@ export default async function ItemsPage({ searchParams }: PageProps<'/items'>) {
                   <Badge color={TYPE_COLORS[item.type]}>
                     {ITEM_TYPE_SHORT[item.type]}
                   </Badge>
+                  {!item.isActive ? (
+                    <Badge color="zinc" className="ml-2">
+                      Inactive
+                    </Badge>
+                  ) : null}
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
                   {item.material?.name ?? '—'}

@@ -93,11 +93,11 @@ export function UserRow({
                 </span>
               ) : null}
             </div>
-            <div className="truncate text-zinc-500 dark:text-zinc-400">
-              {user.email}
-            </div>
           </div>
         </div>
+      </TableCell>
+      <TableCell className="text-zinc-500 dark:text-zinc-400">
+        {user.email}
       </TableCell>
       <TableCell>
         {user.isActive ? (

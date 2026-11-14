@@ -4,12 +4,13 @@ import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
 import { amountCeiling, applyListControls } from '@/lib/list-controls'
 import { RowActions } from '@/components/row-actions'
+import { DeleteImpact } from '@/components/delete-impact'
+import { describeOrderDelete } from '@/lib/order-delete'
 import { deleteOrder } from '@/lib/actions/orders'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { ExportButton } from '@/components/export-button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -19,9 +20,13 @@ import {
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
-import { EmptyState } from '@/components/form-banner'
+import { DateCell } from '@/components/date-cell'
 import { SearchField } from '@/components/search-field'
-import { listOrders } from '@/lib/queries/orders'
+import { StatusFilter } from '@/components/status-filter'
+import { SortHeader } from '@/components/sort-header'
+import { sortRows } from '@/lib/table-sort'
+import { ListEmpty, ResultCount, isFiltered } from '@/components/list-filter-ui'
+import { countOrders, listOrders } from '@/lib/queries/orders'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import {
@@ -51,12 +56,6 @@ const currency = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
 })
 
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
-
 export default async function OrdersPage({
   searchParams,
 }: PageProps<'/orders'>) {
@@ -67,16 +66,30 @@ export default async function OrdersPage({
   const activeTab = TABS.find((tab) => tab.value === tabValue) ?? TABS[0]
   const search = typeof params.q === 'string' ? params.q : undefined
 
-  const orders = await listOrders({ status: activeTab.status, search })
+  const [orders, totalCount] = await Promise.all([
+    listOrders({ status: activeTab.status, search }),
+    countOrders(),
+  ])
   const canCreate = can(user.role, 'order:create')
   const canEdit = can(user.role, 'order:update')
   const canDelete = can(user.role, 'order:delete')
 
-  const sorted = applyListControls(orders, params, {
+  const filtered = applyListControls(orders, params, {
     date: (row) => row.orderDate,
     amount: (row) => row.total,
   })
+  const sorted = sortRows(filtered, params, {
+    number: (row) => row.number,
+    customer: (row) => row.customer.name,
+    subject: (row) => row.subject,
+    material: (row) => MATERIAL_SUMMARY_LABELS[row.materialSummary],
+    date: (row) => row.orderDate,
+    lines: (row) => row._count.lines,
+    total: (row) => row.total,
+    status: (row) => ORDER_STATUS_LABELS[row.status],
+  })
   const paged = paginate(sorted, params)
+  const isNarrowed = isFiltered(params, activeTab.value)
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -84,7 +97,7 @@ export default async function OrdersPage({
         <div className="grid grid-cols-1 gap-2">
           <Heading>Orders</Heading>
           <Text>
-            {orders.length} order{orders.length === 1 ? '' : 's'}
+            {totalCount} order{totalCount === 1 ? '' : 's'}
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -96,72 +109,43 @@ export default async function OrdersPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {TABS.map((tab) => {
-            const isActive = tab.value === activeTab.value
-            const query = new URLSearchParams()
-
-            if (tab.value !== 'all') query.set('tab', tab.value)
-            if (search) query.set('q', search)
-
-            const href = query.toString()
-              ? `/orders?${query.toString()}`
-              : '/orders'
-
-            return (
-              <Link
-                key={tab.value}
-                href={href}
-                className={
-                  isActive
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search number, customer, PO…" />
+        <StatusFilter
+          options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          value={activeTab.value}
+          params={params}
+          pathname="/orders"
+        />
+        <SearchField placeholder="Search number, customer, subject, PO…" />
       </div>
 
       <ListControls
         ceiling={amountCeiling(orders, (row) => row.total)}
         params={params} pathname="/orders" amountLabel="Total" />
 
-      {orders.length > 0 && sorted.length === 0 ? (
-        <EmptyState
-          title="No matches"
-          description="Nothing falls in this amount range. Widen it or clear the filter."
-        />
-      ) : orders.length === 0 ? (
-        <EmptyState
-          title={search ? 'No matches' : 'No orders yet'}
-          description={
-            search
-              ? 'Try a different number, customer or subject.'
-              : 'Create an order directly, or convert an accepted quotation.'
-          }
-          action={
-            canCreate && !search ? (
-              <Button href="/orders/new">New order</Button>
-            ) : null
-          }
+      {sorted.length === 0 ? (
+        <ListEmpty
+          filtered={isNarrowed}
+          pathname="/orders"
+          params={params}
+          noun="order"
+          emptyTitle="No orders yet"
+          emptyDescription="Create an order directly, or convert an accepted quotation."
+          action={canCreate ? <Button href="/orders/new">New order</Button> : null}
         />
       ) : (
 <>
+        <ResultCount shown={sorted.length} total={totalCount} noun="order" filtered={isNarrowed} />
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Number</TableHeader>
-              <TableHeader>Customer</TableHeader>
-              <TableHeader>Subject</TableHeader>
-              <TableHeader>Material</TableHeader>
-              <TableHeader>Date</TableHeader>
-              <TableHeader className="text-right">Lines</TableHeader>
-              <TableHeader className="text-right">Total</TableHeader>
-              <TableHeader>Status</TableHeader>
+              <SortHeader column="number" label="Number" params={params} pathname="/orders" />
+              <SortHeader column="customer" label="Customer" params={params} pathname="/orders" />
+              <SortHeader column="subject" label="Subject" params={params} pathname="/orders" />
+              <SortHeader column="material" label="Material" params={params} pathname="/orders" />
+              <SortHeader column="date" label="Date" params={params} pathname="/orders" />
+              <SortHeader column="lines" label="Lines" params={params} pathname="/orders" align="right" />
+              <SortHeader column="total" label="Total" params={params} pathname="/orders" align="right" />
+              <SortHeader column="status" label="Status" params={params} pathname="/orders" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>
@@ -192,11 +176,12 @@ export default async function OrdersPage({
                     {MATERIAL_SUMMARY_LABELS[order.materialSummary]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-zinc-500 dark:text-zinc-400">
-                  {dateFormat.format(order.orderDate)}
-                  {order.dueDate ? (
-                    <div>due {dateFormat.format(order.dueDate)}</div>
-                  ) : null}
+                <TableCell>
+                  <DateCell
+                    date={order.orderDate}
+                    dueDate={order.dueDate}
+                    open={!['COMPLETED', 'DISPATCHED', 'CANCELLED'].includes(order.status)}
+                  />
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                   {order._count.lines}
@@ -213,13 +198,15 @@ export default async function OrdersPage({
                   <RowActions
                     name={order.number}
                     viewHref={`/orders/${order.id}`}
-                    editHref={canEdit && (order.status === 'DRAFT' || order.status === 'CONFIRMED') ? `/orders/${order.id}/edit` : undefined}
-                    deleteAction={
-                      canDelete && (order.status === 'DRAFT' || order.status === 'CANCELLED')
-                        ? deleteOrder.bind(null, order.id)
+                    editHref={
+                      canEdit && order.status !== 'CANCELLED' && order.impact.invoices.length === 0
+                        ? `/orders/${order.id}/edit`
                         : undefined
                     }
-                    deleteTitle={`Delete ${order.number}?`}
+                    deleteAction={canDelete ? deleteOrder.bind(null, order.id) : undefined}
+                    deleteTitle={`Delete order ${order.number}?`}
+                    deleteBlocked={describeOrderDelete(order.impact).blocked}
+                    deleteDescription={<DeleteImpact {...describeOrderDelete(order.impact)} />}
                   />
                 </TableCell>
               </TableRow>

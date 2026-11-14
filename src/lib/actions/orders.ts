@@ -12,6 +12,8 @@ import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { ensureTasksForOrder } from '@/lib/actions/production'
 import { logActivity } from '@/lib/activity'
+import { describeOrderDelete } from '@/lib/order-delete'
+import { getOrderImpact } from '@/lib/queries/orders'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { OrderStatus } from '@/generated/prisma/enums'
 
@@ -169,7 +171,9 @@ function buildPersistable(input: OrderData) {
   return { totals, lines }
 }
 
-const EDITABLE_STATUSES: OrderStatus[] = ['DRAFT', 'CONFIRMED']
+// Work can be corrected until the order is cancelled; once it is invoiced,
+// the invoice is the record, so the order is locked (checked in updateOrder).
+const EDITABLE_STATUSES: OrderStatus[] = ['DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'COMPLETED']
 
 export async function createOrder(
   _previous: FormState,
@@ -257,11 +261,18 @@ export async function updateOrder(
 
   const existing = await prisma.order.findUnique({
     where: { id },
-    select: { id: true, status: true },
+    select: { id: true, status: true, _count: { select: { invoices: true } } },
   })
 
   if (!existing) {
     return { status: 'error', message: 'Order not found' }
+  }
+
+  if (existing._count.invoices > 0) {
+    return {
+      status: 'error',
+      message: 'This order has been invoiced, so it is locked. Change the invoice instead.',
+    }
   }
 
   if (!EDITABLE_STATUSES.includes(existing.status)) {
@@ -498,34 +509,32 @@ export async function convertQuotationToOrder(
 }
 
 export async function deleteOrder(id: string): Promise<SimpleResult> {
-  await requireCapability('order:delete')
+  const user = await requireCapability('order:delete')
 
-  const order = await prisma.order.findUnique({
-    where: { id },
-    select: { number: true, status: true, quotationId: true },
-  })
+  const [order, impact] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id },
+      select: { number: true, quotationId: true, customerId: true },
+    }),
+    getOrderImpact(id),
+  ])
 
-  if (!order) {
+  if (!order || !impact) {
     return { ok: false, error: 'Order not found' }
   }
 
-  if (order.status !== 'DRAFT' && order.status !== 'CANCELLED') {
-    return {
-      ok: false,
-      error: 'Only draft or cancelled orders can be deleted. Cancel the order first.',
-    }
+  const { blocked } = describeOrderDelete(impact)
+
+  if (blocked) {
+    return { ok: false, error: blocked }
   }
 
-  const [dispatches, invoices] = await Promise.all([
-    prisma.dispatch.count({ where: { orderId: id } }),
-    prisma.invoice.count({ where: { orderId: id } }),
-  ])
-
-  if (dispatches > 0 || invoices > 0) {
-    return {
-      ok: false,
-      error: `This order has ${dispatches} dispatch(es) and ${invoices} invoice(s). Remove those first, or keep the order as cancelled.`,
-    }
+  // The advance stays as the customer's money on account; say where it came from.
+  if (impact.advance) {
+    await prisma.payment.updateMany({
+      where: { orderId: id },
+      data: { notes: `Advance for order ${order.number} (order deleted)` },
+    })
   }
 
   await prisma.$transaction(async (tx) => {
@@ -549,6 +558,15 @@ export async function deleteOrder(id: string): Promise<SimpleResult> {
   revalidatePath('/orders')
   revalidatePath('/production')
   revalidatePath('/quotations')
+  revalidatePath('/payments')
+
+  await logActivity({
+    entity: 'customer',
+    id: order.customerId,
+    action: 'order',
+    summary: `deleted order ${order.number}`,
+    actor: { id: user.id, name: user.name },
+  })
 
   return { ok: true, message: `${order.number} deleted` }
 }

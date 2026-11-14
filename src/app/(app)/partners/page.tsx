@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
+import { FilterSelect } from '@/components/filter-select'
+import { ListSummary } from '@/components/list-summary'
+import { SortHeader } from '@/components/sort-header'
 import { Pagination } from '@/components/pagination'
+import { clearHref } from '@/lib/list-href'
+import { sortRows } from '@/lib/table-sort'
 import { paginate } from '@/lib/pagination'
 import { RowActions } from '@/components/row-actions'
 import { deletePartner } from '@/lib/actions/partners'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
-import { Link } from '@/components/catalyst/link'
 import {
   Table,
   TableBody,
@@ -18,6 +22,7 @@ import {
 import { Text } from '@/components/catalyst/text'
 import { EmptyState, FormBanner } from '@/components/form-banner'
 import { SearchField } from '@/components/search-field'
+import { StatusFilter } from '@/components/status-filter'
 import { listPartners } from '@/lib/queries/partners'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
@@ -43,13 +48,48 @@ export default async function PartnersPage({
   const activeTab = TABS.find((tab) => tab.value === tabValue) ?? TABS[0]
   const search = typeof params.q === 'string' ? params.q : undefined
   const created = typeof params.created === 'string' ? params.created : undefined
-  const includeInactive = params.inactive === '1'
+  // Active partners by default; `inactive=1` is the older spelling of show=all.
+  const requestedShow = typeof params.show === 'string' ? params.show : undefined
+  const show =
+    requestedShow === 'all' || requestedShow === 'inactive'
+      ? requestedShow
+      : params.inactive === '1'
+        ? 'all'
+        : undefined
 
-  const partners = await listPartners({
-    type: activeTab.type,
-    search,
-    includeInactive,
-  })
+  // Everything, to offer the cities and to count against; and the search matches.
+  const [everyone, matched] = await Promise.all([
+    listPartners({ includeInactive: true }),
+    search ? listPartners({ search, includeInactive: true }) : null,
+  ])
+  const cities = [
+    ...new Set(everyone.map((partner) => partner.city).filter((c): c is string => !!c)),
+  ].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
+  const city =
+    typeof params.city === 'string' && cities.includes(params.city) ? params.city : undefined
+
+  const visible = (partner: (typeof everyone)[number]) =>
+    show === 'all' ? true : show === 'inactive' ? !partner.isActive : partner.isActive
+  const total = everyone.filter(visible).length
+  const filtered = Boolean(search || activeTab.type || city || show)
+  const partners = sortRows(
+    (matched ?? everyone).filter(
+      (partner) =>
+        visible(partner) &&
+        (!activeTab.type || partner.type === activeTab.type) &&
+        (!city || partner.city === city),
+    ),
+    params,
+    {
+      code: (partner) => partner.code,
+      name: (partner) => partner.name,
+      type: (partner) => (partner.type === 'ARCHITECT' ? 'Architect' : 'Carpenter'),
+      phone: (partner) => partner.phone,
+      city: (partner) => partner.city,
+      customers: (partner) =>
+        partner._count.preferredByArchitect + partner._count.preferredByCarpenter,
+    },
+  )
 
   const canCreate = can(user.role, 'partner:create')
   const canEdit = can(user.role, 'partner:update')
@@ -75,47 +115,63 @@ export default async function PartnersPage({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {TABS.map((tab) => {
-            const isActive = tab.value === activeTab.value
-            const query = new URLSearchParams()
-
-            if (tab.value !== 'all') query.set('tab', tab.value)
-            if (search) query.set('q', search)
-            if (includeInactive) query.set('inactive', '1')
-
-            const href = query.toString()
-              ? `/partners?${query.toString()}`
-              : '/partners'
-
-            return (
-              <Link
-                key={tab.value}
-                href={href}
-                className={
-                  isActive
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search name, phone, city…" />
+        <StatusFilter
+          options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          value={activeTab.value}
+          params={params}
+          pathname="/partners"
+          paramKey="tab"
+          defaultValue="all"
+        />
+        <SearchField placeholder="Search name, firm, phone, city…" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <FilterSelect
+          param="city"
+          label="City"
+          allLabel="All cities"
+          value={city}
+          options={cities.map((value) => ({ value, label: value }))}
+        />
+        <FilterSelect
+          param="show"
+          label="Status"
+          allLabel="Active only"
+          value={show}
+          options={[
+            { value: 'all', label: 'Active and inactive' },
+            { value: 'inactive', label: 'Inactive only' },
+          ]}
+        />
+      </div>
+
+      {total > 0 ? (
+        <ListSummary
+          shown={partners.length}
+          total={total}
+          singular="partner"
+          plural="partners"
+          filtered={filtered}
+          params={params}
+          pathname="/partners"
+        />
+      ) : null}
 
       {partners.length === 0 ? (
         <EmptyState
-          title={search ? 'No matches' : 'No partners yet'}
+          title={filtered ? 'No matches' : 'No partners yet'}
           description={
-            search
-              ? 'Try a different name, phone number or city.'
+            filtered
+              ? 'No partner matches the current search and filters.'
               : 'Add the architects and carpenters who refer work to you.'
           }
           action={
-            canCreate && !search ? (
+            filtered ? (
+              <Button outline href={clearHref('/partners', params)}>
+                Clear filters
+              </Button>
+            ) : canCreate ? (
               <Button href="/partners/new">Add partner</Button>
             ) : null
           }
@@ -125,12 +181,12 @@ export default async function PartnersPage({
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Code</TableHeader>
-              <TableHeader>Name</TableHeader>
-              <TableHeader>Type</TableHeader>
-              <TableHeader>Phone</TableHeader>
-              <TableHeader>City</TableHeader>
-              <TableHeader className="text-right">Customers</TableHeader>
+              <SortHeader column="code" label="Code" params={params} pathname="/partners" />
+              <SortHeader column="name" label="Name" params={params} pathname="/partners" />
+              <SortHeader column="type" label="Type" params={params} pathname="/partners" />
+              <SortHeader column="phone" label="Phone" params={params} pathname="/partners" />
+              <SortHeader column="city" label="City" params={params} pathname="/partners" />
+              <SortHeader column="customers" label="Customers" params={params} pathname="/partners" align="right" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>

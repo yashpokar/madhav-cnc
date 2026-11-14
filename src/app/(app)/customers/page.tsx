@@ -1,5 +1,10 @@
 import type { Metadata } from 'next'
+import { FilterSelect } from '@/components/filter-select'
+import { ListSummary } from '@/components/list-summary'
+import { SortHeader } from '@/components/sort-header'
 import { Pagination } from '@/components/pagination'
+import { clearHref } from '@/lib/list-href'
+import { sortRows } from '@/lib/table-sort'
 import { paginate } from '@/lib/pagination'
 import { RowActions } from '@/components/row-actions'
 import { deleteCustomer } from '@/lib/actions/customers'
@@ -17,12 +22,12 @@ import {
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
 import { EmptyState, FormBanner } from '@/components/form-banner'
-import { Link } from '@/components/catalyst/link'
 import { SearchField } from '@/components/search-field'
+import { StatusFilter } from '@/components/status-filter'
 import { listCustomers } from '@/lib/queries/customers'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
-import type { CustomerStatus } from '@/generated/prisma/enums'
+import type { CustomerStatus, CustomerType } from '@/generated/prisma/enums'
 
 export const metadata: Metadata = {
   title: 'Customers',
@@ -40,6 +45,11 @@ const STATUS_LABELS: Record<CustomerStatus, string> = {
   ON_HOLD: 'On hold',
 }
 
+const TYPE_LABELS: Record<CustomerType, string> = {
+  INDIVIDUAL: 'Individual',
+  COMPANY: 'Company',
+}
+
 export default async function CustomersPage({
   searchParams,
 }: PageProps<'/customers'>) {
@@ -53,10 +63,41 @@ export default async function CustomersPage({
     ['ACTIVE', 'INACTIVE', 'ON_HOLD'].includes(params.status)
       ? (params.status as CustomerStatus)
       : undefined
-  const everyone = await listCustomers({ search })
-  const customers = status
-    ? everyone.filter((customer) => customer.status === status)
-    : everyone
+  const type =
+    typeof params.type === 'string' && params.type in TYPE_LABELS
+      ? (params.type as CustomerType)
+      : undefined
+
+  // Everyone, to offer the cities and to count against; and the search matches.
+  const [everyone, matched] = await Promise.all([
+    listCustomers(),
+    search ? listCustomers({ search }) : null,
+  ])
+  const cities = [
+    ...new Set(everyone.map((customer) => customer.city).filter((c): c is string => !!c)),
+  ].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
+  const city =
+    typeof params.city === 'string' && cities.includes(params.city) ? params.city : undefined
+
+  const filtered = Boolean(search || status || type || city)
+  const customers = sortRows(
+    (matched ?? everyone).filter(
+      (customer) =>
+        (!status || customer.status === status) &&
+        (!type || customer.type === type) &&
+        (!city || customer.city === city),
+    ),
+    params,
+    {
+      code: (customer) => customer.code,
+      name: (customer) => customer.name,
+      phone: (customer) => customer.phone,
+      city: (customer) => customer.city,
+      architect: (customer) => customer.preferredArchitect?.name,
+      carpenter: (customer) => customer.preferredCarpenter?.name,
+      status: (customer) => STATUS_LABELS[customer.status],
+    },
+  )
   const canCreate = can(user.role, 'customer:create')
   const canEdit = can(user.role, 'customer:update')
   const canDelete = can(user.role, 'customer:delete')
@@ -68,7 +109,7 @@ export default async function CustomersPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid grid-cols-1 gap-2">
           <Heading>Customers</Heading>
-          <Text>{customers.length} record{customers.length === 1 ? '' : 's'}</Text>
+          <Text>Everyone you quote and bill.</Text>
         </div>
         <div className="flex flex-wrap gap-2">
           <ExportButton kind="customers" search={search} />
@@ -81,46 +122,65 @@ export default async function CustomersPage({
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5">
-          {[
-            { value: undefined, label: 'All' },
+        <StatusFilter
+          options={[
+            { value: 'all', label: 'All' },
             { value: 'ACTIVE', label: 'Active' },
             { value: 'ON_HOLD', label: 'On hold' },
             { value: 'INACTIVE', label: 'Inactive' },
-          ].map((tab) => {
-            const query = new URLSearchParams()
-            if (tab.value) query.set('status', tab.value)
-            if (search) query.set('q', search)
-            const href = query.toString() ? `/customers?${query}` : '/customers'
-
-            return (
-              <Link
-                key={tab.label}
-                href={href}
-                className={
-                  tab.value === status
-                    ? 'shrink-0 rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-                    : 'shrink-0 rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
-                }
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-        <SearchField placeholder="Search name, phone, city…" />
+          ]}
+          value={status ?? 'all'}
+          params={params}
+          pathname="/customers"
+          paramKey="status"
+          defaultValue="all"
+        />
+        <SearchField placeholder="Search name, code, phone, city, email…" />
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <FilterSelect
+          param="type"
+          label="Customer type"
+          allLabel="All types"
+          value={type}
+          options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+        />
+        <FilterSelect
+          param="city"
+          label="City"
+          allLabel="All cities"
+          value={city}
+          options={cities.map((value) => ({ value, label: value }))}
+        />
+      </div>
+
+      {everyone.length > 0 ? (
+        <ListSummary
+          shown={customers.length}
+          total={everyone.length}
+          singular="customer"
+          plural="customers"
+          filtered={filtered}
+          params={params}
+          pathname="/customers"
+        />
+      ) : null}
 
       {customers.length === 0 ? (
         <EmptyState
-          title={search ? 'No matches' : 'No customers yet'}
+          title={filtered ? 'No matches' : 'No customers yet'}
           description={
-            search
-              ? 'Try a different name, phone number or city.'
+            filtered
+              ? 'No customer matches the current search and filters.'
               : 'Add your first customer to start raising quotations and orders.'
           }
           action={
-            canCreate && !search ? (
+            filtered ? (
+              <Button outline href={clearHref('/customers', params)}>
+                Clear filters
+              </Button>
+            ) : canCreate ? (
               <Button href="/customers/new">Add customer</Button>
             ) : null
           }
@@ -130,13 +190,13 @@ export default async function CustomersPage({
         <Table dense grid striped>
           <TableHead>
             <TableRow>
-              <TableHeader>Code</TableHeader>
-              <TableHeader>Name</TableHeader>
-              <TableHeader>Phone</TableHeader>
-              <TableHeader>City</TableHeader>
-              <TableHeader>Architect</TableHeader>
-              <TableHeader>Carpenter</TableHeader>
-              <TableHeader>Status</TableHeader>
+              <SortHeader column="code" label="Code" params={params} pathname="/customers" />
+              <SortHeader column="name" label="Name" params={params} pathname="/customers" />
+              <SortHeader column="phone" label="Phone" params={params} pathname="/customers" />
+              <SortHeader column="city" label="City" params={params} pathname="/customers" />
+              <SortHeader column="architect" label="Architect" params={params} pathname="/customers" />
+              <SortHeader column="carpenter" label="Carpenter" params={params} pathname="/customers" />
+              <SortHeader column="status" label="Status" params={params} pathname="/customers" />
             <TableHeader><span className="sr-only">Actions</span></TableHeader>
             </TableRow>
           </TableHead>

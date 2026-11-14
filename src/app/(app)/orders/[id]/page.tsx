@@ -15,7 +15,9 @@ import {
 } from '@/components/catalyst/table'
 import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
-import { getOrder } from '@/lib/queries/orders'
+import { getOrder, getOrderImpact } from '@/lib/queries/orders'
+import { DeleteImpact } from '@/components/delete-impact'
+import { describeOrderDelete } from '@/lib/order-delete'
 import { summariseMaterial } from '@/lib/queries/quotations'
 import { listTasksForOrder } from '@/lib/queries/production'
 import { OrderRelated } from '@/components/related-sections'
@@ -65,8 +67,9 @@ export default async function QuotationDetailPage({
   const query = await searchParams
   const justCreated = query.created === '1'
 
-  const [order, company] = await Promise.all([
+  const [order, impact, company] = await Promise.all([
     getOrder(id),
+    getOrderImpact(id),
     getCompanySetting(),
   ])
 
@@ -84,7 +87,7 @@ export default async function QuotationDetailPage({
 
   const materialSummary = summariseMaterial(order.lines)
   const canUpdate = can(user.role, 'order:update')
-  const editable = order.status === 'DRAFT' || order.status === 'CONFIRMED'
+  const editable = order.status !== 'CANCELLED' && (impact?.invoices.length ?? 0) === 0
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -137,11 +140,12 @@ export default async function QuotationDetailPage({
           {canUpdate && editable ? (
             <Button href={`/orders/${order.id}/edit`}>Edit</Button>
           ) : null}
-          {can(user.role, 'order:delete') && (order.status === 'DRAFT' || order.status === 'CANCELLED') ? (
+          {can(user.role, 'order:delete') && impact ? (
             <ConfirmButton
               label="Delete"
               title={`Delete order ${order.number}?`}
-              description="This permanently removes the order and its production tasks. If it came from a quotation, that quotation returns to accepted. This cannot be undone."
+              blocked={describeOrderDelete(impact).blocked}
+              description={<DeleteImpact {...describeOrderDelete(impact)} />}
               confirmLabel="Delete order"
               redirectTo="/orders"
               action={deleteOrder.bind(null, order.id)}

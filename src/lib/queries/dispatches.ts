@@ -9,6 +9,10 @@ function num(value: DecimalLike): number {
 
 const COUNTS_AS_SENT: DispatchStatus[] = ['DRAFT', 'DISPATCHED', 'DELIVERED']
 
+export function countDispatches() {
+  return prisma.dispatch.count()
+}
+
 export async function listDispatches({
   search,
   status,
@@ -27,6 +31,9 @@ export async function listDispatches({
               { number: { contains: term, mode: 'insensitive' } },
               { vehicleNumber: { contains: term, mode: 'insensitive' } },
               { lrNumber: { contains: term, mode: 'insensitive' } },
+              { driverName: { contains: term, mode: 'insensitive' } },
+              { transporterName: { contains: term, mode: 'insensitive' } },
+              { receivedByName: { contains: term, mode: 'insensitive' } },
               { order: { number: { contains: term, mode: 'insensitive' } } },
               {
                 order: {

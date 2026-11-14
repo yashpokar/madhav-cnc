@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { nextExpenseNumber } from '@/lib/codes'
+import { nextExpenseNumber, nextPaymentNumber } from '@/lib/codes'
 import { round2 } from '@/lib/pricing'
 import {
   expenseCategorySchema,
@@ -163,6 +163,8 @@ export async function setEntryChecked(
 
 /** The same for money received that is not a customer receipt. */
 export async function quickAddCredit(input: {
+  /** A customer's id: records a real receipt on their account. */
+  customerId?: string
   sourceName: string
   amount: string
   channelId: string
@@ -177,6 +179,46 @@ export async function quickAddCredit(input: {
 
   if (!channel) {
     return { ok: false, error: 'Choose a payment mode' }
+  }
+
+  if (input.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: input.customerId },
+      select: { id: true, name: true },
+    })
+
+    if (!customer) {
+      return { ok: false, error: 'Customer not found' }
+    }
+
+    const amount = Number(input.amount)
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { ok: false, error: 'Amount must be greater than zero' }
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+      return { ok: false, error: 'Invalid date' }
+    }
+
+    // Money from a customer is a receipt: it sits on their account, can be
+    // applied to invoices later, and shows in their statement.
+    const receipt = await prisma.payment.create({
+      data: {
+        number: await nextPaymentNumber(),
+        customerId: customer.id,
+        amount,
+        mode: channel.mode,
+        channelId: channel.id,
+        paidOn: new Date(`${input.date}T00:00:00Z`),
+        recordedById: user.id,
+      },
+    })
+
+    revalidatePath('/daybook')
+    revalidatePath('/payments')
+
+    return { ok: true, message: `Receipt ${receipt.number} saved`, id: receipt.id }
   }
 
   const parsed = cashCreditSchema.safeParse({

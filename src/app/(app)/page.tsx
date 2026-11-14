@@ -337,7 +337,9 @@ export default async function DashboardPage({
               compared with {range.compareLabel}
             </span>
           </h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+          <div
+            className={`${CARD} grid grid-cols-2 overflow-hidden md:grid-cols-3 2xl:grid-cols-6 [&>*]:-mt-px [&>*]:-ml-px`}
+          >
             {canMoney ? (
               <PeriodTile
                 href={`/payments?${span}`}

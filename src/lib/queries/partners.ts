@@ -22,6 +22,8 @@ export async function listPartners({
               { name: { contains: term, mode: 'insensitive' } },
               { firmName: { contains: term, mode: 'insensitive' } },
               { phone: { contains: term } },
+              { altPhone: { contains: term } },
+              { email: { contains: term, mode: 'insensitive' } },
               { code: { contains: term, mode: 'insensitive' } },
               { city: { contains: term, mode: 'insensitive' } },
             ],

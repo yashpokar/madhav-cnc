@@ -159,17 +159,19 @@ export function PeriodTile({
   const body = (
     <>
       <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{label}</div>
-      <div className={`mt-0.5 text-2xl/8 font-semibold tracking-tight tabular-nums ${accent}`}>
+      <div className={`mt-1 text-[1.65rem]/8 font-semibold tracking-tight tabular-nums ${accent}`}>
         {value}
       </div>
       <div className={`mt-0.5 text-xs/5 ${changeColor}`}>{change.text}</div>
       {note ? <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{note}</div> : null}
     </>
   )
-  const box = `block p-4 ${CARD}`
+  // A cell of the period strip; the strip draws the outer card.
+  const box =
+    'block border-t border-l border-zinc-950/5 px-5 py-4 dark:border-white/10'
 
   return href ? (
-    <Link href={href} className={`${box} transition hover:bg-zinc-50 dark:hover:bg-white/5`}>
+    <Link href={href} className={`${box} hover:bg-zinc-50 dark:hover:bg-white/5`}>
       {body}
     </Link>
   ) : (

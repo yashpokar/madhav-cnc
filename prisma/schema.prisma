@@ -313,7 +313,7 @@ model Item {
   width         Decimal?      @db.Decimal(10, 3)
 
   hsnCode        String? @map("hsn_code")
-  taxRatePercent Decimal @default(18) @map("tax_rate_percent") @db.Decimal(5, 2)
+  taxRatePercent Decimal @default(0) @map("tax_rate_percent") @db.Decimal(5, 2)
 
   isActive Boolean @default(true) @map("is_active")
   notes    String?
@@ -509,7 +509,7 @@ model Order {
   total          Decimal @default(0) @db.Decimal(14, 2)
 
   transportCharge        Decimal @default(0) @map("transport_charge") @db.Decimal(12, 2)
-  transportTaxRatePercent Decimal @default(18) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
+  transportTaxRatePercent Decimal @default(0) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
 
   advanceAmount Decimal @default(0) @map("advance_amount") @db.Decimal(14, 2)
 
@@ -904,7 +904,7 @@ model Invoice {
   discountValue Decimal      @default(0) @map("discount_value") @db.Decimal(12, 2)
 
   transportCharge         Decimal @default(0) @map("transport_charge") @db.Decimal(12, 2)
-  transportTaxRatePercent Decimal @default(18) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
+  transportTaxRatePercent Decimal @default(0) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
 
   subtotal       Decimal @default(0) @db.Decimal(14, 2)
   discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(14, 2)
@@ -1123,6 +1123,7 @@ model PaymentChannel {
 
   expenses    Expense[]
   cashCredits CashCredit[]
+  payments    Payment[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1139,6 +1140,9 @@ model Payment {
   amount    Decimal     @db.Decimal(14, 2)
   isChecked Boolean     @default(false) @map("is_checked")
   mode      PaymentMode @default(UPI)
+  /// The business's own name for how it came in, e.g. HDFC NEFT (optional).
+  channelId String?          @map("channel_id")
+  channel   PaymentChannel?  @relation(fields: [channelId], references: [id], onDelete: SetNull)
   reference String?
   paidOn    DateTime    @map("paid_on") @db.Date
   notes     String?

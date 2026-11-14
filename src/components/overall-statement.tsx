@@ -9,11 +9,14 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
 import { inr } from '@/components/dashboard-parts'
 import { PrintButton } from '@/components/print-button'
+import { SearchField } from '@/components/search-field'
+import { SortHeader } from '@/components/sort-header'
+import { EmptyState } from '@/components/form-banner'
+import { sortRows } from '@/lib/table-sort'
 import { Pagination } from '@/components/pagination'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/lib/labels'
 import { paginate } from '@/lib/pagination'
@@ -35,15 +38,6 @@ const dateFormat = new Intl.DateTimeFormat('en-IN', {
   year: 'numeric',
   timeZone: 'UTC',
 })
-
-const SORTS = {
-  date_desc: 'Newest first',
-  date_asc: 'Oldest first',
-  amount_desc: 'Amount: high to low',
-  amount_asc: 'Amount: low to high',
-} as const
-
-type SortKey = keyof typeof SORTS
 
 const amountParam = (params: Params, key: string) => {
   const text = one(params, key)
@@ -72,8 +66,16 @@ export async function OverallStatement({
   const min = amountParam(params, 'min')
   const max = amountParam(params, 'max')
   const { from, to } = readDateRange(params)
-  const picked = one(params, 'sort')
-  const sort: SortKey = picked && picked in SORTS ? (picked as SortKey) : 'date_desc'
+  const q = one(params, 'q')?.trim().toLowerCase()
+  const sortKeep = (['sort', 'dir'] as const).flatMap((key) => {
+    const value = one(params, key)
+
+    return value ? [[key, value] as const] : []
+  })
+  // Column headings keep every filter but start again from the first page.
+  const sortParams = Object.fromEntries(
+    Object.entries(params).filter(([key]) => key !== 'sp'),
+  )
 
   const customers = [...new Map(all.map((row) => [row.customer.id, row.customer.name]))].sort(
     (a, b) => a[1].localeCompare(b[1]),
@@ -83,7 +85,7 @@ export async function OverallStatement({
     ...new Set(all.map((row) => row.stageKey).filter((k) => k !== NOT_STARTED && k !== FINISHED)),
   ].sort()
 
-  const rows = all.filter(
+  const matching = all.filter(
     (row) =>
       (!customer || row.customer.id === customer) &&
       (!status || row.status === status) &&
@@ -93,20 +95,29 @@ export async function OverallStatement({
       (balance !== 'clear' || row.due <= 0.005) &&
       (min === undefined || row.total >= min) &&
       (max === undefined || row.total <= max) &&
-      inDateRange(row.orderDate, params),
+      inDateRange(row.orderDate, params) &&
+      (!q ||
+        [
+          row.number,
+          row.customer.name,
+          row.subject,
+          row.materials.join(' '),
+          stageLabel(row.stageKey),
+          ORDER_STATUS_LABELS[row.status],
+        ].some((field) => field?.toLowerCase().includes(q))),
   )
 
-  rows.sort((a, b) => {
-    switch (sort) {
-      case 'date_asc':
-        return a.orderDate.getTime() - b.orderDate.getTime()
-      case 'amount_desc':
-        return b.total - a.total
-      case 'amount_asc':
-        return a.total - b.total
-      default:
-        return b.orderDate.getTime() - a.orderDate.getTime()
-    }
+  const rows = sortRows(matching, params, {
+    order: (row) => row.number,
+    date: (row) => row.orderDate,
+    customer: (row) => row.customer.name,
+    material: (row) => row.materials.join(', '),
+    stage: (row) => stageLabel(row.stageKey),
+    status: (row) => ORDER_STATUS_LABELS[row.status],
+    total: (row) => row.total,
+    billed: (row) => row.invoiced,
+    received: (row) => row.received,
+    due: (row) => row.due,
   })
   const paged = paginate(rows, params, { pageKey: 'sp', sizeKey: 'ss' })
 
@@ -120,7 +131,8 @@ export async function OverallStatement({
     { total: 0, invoiced: 0, received: 0, due: 0 },
   )
   const filtered = Boolean(
-    customer ||
+    q ||
+      customer ||
       status ||
       material ||
       stage ||
@@ -133,20 +145,21 @@ export async function OverallStatement({
 
 
   const renderTable = (list: typeof rows) => (
-    <Table dense grid striped>
+    <Table plain dense grid striped>
       <TableHead>
         <TableRow>
-          <TableHeader>Order</TableHeader>
-          <TableHeader>Customer</TableHeader>
-          <TableHeader>Material</TableHeader>
-          <TableHeader>Stage</TableHeader>
-          <TableHeader>Status</TableHeader>
-          <TableHeader className="text-right">Order value</TableHeader>
+          <SortHeader column="order" label="Order" params={sortParams} pathname="/statement" />
+          <SortHeader column="date" label="Date" params={sortParams} pathname="/statement" />
+          <SortHeader column="customer" label="Customer" params={sortParams} pathname="/statement" />
+          <SortHeader column="material" label="Material" params={sortParams} pathname="/statement" />
+          <SortHeader column="stage" label="Stage" params={sortParams} pathname="/statement" />
+          <SortHeader column="status" label="Status" params={sortParams} pathname="/statement" />
+          <SortHeader column="total" label="Order value" params={sortParams} pathname="/statement" align="right" />
           {showMoney ? (
             <>
-              <TableHeader className="text-right">Billed</TableHeader>
-              <TableHeader className="text-right">Received</TableHeader>
-              <TableHeader className="text-right">Due</TableHeader>
+              <SortHeader column="billed" label="Billed" params={sortParams} pathname="/statement" align="right" />
+              <SortHeader column="received" label="Received" params={sortParams} pathname="/statement" align="right" />
+              <SortHeader column="due" label="Due" params={sortParams} pathname="/statement" align="right" />
             </>
           ) : null}
         </TableRow>
@@ -154,11 +167,9 @@ export async function OverallStatement({
       <TableBody>
         {list.map((row) => (
           <TableRow key={row.id} href={`/orders/${row.id}`}>
-            <TableCell>
-              <div className="font-mono text-xs">{row.number}</div>
-              <div className="text-zinc-500 dark:text-zinc-400">
-                {dateFormat.format(row.orderDate)}
-              </div>
+            <TableCell className="font-mono text-xs">{row.number}</TableCell>
+            <TableCell className="text-zinc-500 dark:text-zinc-400">
+              {dateFormat.format(row.orderDate)}
             </TableCell>
             <TableCell className="font-medium">{row.customer.name}</TableCell>
             <TableCell className="text-zinc-500 dark:text-zinc-400">
@@ -219,9 +230,10 @@ export async function OverallStatement({
         >
           Overall statement
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField placeholder="Search order, customer, material…" />
           <span className="text-xs/5 text-zinc-500 tabular-nums dark:text-zinc-400">
-            {rows.length} of {all.length} order{all.length === 1 ? '' : 's'}
+            {filtered ? `${rows.length} of ${all.length}` : all.length} order{all.length === 1 ? '' : 's'}
           </span>
           <div className="print:hidden">
             <PrintButton label="Print statement" />
@@ -234,6 +246,9 @@ export async function OverallStatement({
         action="/statement"
         className="grid grid-cols-2 items-end gap-3 px-3 py-3 lg:grid-cols-4 print:hidden"
       >
+        {[...sortKeep, ...(q ? [['q', one(params, 'q') ?? ''] as const] : [])].map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
         <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
           Customer
           <Select name="customer" defaultValue={customer ?? 'all'}>
@@ -288,16 +303,6 @@ export async function OverallStatement({
             <option value="clear">Nothing due</option>
           </Select>
         </label>
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Sort by
-          <Select name="sort" defaultValue={sort}>
-            {Object.entries(SORTS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </label>
         <DateRangeFilter
           label="Order date"
           defaultFrom={from}
@@ -322,9 +327,23 @@ export async function OverallStatement({
       </form>
 
       {rows.length === 0 ? (
-        <p className="px-3 pb-4 text-sm/6 text-zinc-500 dark:text-zinc-400">
-          No orders match these filters.
-        </p>
+        <div className="px-3 pb-3">
+          <EmptyState
+            title={filtered ? 'No matches' : 'No orders yet'}
+            description={
+              filtered
+                ? 'No orders fit the current search and filters.'
+                : 'Orders appear here once they are created.'
+            }
+            action={
+              filtered ? (
+                <Button outline href="/statement">
+                  Clear filters
+                </Button>
+              ) : null
+            }
+          />
+        </div>
       ) : (
         <div className="overflow-x-auto px-3 pb-3">
           <div className="print:hidden">{renderTable(paged.rows)}</div>
@@ -342,7 +361,7 @@ export async function OverallStatement({
               </>
             ) : null}
           </div>
-          <Pagination paged={paged} params={params} pathname="/" pageKey="sp" sizeKey="ss" />
+          <Pagination paged={paged} params={params} pathname="/statement" pageKey="sp" sizeKey="ss" />
         </div>
       )}
     </section>

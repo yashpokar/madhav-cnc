@@ -189,7 +189,9 @@ export async function listNotes({
             OR: [
               { number: { contains: term, mode: 'insensitive' } },
               { vendorName: { contains: term, mode: 'insensitive' } },
+              { vendorGstin: { contains: term, mode: 'insensitive' } },
               { customer: { name: { contains: term, mode: 'insensitive' } } },
+              { customer: { code: { contains: term, mode: 'insensitive' } } },
               { invoice: { number: { contains: term, mode: 'insensitive' } } },
             ],
           }

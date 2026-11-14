@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
+import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -7,7 +8,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
@@ -16,9 +16,11 @@ import { FilterSelect } from '@/components/filter-select'
 import { LocalTime } from '@/components/local-time'
 import { Pagination } from '@/components/pagination'
 import { SearchField } from '@/components/search-field'
+import { SortHeader } from '@/components/sort-header'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, type Paged } from '@/lib/pagination'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { readSort } from '@/lib/table-sort'
 
 export const metadata: Metadata = {
   title: 'Activity log',
@@ -47,6 +49,15 @@ const AREAS: Record<string, { label: string; href?: (id: string) => string }> = 
   user: { label: 'User' },
 }
 
+const SORT_FIELDS: Record<string, 'createdAt' | 'userName' | 'entityType' | 'summary'> = {
+  when: 'createdAt',
+  who: 'userName',
+  area: 'entityType',
+  what: 'summary',
+}
+
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).replace(/-/g, ' ')
+
 const one = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) || undefined
 
@@ -58,6 +69,7 @@ export default async function ActivityLogPage({
 
   const entity = one(params.entity)
   const who = one(params.who)
+  const action = one(params.action)
   const q = one(params.q)?.trim()
   const requestedSize = Number(one(params.size))
   const size = (PAGE_SIZES as readonly number[]).includes(requestedSize)
@@ -67,22 +79,44 @@ export default async function ActivityLogPage({
   const where = {
     ...(entity ? { entityType: entity } : {}),
     ...(who ? { userName: who } : {}),
+    ...(action ? { action } : {}),
     ...(q
       ? {
           OR: [
             { summary: { contains: q, mode: 'insensitive' as const } },
             { userName: { contains: q, mode: 'insensitive' as const } },
+            { action: { contains: q, mode: 'insensitive' as const } },
+            { entityType: { contains: q, mode: 'insensitive' as const } },
           ],
         }
       : {}),
   }
 
-  const [total, people] = await Promise.all([
+  const sort = readSort(params, Object.keys(SORT_FIELDS))
+  const direction = sort?.dir ?? 'desc'
+  const orderBy = sort
+    ? [
+        sort.key === 'who'
+          ? { userName: { sort: direction, nulls: 'last' as const } }
+          : { [SORT_FIELDS[sort.key]]: direction },
+        { createdAt: 'desc' as const },
+        { id: 'asc' as const },
+      ]
+    : [{ createdAt: 'desc' as const }, { id: 'asc' as const }]
+  const filtered = Boolean(entity || who || action || q)
+
+  const [total, everything, people, actions] = await Promise.all([
     prisma.activityLog.count({ where }),
+    prisma.activityLog.count(),
     prisma.activityLog.findMany({
       distinct: ['userName'],
       select: { userName: true },
       orderBy: { userName: 'asc' },
+    }),
+    prisma.activityLog.findMany({
+      distinct: ['action'],
+      select: { action: true },
+      orderBy: { action: 'asc' },
     }),
   ])
   const pages = Math.max(1, Math.ceil(total / size))
@@ -90,7 +124,7 @@ export default async function ActivityLogPage({
 
   const rows = await prisma.activityLog.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
+    orderBy,
     skip: (page - 1) * size,
     take: size,
     select: {
@@ -134,24 +168,48 @@ export default async function ActivityLogPage({
               .filter((p) => p.userName)
               .map((p) => ({ value: p.userName!, label: p.userName! }))}
           />
+          <FilterSelect
+            param="action"
+            label="Action"
+            allLabel="Any action"
+            value={action}
+            options={actions.map((a) => ({ value: a.action, label: sentence(a.action) }))}
+          />
         </div>
-        <SearchField placeholder="Search what happened…" />
+        <SearchField placeholder="Search person, area, what happened…" />
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState
-          title="Nothing found"
-          description="No activity matches these filters yet."
-        />
+        filtered ? (
+          <EmptyState
+            title="No matches"
+            description="No activity fits the current search and filters."
+            action={
+              <Button outline href="/admin/activity">
+                Clear filters
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="No activity yet"
+            description="Changes anyone makes will be listed here."
+          />
+        )
       ) : (
         <>
+          {filtered ? (
+            <p className="text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+              {total} of {everything} entr{everything === 1 ? 'y' : 'ies'}
+            </p>
+          ) : null}
           <Table dense grid striped>
             <TableHead>
               <TableRow>
-                <TableHeader>When</TableHeader>
-                <TableHeader>Who</TableHeader>
-                <TableHeader>Area</TableHeader>
-                <TableHeader>What happened</TableHeader>
+                <SortHeader column="when" label="When" params={params} pathname="/admin/activity" />
+                <SortHeader column="who" label="Who" params={params} pathname="/admin/activity" />
+                <SortHeader column="area" label="Area" params={params} pathname="/admin/activity" />
+                <SortHeader column="what" label="What happened" params={params} pathname="/admin/activity" />
               </TableRow>
             </TableHead>
             <TableBody>

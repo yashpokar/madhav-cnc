@@ -119,8 +119,8 @@ export function ExpenseForm({
             </Field>
             <Field>
               <Label>Paid to</Label>
-              <input type="hidden" name="payeeName" value={payee} />
               <VendorPicker options={vendors} value={payee} onChange={setPayee} />
+              <input type="hidden" name="payeeName" value={payee} />
               {errors.payeeName ? (
                 <ErrorMessage>{errors.payeeName}</ErrorMessage>
               ) : null}

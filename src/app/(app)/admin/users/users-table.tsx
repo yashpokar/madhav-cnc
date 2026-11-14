@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/catalyst/table'
+import { SortHeader } from '@/components/sort-header'
 import { Text } from '@/components/catalyst/text'
 import {
   activateUser,
@@ -41,9 +42,11 @@ const ROLES = Object.values(UserRole)
 export function UsersTable({
   users,
   currentUserId,
+  params,
 }: {
   users: UserListItem[]
   currentUserId: string
+  params: Record<string, string | string[] | undefined>
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -81,11 +84,12 @@ export function UsersTable({
       <Table dense grid striped>
         <TableHead>
           <TableRow>
-            <TableHeader>User</TableHeader>
-            <TableHeader>Role</TableHeader>
-            <TableHeader>Status</TableHeader>
-            <TableHeader>Sign-in</TableHeader>
-            <TableHeader>Registered</TableHeader>
+            <SortHeader column="name" label="Name" params={params} pathname="/admin/users" />
+            <SortHeader column="email" label="Email" params={params} pathname="/admin/users" />
+            <SortHeader column="role" label="Role" params={params} pathname="/admin/users" />
+            <SortHeader column="status" label="Status" params={params} pathname="/admin/users" />
+            <SortHeader column="signin" label="Sign-in" params={params} pathname="/admin/users" />
+            <SortHeader column="created" label="Registered" params={params} pathname="/admin/users" />
             <TableHeader className="text-right">Actions</TableHeader>
           </TableRow>
         </TableHead>

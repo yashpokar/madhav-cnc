@@ -1,9 +1,8 @@
 import { Badge } from '@/components/catalyst/badge'
-import { DateRangeFilter } from '@/components/date-range-filter'
-import { RangeSlider } from '@/components/range-slider'
+import { ListControls } from '@/components/list-controls'
+import { FilterSelect } from '@/components/filter-select'
 import { amountCeiling, inDateRange, readDateRange } from '@/lib/list-controls'
 import { Button } from '@/components/catalyst/button'
-import { Select } from '@/components/catalyst/select'
 import {
   Table,
   TableBody,
@@ -67,11 +66,6 @@ export async function OverallStatement({
   const max = amountParam(params, 'max')
   const { from, to } = readDateRange(params)
   const q = one(params, 'q')?.trim().toLowerCase()
-  const sortKeep = (['sort', 'dir'] as const).flatMap((key) => {
-    const value = one(params, key)
-
-    return value ? [[key, value] as const] : []
-  })
   // Column headings keep every filter but start again from the first page.
   const sortParams = Object.fromEntries(
     Object.entries(params).filter(([key]) => key !== 'sp'),
@@ -231,7 +225,6 @@ export async function OverallStatement({
           Overall statement
         </h2>
         <div className="flex flex-wrap items-center gap-3">
-          <SearchField placeholder="Search order, customer, material…" />
           <span className="text-xs/5 text-zinc-500 tabular-nums dark:text-zinc-400">
             {filtered ? `${rows.length} of ${all.length}` : all.length} order{all.length === 1 ? '' : 's'}
           </span>
@@ -241,90 +234,66 @@ export async function OverallStatement({
         </div>
       </header>
 
-      <form
-        method="get"
-        action="/statement"
-        className="grid grid-cols-2 items-end gap-3 px-3 py-3 lg:grid-cols-4 print:hidden"
-      >
-        {[...sortKeep, ...(q ? [['q', one(params, 'q') ?? ''] as const] : [])].map(([key, value]) => (
-          <input key={key} type="hidden" name={key} value={value} />
-        ))}
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Customer
-          <Select name="customer" defaultValue={customer ?? 'all'}>
-            <option value="all">All customers</option>
-            {customers.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Status
-          <Select name="status" defaultValue={status ?? 'all'}>
-            <option value="all">All statuses</option>
-            {Object.values(OrderStatus).map((value) => (
-              <option key={value} value={value}>
-                {ORDER_STATUS_LABELS[value]}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Material
-          <Select name="material" defaultValue={material ?? 'all'}>
-            <option value="all">All materials</option>
-            {materials.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Stage
-          <Select name="stage" defaultValue={stage ?? 'all'}>
-            <option value="all">All stages</option>
-            <option value={NOT_STARTED}>Not started</option>
-            {stages.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-            <option value={FINISHED}>Finished</option>
-          </Select>
-        </label>
-        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Balance
-          <Select name="balance" defaultValue={balance ?? 'all'}>
-            <option value="all">Any balance</option>
-            <option value="due">Has a balance due</option>
-            <option value="clear">Nothing due</option>
-          </Select>
-        </label>
-        <DateRangeFilter
-          label="Order date"
-          defaultFrom={from}
-          defaultTo={to}
-          className="col-span-2"
+      <div className="flex flex-wrap items-center gap-3 px-3 py-3 print:hidden">
+        <SearchField placeholder="Search order, customer, material…" />
+        <FilterSelect
+          param="customer"
+          label="Customer"
+          allLabel="All"
+          value={customer}
+          options={customers.map(([id, name]) => ({ value: id, label: name }))}
         />
-        <RangeSlider
-          label="Order amount"
+        <FilterSelect
+          param="status"
+          label="Status"
+          allLabel="All"
+          value={status}
+          options={Object.values(OrderStatus).map((value) => ({
+            value,
+            label: ORDER_STATUS_LABELS[value],
+          }))}
+        />
+        <FilterSelect
+          param="material"
+          label="Material"
+          allLabel="All"
+          value={material}
+          options={materials.map((name) => ({ value: name, label: name }))}
+        />
+        <FilterSelect
+          param="stage"
+          label="Stage"
+          allLabel="All"
+          value={stage}
+          options={[
+            { value: NOT_STARTED, label: 'Not started' },
+            ...stages.map((name) => ({ value: name, label: name })),
+            { value: FINISHED, label: 'Finished' },
+          ]}
+        />
+        <FilterSelect
+          param="balance"
+          label="Balance"
+          allLabel="Any"
+          value={balance}
+          options={[
+            { value: 'due', label: 'Has a balance due' },
+            { value: 'clear', label: 'Nothing due' },
+          ]}
+        />
+        <ListControls
+          params={params}
+          pathname="/statement"
+          amountLabel="Order amount"
           ceiling={amountCeiling(all, (row) => row.total)}
-          defaultMin={min}
-          defaultMax={max}
-          className="col-span-2"
+          showClear={false}
         />
-        <div className="flex gap-2">
-          <Button type="submit">Apply</Button>
-          {filtered ? (
-            <Button plain href="/statement">
-              Clear
-            </Button>
-          ) : null}
-        </div>
-      </form>
+        {filtered ? (
+          <Button plain href="/statement">
+            Clear all
+          </Button>
+        ) : null}
+      </div>
 
       {rows.length === 0 ? (
         <div className="px-3 pb-3">

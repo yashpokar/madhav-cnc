@@ -431,7 +431,7 @@ export default async function PaymentsPage({
               <FilterSelect
                 param="age"
                 label="Invoice age"
-                allLabel="All open invoices"
+                allLabel="All"
                 value={age}
                 options={[
                   { value: 'overdue', label: 'Overdue' },
@@ -600,45 +600,39 @@ export default async function PaymentsPage({
         <Subheading level={2}>
           Payments
         </Subheading>
-        <form
-          method="get"
-          action="/payments"
-          className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
-        >
-          {q ? <input type="hidden" name="q" value={String(params.q)} /> : null}
-          <input type="hidden" name="tab" value="received" />
-          {mode ? <input type="hidden" name="mode" value={mode} /> : null}
-          {sortKeep.map(([key, value]) => (
-            <input key={key} type="hidden" name={key} value={value} />
-          ))}
-          <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
-          <RangeSlider
-            label="Amount received"
-            ceiling={receiptCeiling}
-            defaultMin={minPaid}
-            defaultMax={maxPaid}
-            className="w-full sm:w-72"
-          />
-          <Button type="submit" outline>
-            Apply
-          </Button>
-          {receiptsFiltered ? (
-            <Button plain href={tabHref('received')}>
-              Clear
-            </Button>
-          ) : null}
-        </form>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3 print:hidden">
           <FilterSelect
             param="mode"
             label="Payment mode"
-            allLabel="All payment modes"
+            allLabel="All"
             value={mode}
             options={Object.values(PaymentMode).map((value) => ({
               value,
               label: PAYMENT_MODE_LABELS[value],
             }))}
           />
+          <form method="get" action="/payments" className="contents">
+            {q ? <input type="hidden" name="q" value={String(params.q)} /> : null}
+            <input type="hidden" name="tab" value="received" />
+            {mode ? <input type="hidden" name="mode" value={mode} /> : null}
+            {sortKeep.map(([key, value]) => (
+              <input key={key} type="hidden" name={key} value={value} />
+            ))}
+            <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} autoSubmit />
+            <RangeSlider
+              label="Amount received"
+              ceiling={receiptCeiling}
+              defaultMin={minPaid}
+              defaultMax={maxPaid}
+              autoSubmit
+              className="w-full sm:w-72"
+            />
+            {receiptsFiltered ? (
+              <Button plain href={tabHref('received')}>
+                Clear
+              </Button>
+            ) : null}
+          </form>
         </div>
         {receiptsFiltered || q ? countLine(receipts.length, data.payments.length, 'payment') : null}
         <div className="mt-4">

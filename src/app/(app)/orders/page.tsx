@@ -108,19 +108,18 @@ export default async function OrdersPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search number, customer, subject, PO…" />
         <StatusFilter
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
           pathname="/orders"
         />
-        <SearchField placeholder="Search number, customer, subject, PO…" />
+        <ListControls
+          ceiling={amountCeiling(orders, (row) => row.total)}
+          params={params} pathname="/orders" amountLabel="Total" />
       </div>
-
-      <ListControls
-        ceiling={amountCeiling(orders, (row) => row.total)}
-        params={params} pathname="/orders" amountLabel="Total" />
 
       {sorted.length === 0 ? (
         <ListEmpty

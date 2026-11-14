@@ -73,10 +73,11 @@ export default async function AdminUsersPage({
 
       <div className="grid grid-cols-1 gap-4">
         <div className="flex flex-wrap items-center gap-3">
+          <SearchField placeholder="Search name, email, phone…" />
           <FilterSelect
             param="role"
             label="Role"
-            allLabel="All roles"
+            allLabel="All"
             value={role}
             options={Object.values(UserRole).map((value) => ({
               value,
@@ -86,16 +87,13 @@ export default async function AdminUsersPage({
           <FilterSelect
             param="status"
             label="Status"
-            allLabel="Any status"
+            allLabel="Any"
             value={status}
             options={[
               { value: 'active', label: 'Active' },
               { value: 'pending', label: 'Pending' },
             ]}
           />
-          <div className="sm:ml-auto">
-            <SearchField placeholder="Search name, email, phone…" />
-          </div>
         </div>
 
         {filtered && sorted.length > 0 ? (

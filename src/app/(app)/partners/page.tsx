@@ -114,8 +114,10 @@ export default async function PartnersPage({
         <FormBanner tone="success">Partner {created} saved</FormBanner>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search name, firm, phone, city…" />
         <StatusFilter
+          label="Type"
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
@@ -123,27 +125,25 @@ export default async function PartnersPage({
           paramKey="tab"
           defaultValue="all"
         />
-        <SearchField placeholder="Search name, firm, phone, city…" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterSelect
-          param="city"
-          label="City"
-          allLabel="All cities"
-          value={city}
-          options={cities.map((value) => ({ value, label: value }))}
-        />
-        <FilterSelect
-          param="show"
-          label="Status"
-          allLabel="Active only"
-          value={show}
-          options={[
-            { value: 'all', label: 'Active and inactive' },
-            { value: 'inactive', label: 'Inactive only' },
-          ]}
-        />
+        <div className="contents">
+          <FilterSelect
+            param="city"
+            label="City"
+            allLabel="All"
+            value={city}
+            options={cities.map((value) => ({ value, label: value }))}
+          />
+          <FilterSelect
+            param="show"
+            label="Status"
+            allLabel="Active only"
+            value={show}
+            options={[
+              { value: 'all', label: 'Active and inactive' },
+              { value: 'inactive', label: 'Inactive only' },
+            ]}
+          />
+        </div>
       </div>
 
       {total > 0 ? (

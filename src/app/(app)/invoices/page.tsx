@@ -107,19 +107,18 @@ export default async function InvoicesPage({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search invoice, customer, order, PO…" />
         <StatusFilter
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
           pathname="/invoices"
         />
-        <SearchField placeholder="Search invoice, customer, order, PO…" />
+        <ListControls
+          ceiling={amountCeiling(invoices, (row) => row.total)}
+          params={params} pathname="/invoices" amountLabel="Total" />
       </div>
-
-      <ListControls
-        ceiling={amountCeiling(invoices, (row) => row.total)}
-        params={params} pathname="/invoices" amountLabel="Total" />
 
       {sorted.length === 0 ? (
         <ListEmpty

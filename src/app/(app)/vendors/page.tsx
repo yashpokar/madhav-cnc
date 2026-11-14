@@ -119,16 +119,18 @@ export default async function VendorsPage({ searchParams }: PageProps<'/vendors'
             { value: 'inactive', label: 'Inactive only' },
           ]}
         />
-      </div>
-
-      {total > 0 ? (
-        <>
-          <ListControls
+        {total > 0 ? (
+<ListControls
             params={params}
             pathname="/vendors"
             amountLabel="Paid"
             ceiling={amountCeiling(scope, (vendor) => vendor.spent)}
           />
+        ) : null}
+      </div>
+
+      {total > 0 ? (
+        <>
           <ListSummary
             shown={vendors.length}
             total={total}

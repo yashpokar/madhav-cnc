@@ -93,17 +93,16 @@ export default async function DispatchPage({
         {canCreate ? <Button href="/dispatch/new">New challan</Button> : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search challan, order, customer, vehicle, driver…" />
         <StatusFilter
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
           pathname="/dispatch"
         />
-        <SearchField placeholder="Search challan, order, customer, vehicle, driver…" />
+        <DateFilter params={params} pathname="/dispatch" />
       </div>
-
-      <DateFilter params={params} pathname="/dispatch" />
 
       {sorted.length === 0 ? (
         <ListEmpty

@@ -140,8 +140,10 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search note, party, GSTIN, invoice…" />
         <StatusFilter
+          label="Type"
           options={TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
           value={activeTab.value}
           params={params}
@@ -149,34 +151,34 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
           paramKey="tab"
           defaultValue="all"
         />
-        <SearchField placeholder="Search note, party, GSTIN, invoice…" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterSelect
-          param="status"
-          label="Status"
-          allLabel="All statuses"
-          value={status}
-          options={Object.entries(NOTE_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-        />
-        <FilterSelect
-          param="reason"
-          label="Reason"
-          allLabel="All reasons"
-          value={reason}
-          options={Object.entries(NOTE_REASON_LABELS).map(([value, label]) => ({ value, label }))}
-        />
-      </div>
-
-      {everyone.length > 0 ? (
-        <>
+        <div className="contents">
+          <FilterSelect
+            param="status"
+            label="Status"
+            allLabel="All"
+            value={status}
+            options={Object.entries(NOTE_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+          />
+          <FilterSelect
+            param="reason"
+            label="Reason"
+            allLabel="All"
+            value={reason}
+            options={Object.entries(NOTE_REASON_LABELS).map(([value, label]) => ({ value, label }))}
+          />
+        </div>
+        {everyone.length > 0 ? (
           <ListControls
             params={params}
             pathname="/notes"
             amountLabel="Total"
             ceiling={amountCeiling(scope, (note) => note.total)}
           />
+        ) : null}
+      </div>
+
+      {everyone.length > 0 ? (
+        <>
           <ListSummary
             shown={notes.length}
             total={everyone.length}

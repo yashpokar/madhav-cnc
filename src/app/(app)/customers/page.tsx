@@ -121,7 +121,8 @@ export default async function CustomersPage({
         <FormBanner tone="success">Customer {created} saved</FormBanner>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchField placeholder="Search name, code, phone, city, email…" />
         <StatusFilter
           options={[
             { value: 'all', label: 'All' },
@@ -135,24 +136,22 @@ export default async function CustomersPage({
           paramKey="status"
           defaultValue="all"
         />
-        <SearchField placeholder="Search name, code, phone, city, email…" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterSelect
-          param="type"
-          label="Customer type"
-          allLabel="All types"
-          value={type}
-          options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-        />
-        <FilterSelect
-          param="city"
-          label="City"
-          allLabel="All cities"
-          value={city}
-          options={cities.map((value) => ({ value, label: value }))}
-        />
+        <div className="contents">
+          <FilterSelect
+            param="type"
+            label="Customer type"
+            allLabel="All"
+            value={type}
+            options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+          />
+          <FilterSelect
+            param="city"
+            label="City"
+            allLabel="All"
+            value={city}
+            options={cities.map((value) => ({ value, label: value }))}
+          />
+        </div>
       </div>
 
       {everyone.length > 0 ? (

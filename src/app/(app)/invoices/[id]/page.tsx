@@ -106,11 +106,11 @@ export default async function InvoiceDetailPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <PrintButton label="Print invoice" />
-          {can(user.role, 'invoice:delete') && invoice.status === 'DRAFT' ? (
+          {can(user.role, 'invoice:delete') ? (
             <ConfirmButton
               label="Delete"
               title={`Delete invoice ${invoice.number}?`}
-              description="This permanently removes the draft invoice. Issued invoices cannot be deleted, only cancelled. This cannot be undone."
+              description="This permanently removes the invoice and any write-offs on it, and it stops counting towards the customer's balance. Invoices with payments or credit/debit notes must have those removed first. This cannot be undone."
               confirmLabel="Delete invoice"
               redirectTo="/invoices"
               action={deleteInvoice.bind(null, invoice.id)}

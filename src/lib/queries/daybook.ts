@@ -1,4 +1,15 @@
 import { prisma } from '@/lib/prisma'
+import { readDaybookLayout } from '@/lib/daybook-layout'
+
+/** The saved day book layout, with defaults filled in. */
+export async function getDaybookLayout() {
+  const setting = await prisma.companySetting.findUnique({
+    where: { id: 'default' },
+    select: { daybookLayout: true },
+  })
+
+  return readDaybookLayout(setting?.daybookLayout)
+}
 
 export async function listBankAccounts(activeOnly = false) {
   return prisma.bankAccount.findMany({
@@ -25,7 +36,7 @@ export async function listChannels(activeOnly = false) {
 export async function listDenominations(activeOnly = false) {
   return prisma.cashDenomination.findMany({
     where: activeOnly ? { isActive: true } : {},
-    orderBy: { value: 'desc' },
+    orderBy: [{ sortOrder: 'asc' }, { value: 'desc' }],
     select: { id: true, value: true, isActive: true },
   })
 }

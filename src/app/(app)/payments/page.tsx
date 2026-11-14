@@ -1,3 +1,8 @@
+import { RowActions } from '@/components/row-actions'
+import { deleteReceipt } from '@/lib/actions/payments'
+import { DateRangeFilter } from '@/components/date-range-filter'
+import { RangeSlider } from '@/components/range-slider'
+import { amountCeiling, readDateRange, readListControls } from '@/lib/list-controls'
 import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { SearchField } from '@/components/search-field'
@@ -83,12 +88,27 @@ export default async function PaymentsPage({
   const params = await searchParams
   const q = (typeof params.q === 'string' ? params.q : '').trim().toLowerCase()
   const matches = (name: string) => !q || name.toLowerCase().includes(q)
-  const [data, ledger] = await Promise.all([getReceivables(), getCustomerLedger()])
+  const [data, ledger] = await Promise.all([getReceivables(new Date(), readDateRange(params)),
+    getCustomerLedger(),
+  ])
   const canSeeOrders = can(user.role, 'order:read')
   const canRecord = can(user.role, 'payment:create')
 
   const defaultedTotal = ledger.reduce((sum, row) => sum + row.defaulted, 0)
   const defaultedCount = ledger.filter((row) => row.defaulted > 0).length
+
+  const { from, to } = readDateRange(params)
+  const minPaid = readListControls(params).min
+  const maxPaid = readListControls(params).max
+  const receiptCeiling = amountCeiling(data.payments, (row) => row.amount)
+  const receipts = data.payments.filter(
+    (row) =>
+      matches(row.customer.name) &&
+      (minPaid === undefined || row.amount >= minPaid) &&
+      (maxPaid === undefined || row.amount <= maxPaid),
+  )
+  const receiptsFiltered =
+    from !== undefined || to !== undefined || minPaid !== undefined || maxPaid !== undefined
 
   const byCustomerRows = data.byCustomer.filter((row) => matches(row.name))
   const ledgerRows = ledger.filter((row) => matches(row.name))
@@ -452,12 +472,41 @@ export default async function PaymentsPage({
       <Divider />
 
       <div>
-        <Subheading level={2}>Recent payments</Subheading>
+        <Subheading level={2}>
+          {receiptsFiltered ? 'Payments' : 'Recent payments'}
+        </Subheading>
+        <form
+          method="get"
+          action="/payments"
+          className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
+        >
+          {q ? <input type="hidden" name="q" value={String(params.q)} /> : null}
+          <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
+          <RangeSlider
+            label="Amount received"
+            ceiling={receiptCeiling}
+            defaultMin={minPaid}
+            defaultMax={maxPaid}
+            className="w-full sm:w-72"
+          />
+          <Button type="submit" outline>
+            Apply
+          </Button>
+          {receiptsFiltered ? (
+            <Button plain href={q ? `/payments?q=${encodeURIComponent(String(params.q))}` : '/payments'}>
+              Clear
+            </Button>
+          ) : null}
+        </form>
         <div className="mt-4">
-          {data.payments.length === 0 ? (
+          {receipts.length === 0 ? (
             <EmptyState
-              title="No payments recorded"
-              description="Payments show up here as you record them against invoices."
+              title={receiptsFiltered ? 'No payments match' : 'No payments recorded'}
+              description={
+                receiptsFiltered
+                  ? 'Try a wider date range or amount.'
+                  : 'Payments show up here as you record them against invoices.'
+              }
             />
           ) : (
             <Table dense grid striped>
@@ -470,10 +519,13 @@ export default async function PaymentsPage({
                   <TableHeader>Mode</TableHeader>
                   <TableHeader>Reference</TableHeader>
                   <TableHeader className="text-right">Amount</TableHeader>
+                  <TableHeader className="w-12">
+                    <span className="sr-only">Actions</span>
+                  </TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.payments.map((payment) => (
+                {receipts.map((payment) => (
                   <TableRow key={payment.id} href={`/payments/${payment.id}`}>
                     <TableCell className="font-mono text-xs">
                       {payment.number}
@@ -505,6 +557,19 @@ export default async function PaymentsPage({
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {exact.format(payment.amount)}
+                    </TableCell>
+                    <TableCell>
+                      <RowActions
+                        name={payment.number}
+                        viewHref={`/payments/${payment.id}`}
+                        deleteAction={
+                          can(user.role, 'payment:delete') && !payment.isAdvance
+                            ? deleteReceipt.bind(null, payment.id)
+                            : undefined
+                        }
+                        deleteTitle={`Delete ${payment.number}?`}
+                        deleteDescription="This removes the receipt and unapplies it from any invoices, so their balances go back up. This cannot be undone."
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

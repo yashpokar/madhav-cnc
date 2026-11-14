@@ -40,7 +40,18 @@ export function bucketFor(days: number): AgingKey {
   return (match ?? AGING_BUCKETS[0]).key
 }
 
-export async function getReceivables(today = new Date()) {
+export async function getReceivables(
+  today = new Date(),
+  range: { from?: string; to?: string } = {},
+) {
+  const ranged = Boolean(range.from || range.to)
+  const paidOn = ranged
+    ? {
+        ...(range.from ? { gte: new Date(`${range.from}T00:00:00Z`) } : {}),
+        ...(range.to ? { lte: new Date(`${range.to}T00:00:00Z`) } : {}),
+      }
+    : undefined
+
   const [invoices, notes, uninvoiced, recentPayments, allReceipts] =
     await Promise.all([
     prisma.invoice.findMany({
@@ -86,8 +97,9 @@ export async function getReceivables(today = new Date()) {
       },
     }),
     prisma.payment.findMany({
+      where: paidOn ? { paidOn } : undefined,
       orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }],
-      take: 25,
+      take: ranged ? 500 : 25,
       select: {
         id: true,
         number: true,
@@ -95,6 +107,7 @@ export async function getReceivables(today = new Date()) {
         amount: true,
         mode: true,
         reference: true,
+        orderId: true,
         customer: { select: { id: true, name: true } },
         allocations: {
           select: { amount: true, invoice: { select: { number: true } } },
@@ -106,6 +119,7 @@ export async function getReceivables(today = new Date()) {
         amount: true,
         customerId: true,
         customer: { select: { id: true, name: true } },
+        orderId: true,
         allocations: { select: { amount: true } },
       },
     }),
@@ -169,7 +183,9 @@ export async function getReceivables(today = new Date()) {
       (sum, allocation) => sum + num(allocation.amount),
       0,
     )
-    const unallocated = round2(num(receipt.amount) - allocated)
+    const unallocated = receipt.orderId
+      ? 0
+      : round2(num(receipt.amount) - allocated)
 
     if (unallocated <= 0) continue
 
@@ -294,6 +310,11 @@ export async function getReceivables(today = new Date()) {
     _sum: { amount: true },
     _count: { _all: true },
   })
+  const credited = await prisma.cashCredit.aggregate({
+    where: { entryDate: { gte: thirtyDaysAgo } },
+    _sum: { amount: true },
+    _count: { _all: true },
+  })
 
   return {
     outstanding,
@@ -302,8 +323,10 @@ export async function getReceivables(today = new Date()) {
     onAccountTotal,
     netReceivable: round2(outstanding - creditOutstanding - onAccountTotal),
     toBillTotal: round2(toBill.reduce((sum, order) => sum + order.total, 0)),
-    collected30: collected._sum.amount ? num(collected._sum.amount) : 0,
-    collected30Count: collected._count._all,
+    collected30:
+      (collected._sum.amount ? num(collected._sum.amount) : 0) +
+      (credited._sum.amount ? num(credited._sum.amount) : 0),
+    collected30Count: collected._count._all + credited._count._all,
     aging,
     invoices: [...open].sort((a, b) => b.overdueBy - a.overdueBy),
     byCustomer,
@@ -321,9 +344,10 @@ export async function getReceivables(today = new Date()) {
         mode: payment.mode,
         reference: payment.reference,
         customer: payment.customer,
+        isAdvance: Boolean(payment.orderId),
         amount: num(payment.amount),
         allocated: round2(allocated),
-        unallocated: round2(num(payment.amount) - allocated),
+        unallocated: payment.orderId ? 0 : round2(num(payment.amount) - allocated),
         invoiceNumbers: payment.allocations.map(
           (allocation) => allocation.invoice.number,
         ),

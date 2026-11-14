@@ -1,7 +1,8 @@
 import { Button } from '@/components/catalyst/button'
-import { Input } from '@/components/catalyst/input'
+import { DateRangeFilter } from '@/components/date-range-filter'
+import { RangeSlider } from '@/components/range-slider'
 import { Select } from '@/components/catalyst/select'
-import { LIST_SORTS, readListControls } from '@/lib/list-controls'
+import { LIST_SORTS, readDateRange, readListControls } from '@/lib/list-controls'
 
 type Params = Record<string, string | string[] | undefined>
 
@@ -10,18 +11,27 @@ export function ListControls({
   params,
   pathname,
   amountLabel = 'Amount',
+  ceiling,
   withDue = false,
 }: {
   params: Params
   pathname: string
   amountLabel?: string
+  /** Largest amount in the list, which sets the slider's scale. */
+  ceiling: number
   /** Offer sorting by the amount still owed (invoices). */
   withDue?: boolean
 }) {
   const { sort, min, max } = readListControls(params)
-  const active = sort !== undefined || min !== undefined || max !== undefined
+  const { from, to } = readDateRange(params)
+  const active =
+    sort !== undefined ||
+    min !== undefined ||
+    max !== undefined ||
+    from !== undefined ||
+    to !== undefined
   const keep = Object.entries(params).filter(
-    ([key, value]) => !['sort', 'min', 'max', 'page'].includes(key) && typeof value === 'string',
+    ([key, value]) => !['sort', 'min', 'max', 'from', 'to', 'page'].includes(key) && typeof value === 'string',
   ) as [string, string][]
   const clear = new URLSearchParams(keep.filter(([key]) => key !== 'size')).toString()
 
@@ -43,32 +53,14 @@ export function ListControls({
             ))}
         </Select>
       </label>
-      <div className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-        {amountLabel} range (₹)
-        <div className="flex items-center gap-2">
-          <Input
-            name="min"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            placeholder="Min"
-            aria-label={`Minimum ${amountLabel.toLowerCase()}`}
-            defaultValue={min ?? ''}
-            className="w-28"
-          />
-          <span aria-hidden="true">–</span>
-          <Input
-            name="max"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            placeholder="Max"
-            aria-label={`Maximum ${amountLabel.toLowerCase()}`}
-            defaultValue={max ?? ''}
-            className="w-28"
-          />
-        </div>
-      </div>
+      <DateRangeFilter defaultFrom={from} defaultTo={to} className="w-full sm:w-auto" />
+      <RangeSlider
+        label={`${amountLabel} range`}
+        ceiling={ceiling}
+        defaultMin={min}
+        defaultMax={max}
+        className="w-full sm:w-72"
+      />
       <Button type="submit" outline>
         Apply
       </Button>

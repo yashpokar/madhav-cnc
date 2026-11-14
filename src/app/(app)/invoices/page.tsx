@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
-import { applyListControls } from '@/lib/list-controls'
+import { amountCeiling, applyListControls } from '@/lib/list-controls'
 import { RowActions } from '@/components/row-actions'
 import { deleteInvoice } from '@/lib/actions/invoices'
 import { Badge } from '@/components/catalyst/badge'
@@ -129,7 +129,9 @@ export default async function InvoicesPage({
         <SearchField placeholder="Search invoice, customer, order…" />
       </div>
 
-      <ListControls params={params} pathname="/invoices" amountLabel="Total" withDue />
+      <ListControls
+        ceiling={amountCeiling(invoices, (row) => row.total)}
+        params={params} pathname="/invoices" amountLabel="Total" withDue />
 
       {invoices.length > 0 && sorted.length === 0 ? (
         <EmptyState

@@ -527,6 +527,8 @@ model Order {
   updatedById String? @map("updated_by_id")
   updatedBy   User?   @relation("OrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
+  advancePayment Payment?
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -667,6 +669,10 @@ model QuotationAttachment {
 
 model CompanySetting {
   id String @id @default("default")
+
+  /// How the day book looks (density, sides, counting area). Validated and
+  /// defaulted in lib/daybook-layout.ts, so old or empty values still work.
+  daybookLayout Json? @map("daybook_layout")
 
   companyName String  @default("Madhav CNC") @map("company_name")
   addressLine String? @map("address_line")
@@ -1050,9 +1056,10 @@ model BankAccount {
 }
 
 model CashDenomination {
-  id       String  @id @default(cuid())
-  value    Int     @unique
-  isActive Boolean @default(true) @map("is_active")
+  id        String  @id @default(cuid())
+  value     Int     @unique
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1136,6 +1143,12 @@ model Payment {
   paidOn    DateTime    @map("paid_on") @db.Date
   notes     String?
 
+  /// Set when this receipt is the advance taken on an order. It is edited on
+  /// the order and is never applied to invoices (the invoice deducts it as
+  /// advanceAdjusted), so it is not counted twice.
+  orderId String? @unique @map("order_id")
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
   recordedById String? @map("recorded_by_id")
   recordedBy   User?   @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
 
@@ -1215,7 +1228,11 @@ model Expense {
   category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   expenseDate DateTime @map("expense_date") @db.Date
+  /// The vendor's name as it was when the expense was saved; vendorId is the
+  /// live record (contact details), which can be missing for old entries.
   payeeName   String   @map("payee_name")
+  vendorId    String?  @map("vendor_id")
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   /// Ticked off in the day book once verified against the bank or cash.
   isChecked   Boolean  @default(false) @map("is_checked")
   channelId   String?  @map("channel_id")
@@ -1345,4 +1362,29 @@ model ActivityLog {
 
   @@index([entityType, entityId, createdAt])
   @@map("activity_logs")
+}
+
+/// Someone the business pays: a supplier, a contractor, a utility. Expenses
+/// point at a vendor so contact details live in one place; a vendor created
+/// by typing a name in the day book starts with just the name.
+model Vendor {
+  id          String  @id @default(cuid())
+  name        String
+  contactName String? @map("contact_name")
+  phone       String?
+  email       String?
+  gstin       String?
+  address     String?
+  city        String?
+  /// What they supply or why they are paid, e.g. "Edge banding, monthly".
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  expenses Expense[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("vendors")
 }

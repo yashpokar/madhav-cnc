@@ -14,6 +14,7 @@ import {
 import type { ExpenseData } from '@/lib/validation/accounting'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
+import { resolveVendor } from '@/lib/vendors'
 
 export type { FormState, SimpleResult }
 
@@ -55,13 +56,15 @@ export async function createExpense(_previous: FormState, formData: FormData): P
   }
 
   const number = await nextExpenseNumber()
+  const vendor = await resolveVendor(parsed.data.payeeName)
 
   const expense = await prisma.expense.create({
     data: {
       number,
       categoryId: parsed.data.categoryId,
       expenseDate: parsed.data.expenseDate,
-      payeeName: parsed.data.payeeName,
+      payeeName: vendor.name,
+      vendorId: vendor.id,
       description: parsed.data.description,
       amount: parsed.data.amount,
       taxRatePercent: parsed.data.taxRatePercent,
@@ -106,16 +109,14 @@ export async function createLiteExpense(
 
   // Match an existing vendor's spelling so "ABC traders" and "Abc Traders"
   // don't become two vendors.
-  const known = await prisma.expense.findFirst({
-    where: { payeeName: { equals: parsed.data.payeeName, mode: 'insensitive' } },
-    select: { payeeName: true },
-  })
+  const vendor = await resolveVendor(parsed.data.payeeName)
 
   const expense = await prisma.expense.create({
     data: {
       number: await nextExpenseNumber(),
       expenseDate: parsed.data.expenseDate,
-      payeeName: known?.payeeName ?? parsed.data.payeeName,
+      payeeName: vendor.name,
+      vendorId: vendor.id,
       amount: parsed.data.amount,
       paymentMode: parsed.data.paymentMode,
       ...amounts(parsed.data),
@@ -159,16 +160,14 @@ export async function quickAddExpense(input: {
     return { ok: false, error: parsed.error.issues[0].message }
   }
 
-  const known = await prisma.expense.findFirst({
-    where: { payeeName: { equals: parsed.data.payeeName, mode: 'insensitive' } },
-    select: { payeeName: true },
-  })
+  const vendor = await resolveVendor(parsed.data.payeeName)
 
   const expense = await prisma.expense.create({
     data: {
       number: await nextExpenseNumber(),
       expenseDate: parsed.data.expenseDate,
-      payeeName: known?.payeeName ?? parsed.data.payeeName,
+      payeeName: vendor.name,
+      vendorId: vendor.id,
       amount: parsed.data.amount,
       paymentMode: parsed.data.paymentMode,
       channelId: channel.id,
@@ -337,12 +336,15 @@ export async function updateExpense(
     return { status: 'error', message: 'Expense not found' }
   }
 
+  const vendor = await resolveVendor(parsed.data.payeeName)
+
   await prisma.expense.update({
     where: { id },
     data: {
       categoryId: parsed.data.categoryId,
       expenseDate: parsed.data.expenseDate,
-      payeeName: parsed.data.payeeName,
+      payeeName: vendor.name,
+      vendorId: vendor.id,
       description: parsed.data.description,
       amount: parsed.data.amount,
       taxRatePercent: parsed.data.taxRatePercent,

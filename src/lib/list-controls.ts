@@ -21,6 +21,32 @@ function amount(params: Params, key: string) {
   return Number.isFinite(value) && value >= 0 ? value : undefined
 }
 
+const ISO = /^\d{4}-\d{2}-\d{2}$/
+
+function day(params: Params, key: string) {
+  const text = first(params[key])
+
+  return text && ISO.test(text) ? text : undefined
+}
+
+/** The from/to dates (ISO yyyy-mm-dd) picked in a date-range filter. */
+export function readDateRange(params: Params) {
+  return { from: day(params, 'from'), to: day(params, 'to') }
+}
+
+/** True when the date falls inside the picked range; open ends always pass. */
+export function inDateRange(date: Date, params: Params) {
+  const { from, to } = readDateRange(params)
+  const value = date.toISOString().slice(0, 10)
+
+  return (!from || value >= from) && (!to || value <= to)
+}
+
+/** The largest amount in a list: the right-hand end of the range slider. */
+export function amountCeiling<T>(rows: T[], amount: (row: T) => number) {
+  return rows.reduce((top, row) => Math.max(top, amount(row)), 0)
+}
+
 export function readListControls(params: Params) {
   const picked = first(params.sort)
 
@@ -49,7 +75,11 @@ export function applyListControls<T>(
   const kept = rows.filter((row) => {
     const value = pick.amount(row)
 
-    return (min === undefined || value >= min) && (max === undefined || value <= max)
+    return (
+      (min === undefined || value >= min) &&
+      (max === undefined || value <= max) &&
+      inDateRange(pick.date(row), params)
+    )
   })
 
   if (!sort) return kept

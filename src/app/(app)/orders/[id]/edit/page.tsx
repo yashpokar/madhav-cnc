@@ -65,6 +65,7 @@ export default async function EditOrderPage({
           discountType: order.discountType,
           discountValue: order.discountValue,
           advanceAmount: order.advanceAmount,
+          advanceMode: order.advancePayment?.mode ?? 'CASH',
           transportCharge: order.transportCharge,
           transportTaxRatePercent: order.transportTaxRatePercent,
           notes: order.notes,

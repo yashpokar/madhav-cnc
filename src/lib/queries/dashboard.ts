@@ -131,12 +131,17 @@ export async function getMoneyWatch() {
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
   )
 
-  const [overdue, collected, overdueList] = await Promise.all([
+  const [overdue, collected, credited, overdueList] = await Promise.all([
     prisma.invoice.count({
       where: { status: 'ISSUED', dueDate: { lt: today } },
     }),
     prisma.payment.aggregate({
       where: { paidOn: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+    // Money typed into the day book's Credit side is collected money too.
+    prisma.cashCredit.aggregate({
+      where: { entryDate: { gte: monthStart } },
       _sum: { amount: true },
     }),
     prisma.invoice.findMany({
@@ -155,7 +160,10 @@ export async function getMoneyWatch() {
 
   return {
     overdueCount: overdue,
-    collectedThisMonth: collected._sum.amount?.toNumber() ?? 0,
+    collectedThisMonth:
+      (collected._sum.amount?.toNumber() ?? 0) + (credited._sum.amount?.toNumber() ?? 0),
+    receiptsThisMonth: collected._sum.amount?.toNumber() ?? 0,
+    creditsThisMonth: credited._sum.amount?.toNumber() ?? 0,
     overdueList: overdueList.map((invoice) => ({
       ...invoice,
       total: invoice.total.toNumber(),

@@ -27,7 +27,8 @@ import type { FormState } from '@/lib/actions/orders'
 import { CustomerCombobox } from '@/components/customer-combobox'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
-import { DiscountType } from '@/generated/prisma/enums'
+import { DiscountType, PaymentMode } from '@/generated/prisma/enums'
+import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { currency, emptyLine, LineEditor, type EditorLine } from '@/components/line-editor'
 
 export type OrderFormValues = {
@@ -39,6 +40,7 @@ export type OrderFormValues = {
   dueDate: string | null
   customerPoNumber: string | null
   advanceAmount: number
+  advanceMode: PaymentMode
   transportCharge: number
   transportTaxRatePercent: number
   siteAddress: string | null
@@ -97,6 +99,9 @@ export function OrderForm({
 
   const [discountType, setDiscountType] = useState<DiscountType>(
     values.discountType,
+  )
+  const [advanceMode, setAdvanceMode] = useState<PaymentMode>(
+    values.advanceMode,
   )
   const [discountValue, setDiscountValue] = useState(String(values.discountValue))
   const [transportCharge, setTransportCharge] = useState(
@@ -385,7 +390,23 @@ export function OrderForm({
                   min={0}
                   defaultValue={keep('advanceAmount', values.advanceAmount)}
                 />
-                <Description>Recorded against this order.</Description>
+                <Description>
+                  Recorded as a receipt in Payments and the Day book.
+                </Description>
+              </Field>
+              <Field>
+                <Label>Advance paid by</Label>
+                <Listbox
+                  name="advanceMode"
+                  value={advanceMode}
+                  onChange={setAdvanceMode}
+                >
+                  {Object.values(PaymentMode).map((value) => (
+                    <ListboxOption key={value} value={value}>
+                      <ListboxLabel>{PAYMENT_MODE_LABELS[value]}</ListboxLabel>
+                    </ListboxOption>
+                  ))}
+                </Listbox>
               </Field>
               <Field>
                 <Label>Customer PO number</Label>

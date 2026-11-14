@@ -3,6 +3,7 @@ import {
   DiscountType,
   MaterialSupply,
   OrderStatus,
+  PaymentMode,
 } from '@/generated/prisma/enums'
 import { quotationLineSchema } from '@/lib/validation/quotations'
 
@@ -59,6 +60,7 @@ export const orderInputSchema = z.object({
   discountType: z.enum(DiscountType).default('NONE'),
   discountValue: z.coerce.number().min(0).max(99_999_999).default(0),
   advanceAmount: z.coerce.number().min(0).max(99_999_999).default(0),
+  advanceMode: z.enum(PaymentMode).default('CASH'),
   transportCharge: z.coerce.number().min(0).max(9_999_999).default(0),
   transportTaxRatePercent: z.coerce.number().min(0).max(100).default(18),
   notes: optionalText(2000),

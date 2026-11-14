@@ -1,5 +1,7 @@
 import { Badge } from '@/components/catalyst/badge'
-import { Input } from '@/components/catalyst/input'
+import { DateRangeFilter } from '@/components/date-range-filter'
+import { RangeSlider } from '@/components/range-slider'
+import { amountCeiling, inDateRange, readDateRange } from '@/lib/list-controls'
 import { Button } from '@/components/catalyst/button'
 import { Select } from '@/components/catalyst/select'
 import {
@@ -66,8 +68,10 @@ export async function OverallStatement({
   const status = one(params, 'status')
   const material = one(params, 'material')
   const stage = one(params, 'stage')
+  const balance = one(params, 'balance') === 'due' || one(params, 'balance') === 'clear' ? one(params, 'balance') : undefined
   const min = amountParam(params, 'min')
   const max = amountParam(params, 'max')
+  const { from, to } = readDateRange(params)
   const picked = one(params, 'sort')
   const sort: SortKey = picked && picked in SORTS ? (picked as SortKey) : 'date_desc'
 
@@ -85,8 +89,11 @@ export async function OverallStatement({
       (!status || row.status === status) &&
       (!material || row.materials.includes(material)) &&
       (!stage || row.stageKey === stage) &&
+      (balance !== 'due' || row.due > 0.005) &&
+      (balance !== 'clear' || row.due <= 0.005) &&
       (min === undefined || row.total >= min) &&
-      (max === undefined || row.total <= max),
+      (max === undefined || row.total <= max) &&
+      inDateRange(row.orderDate, params),
   )
 
   rows.sort((a, b) => {
@@ -113,7 +120,15 @@ export async function OverallStatement({
     { total: 0, invoiced: 0, received: 0, due: 0 },
   )
   const filtered = Boolean(
-    customer || status || material || stage || min !== undefined || max !== undefined,
+    customer ||
+      status ||
+      material ||
+      stage ||
+      balance ||
+      min !== undefined ||
+      max !== undefined ||
+      from ||
+      to,
   )
 
   // Keep the other dashboard filters when this one is applied.
@@ -269,6 +284,14 @@ export async function OverallStatement({
           </Select>
         </label>
         <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
+          Balance
+          <Select name="balance" defaultValue={balance ?? 'all'}>
+            <option value="all">Any balance</option>
+            <option value="due">Has a balance due</option>
+            <option value="clear">Nothing due</option>
+          </Select>
+        </label>
+        <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
           Sort by
           <Select name="sort" defaultValue={sort}>
             {Object.entries(SORTS).map(([value, label]) => (
@@ -278,30 +301,19 @@ export async function OverallStatement({
             ))}
           </Select>
         </label>
-        <div className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Amount range (₹)
-          <div className="flex items-center gap-2">
-            <Input
-              name="min"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              placeholder="Min"
-              aria-label="Minimum amount"
-              defaultValue={min ?? ''}
-            />
-            <span aria-hidden="true">–</span>
-            <Input
-              name="max"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              placeholder="Max"
-              aria-label="Maximum amount"
-              defaultValue={max ?? ''}
-            />
-          </div>
-        </div>
+        <DateRangeFilter
+          label="Order date"
+          defaultFrom={from}
+          defaultTo={to}
+          className="col-span-2"
+        />
+        <RangeSlider
+          label="Order amount"
+          ceiling={amountCeiling(all, (row) => row.total)}
+          defaultMin={min}
+          defaultMax={max}
+          className="col-span-2"
+        />
         <div className="flex gap-2">
           <Button type="submit">Apply</Button>
           {filtered ? (

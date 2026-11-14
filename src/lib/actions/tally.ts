@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { reconcile } from '@/lib/queries/daybook'
 import { requireCapability } from '@/lib/session'
 import { PaymentMode } from '@/generated/prisma/enums'
+import { daybookLayoutSchema, readDaybookLayout } from '@/lib/daybook-layout'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -163,7 +164,11 @@ export async function createDenomination(value: number): Promise<SimpleResult> {
 
   if (exists) return { ok: false, error: `₹${value} is already in the list` }
 
-  await prisma.cashDenomination.create({ data: { value } })
+  const last = await prisma.cashDenomination.aggregate({ _max: { sortOrder: true } })
+
+  await prisma.cashDenomination.create({
+    data: { value, sortOrder: (last._max.sortOrder ?? 0) + 1 },
+  })
 
   return done(`₹${value} added`)
 }
@@ -340,4 +345,78 @@ export async function deleteChannel(id: string): Promise<SimpleResult> {
   await prisma.paymentChannel.delete({ where: { id } })
 
   return done('Payment mode deleted')
+}
+
+/** Saves how the day book looks. */
+export async function saveDaybookLayout(input: unknown): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+
+  const layout = readDaybookLayout(input)
+  const json = JSON.parse(JSON.stringify(daybookLayoutSchema.parse(layout)))
+
+  await prisma.companySetting.upsert({
+    where: { id: 'default' },
+    create: { id: 'default', daybookLayout: json },
+    update: { daybookLayout: json },
+  })
+
+  revalidatePath('/daybook')
+
+  return { ok: true, message: 'Layout saved' }
+}
+
+/** Moves a bank account one place up or down in the counting area. */
+export async function moveBankAccount(id: string, direction: 'up' | 'down'): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+
+  const rows = await prisma.bankAccount.findMany({
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    select: { id: true },
+  })
+
+  return reorder(rows.map((row) => row.id), id, direction, (order) =>
+    prisma.$transaction(
+      order.map((rowId, index) =>
+        prisma.bankAccount.update({ where: { id: rowId }, data: { sortOrder: index + 1 } }),
+      ),
+    ),
+  )
+}
+
+/** Moves a note denomination one place up or down in the counting area. */
+export async function moveDenomination(id: string, direction: 'up' | 'down'): Promise<SimpleResult> {
+  await requireCapability('expense:update')
+
+  const rows = await prisma.cashDenomination.findMany({
+    orderBy: [{ sortOrder: 'asc' }, { value: 'desc' }],
+    select: { id: true },
+  })
+
+  return reorder(rows.map((row) => row.id), id, direction, (order) =>
+    prisma.$transaction(
+      order.map((rowId, index) =>
+        prisma.cashDenomination.update({ where: { id: rowId }, data: { sortOrder: index + 1 } }),
+      ),
+    ),
+  )
+}
+
+async function reorder(
+  ids: string[],
+  id: string,
+  direction: 'up' | 'down',
+  save: (order: string[]) => Promise<unknown>,
+): Promise<SimpleResult> {
+  const from = ids.indexOf(id)
+  const to = direction === 'up' ? from - 1 : from + 1
+
+  if (from < 0 || to < 0 || to >= ids.length) return { ok: true, message: 'Already there' }
+
+  const next = [...ids]
+  ;[next[from], next[to]] = [next[to], next[from]]
+  await save(next)
+  revalidatePath('/daybook')
+  revalidatePath('/daybook/setup')
+
+  return { ok: true, message: 'Order saved' }
 }

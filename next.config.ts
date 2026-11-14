@@ -8,6 +8,15 @@ const extraOrigins = (process.env.ALLOWED_ORIGINS ?? '')
 const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS !== 'false'
 
 const nextConfig: NextConfig = {
+  // Pages folded into others; keep old links and bookmarks working.
+  async redirects() {
+    return [
+      { source: '/cashbook', destination: '/daybook', permanent: true },
+      { source: '/expenses/lite', destination: '/daybook', permanent: true },
+      { source: '/expenses/lite/new', destination: '/expenses/new', permanent: true },
+      { source: '/daybook/credit/new', destination: '/daybook', permanent: true },
+    ]
+  },
   experimental: {
     authInterrupts: true,
     serverActions: {

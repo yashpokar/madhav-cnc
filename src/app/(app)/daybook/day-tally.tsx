@@ -158,13 +158,12 @@ export function DayTally({
     })
   }
 
-  const bankRows = layout.showBanks
-    ? banks.map((b) => (
+  const bankRows = banks.map((b) => (
         <tr key={`bank-${b.id}`}>
           <th scope="row" className="py-1 pr-3 text-left font-medium">
             {b.name}
           </th>
-          {layout.showCount ? <td className="px-2 text-right text-zinc-300">—</td> : null}
+          <td className="px-2 text-right text-zinc-300">—</td>
           <td className="py-1 pl-2">
             <input
               type="number"
@@ -183,10 +182,8 @@ export function DayTally({
           </td>
         </tr>
       ))
-    : null
 
-  const noteRows = layout.showNotes
-    ? denominations.map((d) => {
+  const noteRows = denominations.map((d) => {
         const count = Number(noteCounts[d.value]) || 0
 
         return (
@@ -194,7 +191,6 @@ export function DayTally({
             <th scope="row" className="py-1 pr-3 text-left font-medium tabular-nums">
               ₹{d.value} <span className="font-normal text-zinc-400">×</span>
             </th>
-            {layout.showCount ? (
               <td className="px-2 py-1">
                 <input
                   type="number"
@@ -212,49 +208,43 @@ export function DayTally({
                   onBlur={() => save(() => setTallyCount(date, d.value, count))}
                 />
               </td>
-            ) : null}
             <td className="py-1 pl-2 text-right text-zinc-600 tabular-nums dark:text-zinc-300">
               {count ? money.format(count * d.value) : ''}
             </td>
           </tr>
         )
       })
-    : null
 
   return (
     <div className="grid grid-cols-1 gap-8 border-t border-zinc-950/5 p-5 lg:grid-cols-2 dark:border-white/10">
       <div className="min-w-0 overflow-x-auto">
         <h3 className="mb-3 text-sm/6 font-semibold tracking-wide uppercase">
-          {layout.titleLabel}
+          Banks and cash counted
         </h3>
         <table className="w-full min-w-[20rem] border-collapse text-sm/6">
           <thead>
             <tr className="border-b border-zinc-950/10 text-xs/5 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-              <th className="pb-2 text-left font-medium">{layout.modeLabel}</th>
-              {layout.showCount ? (
-                <th className="w-28 pb-2 text-right font-medium">{layout.countLabel}</th>
-              ) : null}
-              <th className="w-44 pb-2 text-right font-medium">{layout.amountLabel}</th>
+              <th className="pb-2 text-left font-medium">Mode</th>
+              <th className="w-28 pb-2 text-right font-medium">Count</th>
+              <th className="w-44 pb-2 text-right font-medium">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-950/5 dark:divide-white/5">
             {layout.order === 'banks-first' ? bankRows : noteRows}
             {layout.order === 'banks-first' ? noteRows : bankRows}
           </tbody>
-          {layout.showTotal ? (
-            <tfoot>
+          <tfoot>
               <tr className="border-t border-zinc-950/10 font-semibold dark:border-white/10">
-                <td className="pt-3 text-left" colSpan={layout.showCount ? 2 : 1}>
-                  {layout.totalLabel}
+                <td className="pt-3 text-left" colSpan={2}>
+                  Grand total
                 </td>
                 <td className="pt-3 text-right tabular-nums">
                   {money.format(
-                    (layout.showBanks ? bankCounted : 0) + (layout.showNotes ? cashCounted : 0),
+                    bankCounted + cashCounted,
                   )}
                 </td>
               </tr>
             </tfoot>
-          ) : null}
         </table>
       </div>
 

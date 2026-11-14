@@ -131,8 +131,6 @@ export async function OverallStatement({
       to,
   )
 
-  // Keep the other dashboard filters when this one is applied.
-  const keep = typeof params.outstanding === 'string' ? params.outstanding : undefined
 
   const renderTable = (list: typeof rows) => (
     <Table dense grid striped>
@@ -233,10 +231,9 @@ export async function OverallStatement({
 
       <form
         method="get"
-        action="/"
+        action="/statement"
         className="grid grid-cols-2 items-end gap-3 px-3 py-3 lg:grid-cols-4 print:hidden"
       >
-        {keep ? <input type="hidden" name="outstanding" value={keep} /> : null}
         <label className="grid gap-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
           Customer
           <Select name="customer" defaultValue={customer ?? 'all'}>
@@ -317,7 +314,7 @@ export async function OverallStatement({
         <div className="flex gap-2">
           <Button type="submit">Apply</Button>
           {filtered ? (
-            <Button plain href={keep ? `/?outstanding=${keep}` : '/'}>
+            <Button plain href="/statement">
               Clear
             </Button>
           ) : null}

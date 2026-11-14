@@ -3,6 +3,7 @@
 import { useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { quickAddCredit, quickAddExpense } from '@/lib/actions/expenses'
+import { VendorPicker, type VendorOption } from '@/components/vendor-picker'
 
 const field =
   'w-full rounded-md bg-white px-2.5 py-1.5 text-sm/6 ring-1 ring-zinc-950/10 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 disabled:opacity-60 dark:bg-zinc-900 dark:ring-white/15'
@@ -17,12 +18,16 @@ export function EntryRow({
   kind,
   date,
   suggestions,
+  vendors = [],
   channels,
 }: {
   kind: 'credit' | 'debit'
   /** The day this row adds to, YYYY-MM-DD. */
   date: string
+  /** Names offered for money received (free text). */
   suggestions: string[]
+  /** Vendors to pick from for money spent. */
+  vendors?: VendorOption[]
   /** The business's own payment modes, e.g. HDFC NEFT, SBI UPI, CASH. */
   channels: { id: string; name: string }[]
 }) {
@@ -64,31 +69,33 @@ export function EntryRow({
     }
   }
 
-  const typed = name.trim()
-  const isNewVendor =
-    kind === 'debit' &&
-    typed.length > 0 &&
-    !suggestions.some((option) => option.toLowerCase() === typed.toLowerCase())
-
   return (
     <div className="mt-3 rounded-lg bg-zinc-50 p-2 ring-1 ring-zinc-950/5 print:hidden dark:bg-white/5 dark:ring-white/10">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_7rem_9.5rem_auto]">
-        <input
-          ref={nameRef}
-          list={listId}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          onKeyDown={onEnter}
-          placeholder={kind === 'debit' ? 'Paid to a vendor…' : 'Received from…'}
-          aria-label={kind === 'debit' ? 'Paid to' : 'Received from'}
-          className={`${field} col-span-2 sm:col-span-1`}
-          disabled={pending}
-        />
-        <datalist id={listId}>
-          {suggestions.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
+        {kind === 'debit' ? (
+          <div className="col-span-2 sm:col-span-1">
+            <VendorPicker options={vendors} value={name} onChange={setName} disabled={pending} />
+          </div>
+        ) : (
+          <>
+            <input
+              ref={nameRef}
+              list={listId}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={onEnter}
+              placeholder="Received from…"
+              aria-label="Received from"
+              className={`${field} col-span-2 sm:col-span-1`}
+              disabled={pending}
+            />
+            <datalist id={listId}>
+              {suggestions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </>
+        )}
         <input
           type="number"
           inputMode="decimal"
@@ -125,11 +132,6 @@ export function EntryRow({
           {pending ? 'Adding…' : 'Add'}
         </button>
       </div>
-      {isNewVendor ? (
-        <p className="px-1 pt-1.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          New vendor. “{typed}” will be added to Vendors; add contact details there any time.
-        </p>
-      ) : null}
       {error ? (
         <p role="alert" className="px-1 pt-1.5 text-xs/5 text-red-600 dark:text-red-400">
           {error}

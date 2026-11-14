@@ -19,6 +19,7 @@ import { Switch, SwitchField } from '@/components/catalyst/switch'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
 import { QuickNameDialog } from '@/components/quick-name-dialog'
+import { VendorPicker, type VendorOption } from '@/components/vendor-picker'
 import { quickCreateExpenseCategory, type FormState } from '@/lib/actions/expenses'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { PaymentMode } from '@/generated/prisma/enums'
@@ -50,12 +51,14 @@ export function ExpenseForm({
   values,
   categories: initialCategories,
   orders,
+  vendors,
   submitLabel,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
   values: ExpenseFormValues
   categories: { id: string; name: string }[]
   orders: { id: string; number: string; customerName: string }[]
+  vendors: VendorOption[]
   submitLabel: string
 }) {
   const router = useRouter()
@@ -78,6 +81,7 @@ export function ExpenseForm({
     keep('categoryId', values.categoryId),
   )
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
+  const [payee, setPayee] = useState(keep('payeeName', values.payeeName))
   const [amount, setAmount] = useState(keep('amount', values.amount))
   const [taxRate, setTaxRate] = useState(
     keep('taxRatePercent', values.taxRatePercent),
@@ -115,12 +119,8 @@ export function ExpenseForm({
             </Field>
             <Field>
               <Label>Paid to</Label>
-              <Input
-                name="payeeName"
-                defaultValue={keep('payeeName', values.payeeName)}
-                required
-                invalid={Boolean(errors.payeeName)}
-              />
+              <input type="hidden" name="payeeName" value={payee} />
+              <VendorPicker options={vendors} value={payee} onChange={setPayee} />
               {errors.payeeName ? (
                 <ErrorMessage>{errors.payeeName}</ErrorMessage>
               ) : null}

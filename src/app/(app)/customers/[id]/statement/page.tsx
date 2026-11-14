@@ -1,3 +1,5 @@
+import { RowActions } from '@/components/row-actions'
+import { deleteReceipt } from '@/lib/actions/payments'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -13,6 +15,9 @@ import {
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
+import { DateRangeFilter } from '@/components/date-range-filter'
+import { RangeSlider } from '@/components/range-slider'
+import { amountCeiling, inDateRange, readDateRange, readListControls } from '@/lib/list-controls'
 import { EmptyState } from '@/components/form-banner'
 import { PrintButton } from '@/components/print-button'
 import { DocumentLetterhead } from '@/components/document-letterhead'
@@ -40,9 +45,11 @@ const dateFormat = new Intl.DateTimeFormat('en-IN', {
 
 export default async function CustomerStatementPage({
   params,
+  searchParams,
 }: PageProps<'/customers/[id]/statement'>) {
   const user = await requireCapability('payment:read')
   const { id } = await params
+  const query = await searchParams
 
   const [account, company] = await Promise.all([
     customerAccount(id),
@@ -52,6 +59,17 @@ export default async function CustomerStatementPage({
   if (!account) {
     notFound()
   }
+
+  const { from, to } = readDateRange(query)
+  const { min, max } = readListControls(query)
+  const receipts = account.receipts.filter(
+    (receipt) =>
+      inDateRange(receipt.paidOn, query) &&
+      (min === undefined || receipt.amount >= min) &&
+      (max === undefined || receipt.amount <= max),
+  )
+  const filtered = receipts.length !== account.receipts.length ||
+    from !== undefined || to !== undefined || min !== undefined || max !== undefined
 
   const owing = account.net > 0
   const settled = Math.abs(account.net) < 0.005
@@ -184,11 +202,38 @@ export default async function CustomerStatementPage({
 
       <div>
         <Subheading level={2}>Receipts</Subheading>
+        {account.receipts.length > 0 ? (
+          <form
+            method="get"
+            className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-4 print:hidden"
+          >
+            <DateRangeFilter label="Received on" defaultFrom={from} defaultTo={to} />
+            <RangeSlider
+              label="Amount received"
+              ceiling={amountCeiling(account.receipts, (row) => row.amount)}
+              defaultMin={min}
+              defaultMax={max}
+              className="w-full sm:w-72"
+            />
+            <Button type="submit" outline>
+              Apply
+            </Button>
+            {filtered ? (
+              <Button plain href={`/customers/${account.customer.id}/statement`}>
+                Clear
+              </Button>
+            ) : null}
+          </form>
+        ) : null}
         <div className="mt-4">
-          {account.receipts.length === 0 ? (
+          {receipts.length === 0 ? (
             <EmptyState
-              title="No receipts"
-              description="Nothing has been received from this customer yet."
+              title={account.receipts.length === 0 ? 'No receipts' : 'No receipts match'}
+              description={
+                account.receipts.length === 0
+                  ? 'Nothing has been received from this customer yet.'
+                  : 'Try a wider date range or amount.'
+              }
             />
           ) : (
             <Table dense grid striped>
@@ -201,10 +246,13 @@ export default async function CustomerStatementPage({
                   <TableHeader className="text-right">Amount</TableHeader>
                   <TableHeader className="text-right">Applied</TableHeader>
                   <TableHeader className="text-right">On account</TableHeader>
+                  <TableHeader className="w-12 print:hidden">
+                    <span className="sr-only">Actions</span>
+                  </TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {account.receipts.map((receipt) => (
+                {receipts.map((receipt) => (
                   <TableRow key={receipt.id} href={`/payments/${receipt.id}`}>
                     <TableCell className="font-mono text-xs">
                       {receipt.number}
@@ -230,6 +278,19 @@ export default async function CustomerStatementPage({
                       ) : (
                         <span className="text-zinc-400">—</span>
                       )}
+                    </TableCell>
+                    <TableCell className="print:hidden">
+                      <RowActions
+                        name={receipt.number}
+                        viewHref={`/payments/${receipt.id}`}
+                        deleteAction={
+                          can(user.role, 'payment:delete') && !receipt.orderId
+                            ? deleteReceipt.bind(null, receipt.id)
+                            : undefined
+                        }
+                        deleteTitle={`Delete ${receipt.number}?`}
+                        deleteDescription="This removes the receipt and unapplies it from any invoices, so their balances go back up. This cannot be undone."
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

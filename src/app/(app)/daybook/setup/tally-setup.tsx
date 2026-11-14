@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrashIcon } from '@heroicons/react/16/solid'
+import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
 import { Input } from '@/components/catalyst/input'
 import { ConfirmButton } from '@/components/confirm-button'
@@ -14,6 +14,8 @@ import {
   deleteBankAccount,
   deleteChannel,
   deleteDenomination,
+  moveBankAccount,
+  moveDenomination,
   renameBankAccount,
   setBankAccountActive,
   setChannelActive,
@@ -39,6 +41,34 @@ const pick =
 
 const row =
   'flex flex-wrap items-center gap-3 border-b border-zinc-950/5 px-3 py-2 last:border-b-0 dark:border-white/10'
+
+function MoveButtons({
+  label,
+  first,
+  last,
+  disabled,
+  onMove,
+}: {
+  label: string
+  first: boolean
+  last: boolean
+  disabled: boolean
+  onMove: (direction: 'up' | 'down') => void
+}) {
+  const style =
+    'rounded p-1 text-zinc-500 hover:bg-zinc-950/5 disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-white/10'
+
+  return (
+    <span className="flex">
+      <button type="button" className={style} disabled={disabled || first} aria-label={`Move ${label} up`} onClick={() => onMove('up')}>
+        <ArrowUpIcon className="size-4" />
+      </button>
+      <button type="button" className={style} disabled={disabled || last} aria-label={`Move ${label} down`} onClick={() => onMove('down')}>
+        <ArrowDownIcon className="size-4" />
+      </button>
+    </span>
+  )
+}
 
 function Shown({
   checked,
@@ -271,8 +301,15 @@ export function TallySetup({
           Bank accounts
         </h2>
         <ul>
-          {banks.map((bank) => (
+          {banks.map((bank, index) => (
             <li key={bank.id} className={row}>
+              <MoveButtons
+                label={bank.name}
+                first={index === 0}
+                last={index === banks.length - 1}
+                disabled={pending}
+                onMove={(direction) => run(() => moveBankAccount(bank.id, direction))}
+              />
               <Input
                 aria-label="Bank account name"
                 value={names[bank.id] ?? bank.name}
@@ -335,8 +372,15 @@ export function TallySetup({
           Note denominations
         </h2>
         <ul>
-          {notes.map((note) => (
+          {notes.map((note, index) => (
             <li key={note.id} className={row}>
+              <MoveButtons
+                label={`₹${note.value}`}
+                first={index === 0}
+                last={index === notes.length - 1}
+                disabled={pending}
+                onMove={(direction) => run(() => moveDenomination(note.id, direction))}
+              />
               <span className="w-24 text-sm/6 font-medium tabular-nums">₹{note.value}</span>
               <Shown
                 checked={note.isActive}

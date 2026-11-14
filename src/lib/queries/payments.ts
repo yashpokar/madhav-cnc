@@ -96,7 +96,8 @@ export async function getReceipt(id: string) {
     ...payment,
     amount,
     allocated,
-    unallocated: round2(amount - allocated),
+    // An order's advance is deducted on the invoice itself, never applied.
+    unallocated: payment.orderId ? 0 : round2(amount - allocated),
     allocations: payment.allocations.map((allocation) => ({
       id: allocation.id,
       amount: num(allocation.amount),
@@ -125,6 +126,7 @@ export async function customerAccount(customerId: string) {
         amount: true,
         mode: true,
         reference: true,
+        orderId: true,
         allocations: { select: { amount: true } },
       },
     }),
@@ -158,7 +160,9 @@ export async function customerAccount(customerId: string) {
         0,
       )
 
-      return sum + Math.max(0, num(receipt.amount) - allocated)
+      return receipt.orderId
+        ? sum
+        : sum + Math.max(0, num(receipt.amount) - allocated)
     }, 0),
   )
   const creditNotes = credits.map((note) => ({
@@ -192,8 +196,9 @@ export async function customerAccount(customerId: string) {
         mode: receipt.mode,
         reference: receipt.reference,
         amount: num(receipt.amount),
+        orderId: receipt.orderId,
         allocated,
-        unallocated: round2(num(receipt.amount) - allocated),
+        unallocated: receipt.orderId ? 0 : round2(num(receipt.amount) - allocated),
       }
     }),
   }

@@ -2,9 +2,15 @@ import type { Metadata } from 'next'
 import { Button } from '@/components/catalyst/button'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
-import { listBankAccounts, listChannels, listDenominations } from '@/lib/queries/daybook'
+import {
+  getDaybookLayout,
+  listBankAccounts,
+  listChannels,
+  listDenominations,
+} from '@/lib/queries/daybook'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
+import { LayoutSettings } from './layout-settings'
 import { TallySetup } from './tally-setup'
 
 export const metadata: Metadata = {
@@ -13,10 +19,11 @@ export const metadata: Metadata = {
 
 export default async function DayBookSetupPage() {
   const user = await requireCapability('expense:update')
-  const [banks, notes, channels] = await Promise.all([
+  const [banks, notes, channels, layout] = await Promise.all([
     listBankAccounts(),
     listDenominations(),
     listChannels(),
+    getDaybookLayout(),
   ])
 
   return (
@@ -34,6 +41,8 @@ export default async function DayBookSetupPage() {
           Back to day book
         </Button>
       </div>
+
+      <LayoutSettings layout={layout} />
 
       <TallySetup
         banks={banks}

@@ -236,6 +236,11 @@ export default async function DashboardPage({
               href="/payments"
               label="Collected this month"
               value={inr.format(money.collectedThisMonth)}
+              hint={
+                money.creditsThisMonth > 0
+                  ? `${inr.format(money.receiptsThisMonth)} receipts · ${inr.format(money.creditsThisMonth)} day-book credits`
+                  : 'Customer receipts this month'
+              }
               tone="good"
             />
           </>

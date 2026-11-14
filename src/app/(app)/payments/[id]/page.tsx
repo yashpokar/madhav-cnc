@@ -178,6 +178,14 @@ export default async function ReceiptPage({
 
       <Divider />
 
+      {receipt.orderId ? (
+        <Text>
+          This is the advance taken on an order. It is deducted on the
+          order&rsquo;s invoice automatically; to change or remove it, edit the
+          advance on{' '}
+          <TextLink href={`/orders/${receipt.orderId}/edit`}>the order</TextLink>.
+        </Text>
+      ) : (
       <div>
         <Subheading level={2}>Change what this pays for</Subheading>
         <Text className="mt-1">
@@ -195,6 +203,7 @@ export default async function ReceiptPage({
           />
         </div>
       </div>
+      )}
 
       <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
         Recorded <LocalTime value={receipt.createdAt} />

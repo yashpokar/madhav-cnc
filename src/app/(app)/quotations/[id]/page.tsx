@@ -100,11 +100,11 @@ export default async function QuotationDetailPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <PrintButton label="Print" />
-          {can(user.role, 'quotation:delete') && ['DRAFT', 'REJECTED', 'EXPIRED'].includes(quotation.status) ? (
+          {can(user.role, 'quotation:delete') ? (
             <ConfirmButton
               label="Delete"
               title={`Delete quotation ${quotation.number}?`}
-              description="This permanently removes the quotation, its lines and its design images. This cannot be undone."
+              description="This permanently removes the quotation with its lines, design images, share links and customer comments. Quotations with orders or later revisions must have those removed first. This cannot be undone."
               confirmLabel="Delete quotation"
               redirectTo="/quotations"
               action={deleteQuotation.bind(null, quotation.id)}

@@ -40,23 +40,15 @@ export async function listCashCreditSources() {
     })
 }
 
-/** Every vendor name used on an expense so far, A to Z, ignoring case. */
+/** Every active vendor's name, A to Z. */
 export async function listExpenseVendors() {
-  const rows = await prisma.expense.findMany({
-    distinct: ['payeeName'],
-    select: { payeeName: true },
-    orderBy: { payeeName: 'asc' },
+  const rows = await prisma.vendor.findMany({
+    where: { isActive: true },
+    select: { name: true },
+    orderBy: { name: 'asc' },
   })
-  const seen = new Set<string>()
 
-  return rows
-    .map((row) => row.payeeName.trim())
-    .filter((name) => {
-      const key = name.toLowerCase()
-      if (!name || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+  return rows.map((row) => row.name)
 }
 
 export async function listExpenses({

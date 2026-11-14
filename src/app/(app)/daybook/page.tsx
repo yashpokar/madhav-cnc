@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { listCashCreditSources, listExpenseVendors } from '@/lib/queries/accounting'
 import {
   getDayClose,
+  getDaybookLayout,
   getDayTally,
   listBankAccounts,
   listChannels,
@@ -69,8 +70,6 @@ type Line = {
   channelName?: string
 }
 
-const MIN_ROWS = 15
-
 function parseRange(params: Record<string, string | string[] | undefined>) {
   const pick = (key: string) =>
     typeof params[key] === 'string' ? (params[key] as string) : undefined
@@ -117,6 +116,7 @@ function Ledger({
   canCheck,
   entry,
   extras,
+  compact,
 }: {
   title: string
   caption: string
@@ -125,15 +125,16 @@ function Ledger({
   total: number
   canDelete: boolean
   canCheck: boolean
-  /** The typed-in row at the bottom; omitted when the book is read-only. */
+  /** The typed-in composer at the bottom; omitted when the book is read-only. */
   entry?: React.ReactNode
   /** Credit and debit notes under the credit total, as on the sheet. */
   extras?: { cn: number; dn: number }
+  compact: boolean
 }) {
   const accent =
     tone === 'credit' ? 'text-lime-700 dark:text-lime-400' : 'text-red-600 dark:text-red-400'
-  const grid = 'border border-zinc-400 dark:border-white/30'
-  const blanks = Math.max(0, MIN_ROWS - lines.length - (entry ? 1 : 0))
+  const dot = tone === 'credit' ? 'bg-lime-500' : 'bg-red-500'
+  const pad = compact ? 'py-1.5' : 'py-3'
   const tick = (line: Line) =>
     line.kind === 'note' ? null : (
       <CheckCell
@@ -146,65 +147,53 @@ function Ledger({
     )
 
   return (
-    <div className="min-w-0 overflow-x-auto p-3">
-      <table className="w-full min-w-[26rem] border-collapse text-sm/6">
-        <caption className="pb-2 text-center">
-          <span className={`block text-sm/6 font-bold tracking-wide uppercase ${accent}`}>
+    <div className="min-w-0 p-4 sm:p-5">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm/6 font-semibold tracking-wide uppercase">
+            <span aria-hidden="true" className={`size-2 rounded-full ${dot}`} />
             {title}
-          </span>
-          <span className="block text-xs/5 text-zinc-500 dark:text-zinc-400">{caption}</span>
-        </caption>
-        <thead>
-          <tr className="text-left text-sm/6 font-medium">
-            <th className={`${grid} w-16 px-2 py-1 text-center`}>Check</th>
-            <th className={`${grid} w-32 px-2 py-1 text-right`}>Amount</th>
-            <th className={`${grid} px-2 py-1`}>Description</th>
-            <th className={`${grid} w-32 px-2 py-1`}>Payment mode</th>
-            <th className="w-8 print:hidden">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+          </h3>
+          <p className="text-xs/5 text-zinc-500 dark:text-zinc-400">{caption}</p>
+        </div>
+        <p className={`text-xl/7 font-semibold tabular-nums ${accent}`}>{money.format(total)}</p>
+      </div>
+
+      {lines.length > 0 ? (
+        <ul className="mt-3 divide-y divide-zinc-950/5 dark:divide-white/10">
           {lines.map((line) => {
             const reference = line.kind === 'note'
-            const name = (
-              <>
-                <span className="font-medium">{line.name}</span>
-                {line.note ? (
-                  <span className="block text-xs/5 text-zinc-500 dark:text-zinc-400">
-                    {line.note}
-                  </span>
-                ) : null}
-              </>
-            )
+            const how = reference
+              ? 'Credit note'
+              : (line.channelName ?? (line.mode ? PAYMENT_MODE_LABELS[line.mode] : ''))
+            const name = <span className="font-medium">{line.name}</span>
 
             return (
-              <tr
+              <li
                 key={line.id}
-                className={reference ? 'bg-zinc-50 text-zinc-500 italic dark:bg-white/[0.02]' : ''}
+                className={`group grid grid-cols-[1.75rem_1fr_auto_2rem] items-center gap-x-3 ${pad} ${
+                  reference ? 'text-zinc-500 italic' : ''
+                }`}
               >
-                <td className={`${grid} px-2 text-center`}>{tick(line)}</td>
-                <td
-                  className={`${grid} px-2 text-right tabular-nums ${reference ? '' : `font-medium ${accent}`}`}
-                >
-                  {money.format(line.amount)}
-                </td>
-                <td className={`${grid} px-2 py-1`}>
+                <span className="flex justify-center">{tick(line)}</span>
+                <span className="min-w-0">
                   {line.href ? (
-                    <Link href={line.href} className="block hover:underline">
+                    <Link href={line.href} className="block truncate hover:underline">
                       {name}
                     </Link>
                   ) : (
-                    name
+                    <span className="block truncate">{name}</span>
                   )}
-                </td>
-                <td className={`${grid} px-2 text-zinc-600 dark:text-zinc-300`}>
-                  {reference
-                    ? 'Credit note'
-                    : (line.channelName ?? (line.mode ? PAYMENT_MODE_LABELS[line.mode] : ''))}
-                </td>
-                <td className="px-1 text-center print:hidden">
+                  <span className="block truncate text-xs/5 text-zinc-500 dark:text-zinc-400">
+                    {[how, line.note].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                <span
+                  className={`text-sm/6 tabular-nums ${reference ? '' : `font-semibold ${accent}`}`}
+                >
+                  {money.format(line.amount)}
+                </span>
+                <span className="flex justify-end opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 print:hidden">
                   {line.deleteId && canDelete ? (
                     <ConfirmButton
                       outline={false}
@@ -222,51 +211,32 @@ function Ledger({
                       <span className="sr-only">Delete</span>
                     </ConfirmButton>
                   ) : null}
-                </td>
-              </tr>
+                </span>
+              </li>
             )
           })}
-          {entry}
-          {Array.from({ length: blanks }).map((_, i) => (
-            <tr key={`blank-${i}`}>
-              <td className={`${grid} py-2.5`} />
-              <td className={grid} />
-              <td className={grid} />
-              <td className={grid} />
-              <td className="print:hidden" />
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-3 flex items-center justify-end gap-2 text-sm/6 font-semibold">
-        <span>Total amount</span>
-        <span
-          className={`min-w-36 border border-zinc-400 px-2 py-1 text-right tabular-nums dark:border-white/30 ${accent}`}
-        >
-          {money.format(total)}
-        </span>
-      </div>
+        </ul>
+      ) : (
+        <p className="mt-3 rounded-lg border border-dashed border-zinc-950/10 px-4 py-6 text-center text-sm/6 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+          Nothing {tone === 'credit' ? 'received' : 'spent'} yet.
+        </p>
+      )}
+
+      {entry}
+
       {extras ? (
-        <dl className="mt-2 grid gap-1 text-sm/6">
-          <div className="flex items-center justify-end gap-2">
+        <dl className="mt-4 grid gap-1 border-t border-zinc-950/5 pt-3 text-sm/6 tabular-nums dark:border-white/10">
+          <div className="flex justify-between text-zinc-600 dark:text-zinc-300">
             <dt>CN (credit notes)</dt>
-            <dd className="min-w-36 px-2 py-0.5 text-right tabular-nums">
-              + {money.format(extras.cn)}
-            </dd>
+            <dd>+ {money.format(extras.cn)}</dd>
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex justify-between text-zinc-600 dark:text-zinc-300">
             <dt>DN (debit notes)</dt>
-            <dd className="min-w-36 px-2 py-0.5 text-right tabular-nums">
-              − {money.format(extras.dn)}
-            </dd>
+            <dd>− {money.format(extras.dn)}</dd>
           </div>
-          <div className="flex items-center justify-end gap-2 font-semibold">
+          <div className="flex justify-between font-semibold">
             <dt>Grand TOTAL</dt>
-            <dd
-              className={`min-w-36 border border-zinc-400 px-2 py-1 text-right tabular-nums dark:border-white/30 ${accent}`}
-            >
-              {money.format(total + extras.cn - extras.dn)}
-            </dd>
+            <dd className={accent}>{money.format(total + extras.cn - extras.dn)}</dd>
           </div>
         </dl>
       ) : null}
@@ -288,6 +258,10 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
   const savedCredit = params.savedCredit === '1'
   const modeFilter = cashOnly ? { equals: 'CASH' as const } : undefined
   const inRange = { gte: range.from, lte: range.to }
+
+  const layout = await getDaybookLayout()
+  const compact = layout.density === 'compact'
+  const stacked = layout.sides === 'stacked'
 
   const [
     expenses,
@@ -617,13 +591,10 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
               <section
                 key={day.key}
                 aria-label={longDay.format(date)}
-                className="overflow-hidden rounded-lg bg-white ring-1 ring-zinc-950/10 break-inside-avoid dark:bg-zinc-900 dark:ring-white/10"
+                className="overflow-hidden rounded-2xl bg-white shadow-xs ring-1 ring-zinc-950/10 break-inside-avoid dark:bg-zinc-900 dark:ring-white/10"
               >
-                <header className="grid grid-cols-1 items-center gap-2 border-b border-zinc-950/10 bg-zinc-50 px-4 py-2.5 sm:grid-cols-[1fr_auto_1fr] dark:border-white/10 dark:bg-white/5">
-                  <span className="hidden text-sm/6 text-zinc-600 tabular-nums sm:block dark:text-zinc-300">
-                    Brought forward <strong>{money.format(day.start)}</strong>
-                  </span>
-                  <h2 className="text-center text-base/6 font-bold">
+                <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-zinc-950/5 px-5 py-4 dark:border-white/10">
+                  <h2 className="text-lg/7 font-semibold tracking-tight">
                     {longDay.format(date)}
                     {range.view === 'month' ? (
                       <Link
@@ -634,10 +605,21 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                       </Link>
                     ) : null}
                   </h2>
-                  <span aria-hidden="true" />
+                  {layout.showBroughtForward ? (
+                    <span className="text-sm/6 text-zinc-500 tabular-nums dark:text-zinc-400">
+                      Brought forward{' '}
+                      <strong className="font-semibold text-zinc-950 dark:text-white">
+                        {money.format(day.start)}
+                      </strong>
+                    </span>
+                  ) : null}
                 </header>
 
-                <div className="grid grid-cols-1 divide-zinc-950/10 lg:grid-cols-2 lg:divide-x dark:divide-white/10">
+                <div
+                  className={`grid grid-cols-1 divide-zinc-950/5 dark:divide-white/10 ${
+                    stacked ? 'divide-y' : 'lg:grid-cols-2 lg:divide-x'
+                  }`}
+                >
                   <Ledger
                     title="Credit"
                     caption="Money received"
@@ -647,6 +629,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     extras={showNotes ? { cn: day.cn, dn: day.dn } : undefined}
                     canDelete={canDelete}
                     canCheck={canCheck}
+                    compact={compact}
                     entry={
                       editable ? (
                         <EntryRow
@@ -666,6 +649,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     total={day.spentTotal}
                     canDelete={canDelete}
                     canCheck={canCheck}
+                    compact={compact}
                     entry={
                       editable ? (
                         <EntryRow
@@ -679,7 +663,7 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                   />
                 </div>
 
-                {tally && check ? (
+                {tally && check && layout.tally.show ? (
                   <DayTally
                     key={day.key}
                     date={day.key}
@@ -691,11 +675,12 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                     bank={check!.bank}
                     close={dayClose}
                     canEdit={canCheck}
+                    layout={layout.tally}
                   />
                 ) : null}
 
-                <footer className="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-zinc-950/10 bg-zinc-50 px-4 py-2.5 text-sm/6 tabular-nums dark:border-white/10 dark:bg-white/5">
-                  <span>
+                <footer className="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 border-t border-zinc-950/5 bg-zinc-50/60 px-5 py-3 text-sm/6 tabular-nums dark:border-white/10 dark:bg-white/[0.02]">
+                  <span className="text-zinc-500 dark:text-zinc-400">
                     Day&apos;s result{' '}
                     <strong
                       className={
@@ -707,9 +692,14 @@ export default async function DayBookPage({ searchParams }: PageProps<'/daybook'
                       {money.format(day.receivedTotal - day.spentTotal)}
                     </strong>
                   </span>
-                  <span>
-                    Carried forward <strong>{money.format(day.end)}</strong>
-                  </span>
+                  {layout.showCarriedForward ? (
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      Carried forward{' '}
+                      <strong className="font-semibold text-zinc-950 dark:text-white">
+                        {money.format(day.end)}
+                      </strong>
+                    </span>
+                  ) : null}
                 </footer>
               </section>
             )

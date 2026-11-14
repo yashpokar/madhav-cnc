@@ -450,12 +450,6 @@ export async function createRevision(id: string): Promise<SimpleResult> {
   }
 }
 
-const DELETABLE_QUOTATION_STATUSES: QuotationStatus[] = [
-  'DRAFT',
-  'REJECTED',
-  'EXPIRED',
-]
-
 export async function deleteQuotation(id: string): Promise<SimpleResult> {
   await requireCapability('quotation:delete')
 
@@ -472,13 +466,6 @@ export async function deleteQuotation(id: string): Promise<SimpleResult> {
     return { ok: false, error: 'Quotation not found' }
   }
 
-  if (!DELETABLE_QUOTATION_STATUSES.includes(quotation.status)) {
-    return {
-      ok: false,
-      error: `A ${quotation.status.toLowerCase()} quotation has been shared with the customer or turned into work and cannot be deleted.`,
-    }
-  }
-
   const [orders, revisions] = await Promise.all([
     prisma.order.count({ where: { quotationId: id } }),
     prisma.quotation.count({ where: { parentId: id } }),
@@ -487,7 +474,7 @@ export async function deleteQuotation(id: string): Promise<SimpleResult> {
   if (orders > 0 || revisions > 0) {
     return {
       ok: false,
-      error: 'This quotation has orders or later revisions linked to it.',
+      error: 'This quotation has orders or later revisions linked to it. Delete those first.',
     }
   }
 

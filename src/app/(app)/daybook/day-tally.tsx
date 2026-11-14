@@ -6,6 +6,7 @@ import { Button } from '@/components/catalyst/button'
 import { ConfirmButton } from '@/components/confirm-button'
 import { LocalTime } from '@/components/local-time'
 import { closeDay, reopenDay, setTallyBank, setTallyCount } from '@/lib/actions/tally'
+import type { DaybookLayout } from '@/lib/daybook-layout'
 
 const money = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -13,9 +14,8 @@ const money = new Intl.NumberFormat('en-IN', {
   minimumFractionDigits: 2,
 })
 
-const grid = 'border border-zinc-400 dark:border-white/30'
 const input =
-  'w-full bg-transparent px-2 py-1.5 text-right text-sm/6 tabular-nums outline-none focus:bg-blue-50 focus:ring-2 focus:ring-inset focus:ring-blue-500 disabled:opacity-60 dark:focus:bg-blue-400/10'
+  'w-full rounded-md bg-transparent px-2.5 py-1.5 text-right text-sm/6 tabular-nums outline-none ring-1 ring-transparent hover:ring-zinc-950/10 focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-60 dark:hover:ring-white/15 dark:focus:bg-zinc-900'
 
 type Expectation = { expected: number | null; since: string | null }
 
@@ -104,6 +104,7 @@ export function DayTally({
   bank,
   close,
   canEdit,
+  layout,
 }: {
   date: string
   denominations: { id: string; value: number }[]
@@ -114,6 +115,7 @@ export function DayTally({
   bank: Expectation
   close: Close
   canEdit: boolean
+  layout: DaybookLayout['tally']
 }) {
   const router = useRouter()
   const [noteCounts, setNoteCounts] = useState<Record<number, string>>(() =>
@@ -156,92 +158,103 @@ export function DayTally({
     })
   }
 
+  const bankRows = layout.showBanks
+    ? banks.map((b) => (
+        <tr key={`bank-${b.id}`}>
+          <th scope="row" className="py-1 pr-3 text-left font-medium">
+            {b.name}
+          </th>
+          {layout.showCount ? <td className="px-2 text-right text-zinc-300">—</td> : null}
+          <td className="py-1 pl-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={bankBalances[b.id] ?? ''}
+              disabled={!editable}
+              aria-label={`${b.name} balance`}
+              placeholder="0.00"
+              className={input}
+              onChange={(event) =>
+                setBankBalances((current) => ({ ...current, [b.id]: event.target.value }))
+              }
+              onBlur={() => save(() => setTallyBank(date, b.id, Number(bankBalances[b.id]) || 0))}
+            />
+          </td>
+        </tr>
+      ))
+    : null
+
+  const noteRows = layout.showNotes
+    ? denominations.map((d) => {
+        const count = Number(noteCounts[d.value]) || 0
+
+        return (
+          <tr key={`note-${d.id}`}>
+            <th scope="row" className="py-1 pr-3 text-left font-medium tabular-nums">
+              ₹{d.value} <span className="font-normal text-zinc-400">×</span>
+            </th>
+            {layout.showCount ? (
+              <td className="px-2 py-1">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min={0}
+                  value={noteCounts[d.value] ?? ''}
+                  disabled={!editable}
+                  aria-label={`Number of ₹${d.value} notes`}
+                  placeholder="0"
+                  className={input}
+                  onChange={(event) =>
+                    setNoteCounts((current) => ({ ...current, [d.value]: event.target.value }))
+                  }
+                  onBlur={() => save(() => setTallyCount(date, d.value, count))}
+                />
+              </td>
+            ) : null}
+            <td className="py-1 pl-2 text-right text-zinc-600 tabular-nums dark:text-zinc-300">
+              {count ? money.format(count * d.value) : ''}
+            </td>
+          </tr>
+        )
+      })
+    : null
+
   return (
-    <div className="grid grid-cols-1 gap-6 border-t border-zinc-950/10 p-3 lg:grid-cols-2 dark:border-white/10">
+    <div className="grid grid-cols-1 gap-8 border-t border-zinc-950/5 p-5 lg:grid-cols-2 dark:border-white/10">
       <div className="min-w-0 overflow-x-auto">
-        <table className="w-full min-w-[22rem] border-collapse text-sm/6">
-          <caption className="pb-2 text-center text-sm/6 font-bold tracking-wide uppercase">
-            Banks and cash counted
-          </caption>
+        <h3 className="mb-3 text-sm/6 font-semibold tracking-wide uppercase">
+          {layout.titleLabel}
+        </h3>
+        <table className="w-full min-w-[20rem] border-collapse text-sm/6">
           <thead>
-            <tr className="bg-zinc-100 text-left font-medium dark:bg-white/5">
-              <th className={`${grid} px-2 py-1`}>Mode</th>
-              <th className={`${grid} w-28 px-2 py-1 text-right`}>Count</th>
-              <th className={`${grid} w-44 px-2 py-1 text-right`}>Amount</th>
+            <tr className="border-b border-zinc-950/10 text-xs/5 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+              <th className="pb-2 text-left font-medium">{layout.modeLabel}</th>
+              {layout.showCount ? (
+                <th className="w-28 pb-2 text-right font-medium">{layout.countLabel}</th>
+              ) : null}
+              <th className="w-44 pb-2 text-right font-medium">{layout.amountLabel}</th>
             </tr>
           </thead>
-          <tbody>
-            {banks.map((b) => (
-              <tr key={b.id}>
-                <th scope="row" className={`${grid} px-2 py-1.5 text-right font-medium`}>
-                  {b.name} <span className="text-zinc-400">x</span>
-                </th>
-                <td className={`${grid} px-2 text-right text-zinc-300`}>—</td>
-                <td className={`${grid} p-0`}>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    value={bankBalances[b.id] ?? ''}
-                    disabled={!editable}
-                    aria-label={`${b.name} balance`}
-                    placeholder="0.00"
-                    className={input}
-                    onChange={(event) =>
-                      setBankBalances((current) => ({ ...current, [b.id]: event.target.value }))
-                    }
-                    onBlur={() =>
-                      save(() => setTallyBank(date, b.id, Number(bankBalances[b.id]) || 0))
-                    }
-                  />
+          <tbody className="divide-y divide-zinc-950/5 dark:divide-white/5">
+            {layout.order === 'banks-first' ? bankRows : noteRows}
+            {layout.order === 'banks-first' ? noteRows : bankRows}
+          </tbody>
+          {layout.showTotal ? (
+            <tfoot>
+              <tr className="border-t border-zinc-950/10 font-semibold dark:border-white/10">
+                <td className="pt-3 text-left" colSpan={layout.showCount ? 2 : 1}>
+                  {layout.totalLabel}
+                </td>
+                <td className="pt-3 text-right tabular-nums">
+                  {money.format(
+                    (layout.showBanks ? bankCounted : 0) + (layout.showNotes ? cashCounted : 0),
+                  )}
                 </td>
               </tr>
-            ))}
-            {denominations.map((d) => {
-              const count = Number(noteCounts[d.value]) || 0
-
-              return (
-                <tr key={d.id}>
-                  <th
-                    scope="row"
-                    className={`${grid} px-2 py-1.5 text-right font-medium tabular-nums`}
-                  >
-                    {d.value} <span className="text-zinc-400">x</span>
-                  </th>
-                  <td className={`${grid} p-0`}>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      step="1"
-                      min={0}
-                      value={noteCounts[d.value] ?? ''}
-                      disabled={!editable}
-                      aria-label={`Number of ₹${d.value} notes`}
-                      placeholder="0"
-                      className={input}
-                      onChange={(event) =>
-                        setNoteCounts((current) => ({ ...current, [d.value]: event.target.value }))
-                      }
-                      onBlur={() => save(() => setTallyCount(date, d.value, count))}
-                    />
-                  </td>
-                  <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
-                    {count ? money.format(count * d.value) : ''}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="font-semibold">
-              <td className={`${grid} px-2 py-1.5 text-right`} colSpan={2}>
-                Grand TOTAL
-              </td>
-              <td className={`${grid} px-2 py-1.5 text-right tabular-nums`}>
-                {money.format(bankCounted + cashCounted)}
-              </td>
-            </tr>
-          </tfoot>
+            </tfoot>
+          ) : null}
         </table>
       </div>
 

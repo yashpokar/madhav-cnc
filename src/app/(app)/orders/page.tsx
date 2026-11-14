@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
-import { applyListControls } from '@/lib/list-controls'
+import { amountCeiling, applyListControls } from '@/lib/list-controls'
 import { RowActions } from '@/components/row-actions'
 import { deleteOrder } from '@/lib/actions/orders'
 import { Badge } from '@/components/catalyst/badge'
@@ -126,7 +126,9 @@ export default async function OrdersPage({
         <SearchField placeholder="Search number, customer, PO…" />
       </div>
 
-      <ListControls params={params} pathname="/orders" amountLabel="Total" />
+      <ListControls
+        ceiling={amountCeiling(orders, (row) => row.total)}
+        params={params} pathname="/orders" amountLabel="Total" />
 
       {orders.length > 0 && sorted.length === 0 ? (
         <EmptyState

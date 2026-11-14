@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
-import { applyListControls } from '@/lib/list-controls'
+import { amountCeiling, applyListControls } from '@/lib/list-controls'
 import { RowActions } from '@/components/row-actions'
 import { deleteQuotation } from '@/lib/actions/quotations'
 import { Badge } from '@/components/catalyst/badge'
@@ -124,7 +124,9 @@ export default async function QuotationsPage({
         <SearchField placeholder="Search number, customer, subject…" />
       </div>
 
-      <ListControls params={params} pathname="/quotations" amountLabel="Total" />
+      <ListControls
+        ceiling={amountCeiling(quotations, (row) => row.total)}
+        params={params} pathname="/quotations" amountLabel="Total" />
 
       {quotations.length > 0 && sorted.length === 0 ? (
         <EmptyState
@@ -209,7 +211,7 @@ export default async function QuotationsPage({
                     viewHref={`/quotations/${quotation.id}`}
                     editHref={canEdit && (quotation.status !== 'CONVERTED') ? `/quotations/${quotation.id}/edit` : undefined}
                     deleteAction={
-                      canDelete && (['DRAFT', 'REJECTED', 'EXPIRED'].includes(quotation.status))
+                      canDelete
                         ? deleteQuotation.bind(null, quotation.id)
                         : undefined
                     }

@@ -154,11 +154,18 @@ export async function updateAllocations(
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    select: { id: true, number: true, customerId: true, amount: true },
+    select: { id: true, number: true, customerId: true, amount: true, orderId: true },
   })
 
   if (!payment) {
     return { ok: false, error: 'Receipt not found' }
+  }
+
+  if (payment.orderId) {
+    return {
+      ok: false,
+      error: 'This is the advance on an order. It is deducted on the invoice automatically; change it on the order.',
+    }
   }
 
   const checked = await validateAllocations(
@@ -213,11 +220,18 @@ export async function deleteReceipt(paymentId: string): Promise<SimpleResult> {
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    select: { number: true },
+    select: { number: true, orderId: true },
   })
 
   if (!payment) {
     return { ok: false, error: 'Receipt not found' }
+  }
+
+  if (payment.orderId) {
+    return {
+      ok: false,
+      error: 'This is the advance on an order. Set the advance to 0 on the order to remove it.',
+    }
   }
 
   await prisma.payment.delete({ where: { id: paymentId } })

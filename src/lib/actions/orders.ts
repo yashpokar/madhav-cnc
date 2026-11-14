@@ -15,6 +15,51 @@ import { logActivity } from '@/lib/activity'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { OrderStatus } from '@/generated/prisma/enums'
 
+/**
+ * The advance taken on an order is kept as a receipt (so it shows in Payments
+ * and the Day book) tied to the order. It is never applied to an invoice; the
+ * invoice deducts it as "advance adjusted", so it is not counted twice.
+ */
+async function syncAdvancePayment(
+  order: { id: string; number: string },
+  data: OrderData,
+  recordedById: string,
+) {
+  const existing = await prisma.payment.findUnique({
+    where: { orderId: order.id },
+    select: { id: true },
+  })
+
+  if (data.advanceAmount <= 0) {
+    if (existing) {
+      await prisma.payment.delete({ where: { id: existing.id } })
+    }
+
+    return
+  }
+
+  const fields = {
+    customerId: data.customerId,
+    amount: data.advanceAmount,
+    mode: data.advanceMode,
+    paidOn: data.orderDate,
+    notes: `Advance for order ${order.number}`,
+  }
+
+  if (existing) {
+    await prisma.payment.update({ where: { id: existing.id }, data: fields })
+  } else {
+    await prisma.payment.create({
+      data: {
+        ...fields,
+        number: `ADV-${order.number}`,
+        orderId: order.id,
+        recordedById,
+      },
+    })
+  }
+}
+
 export type { FormState, SimpleResult }
 
 function parse(formData: FormData) {
@@ -41,6 +86,7 @@ function parse(formData: FormData) {
     discountType: formData.get('discountType') ?? undefined,
     discountValue: formData.get('discountValue') || 0,
     advanceAmount: formData.get('advanceAmount') || 0,
+    advanceMode: formData.get('advanceMode') ?? undefined,
     transportCharge: formData.get('transportCharge') || 0,
     transportTaxRatePercent: formData.get('transportTaxRatePercent') || 0,
     notes: formData.get('notes'),
@@ -178,6 +224,8 @@ export async function createOrder(
     },
   })
 
+  await syncAdvancePayment(order, parsed.data, user.id)
+
   await logActivity({
     entity: 'order',
     id: order.id,
@@ -260,6 +308,14 @@ export async function updateOrder(
       },
     }),
   ])
+
+  const saved = await prisma.order.findUniqueOrThrow({
+    where: { id },
+    select: { id: true, number: true },
+  })
+
+  await syncAdvancePayment(saved, parsed.data, user.id)
+  revalidatePath('/payments')
 
   await logActivity({
     entity: 'order',

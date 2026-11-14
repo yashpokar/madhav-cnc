@@ -3,7 +3,7 @@ import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
 import { ListControls } from '@/components/list-controls'
-import { applyListControls } from '@/lib/list-controls'
+import { amountCeiling, applyListControls } from '@/lib/list-controls'
 import { RowActions } from '@/components/row-actions'
 import { deleteExpense } from '@/lib/actions/expenses'
 import { Badge } from '@/components/catalyst/badge'
@@ -134,7 +134,9 @@ export default async function ExpensesPage({
         <SearchField placeholder="Search payee, bill, note…" />
       </div>
 
-      <ListControls params={params} pathname="/expenses" amountLabel="Total" />
+      <ListControls
+        ceiling={amountCeiling(expenses, (row) => row.total)}
+        params={params} pathname="/expenses" amountLabel="Total" />
 
       {expenses.length > 0 && sorted.length === 0 ? (
         <EmptyState

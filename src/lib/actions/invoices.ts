@@ -708,13 +708,6 @@ export async function deleteInvoice(id: string): Promise<SimpleResult> {
     return { ok: false, error: 'Invoice not found' }
   }
 
-  if (invoice.status === 'ISSUED') {
-    return {
-      ok: false,
-      error: 'Issued invoices are part of your books. Cancel it instead of deleting.',
-    }
-  }
-
   if (invoice._count.paymentAllocations > 0) {
     return {
       ok: false,
@@ -736,7 +729,7 @@ export async function deleteInvoice(id: string): Promise<SimpleResult> {
       entity: 'order',
       id: invoice.orderId,
       action: 'invoice',
-      summary: `deleted draft invoice ${invoice.number}`,
+      summary: `deleted invoice ${invoice.number}`,
       actor: actorOf(user),
     })
   }

@@ -1,3 +1,4 @@
+import { date as dateFormat } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
@@ -43,12 +44,6 @@ const TABS: { label: string; value: string; status?: DispatchStatus }[] = [
   { label: 'Dispatched', value: 'dispatched', status: 'DISPATCHED' },
   { label: 'Delivered', value: 'delivered', status: 'DELIVERED' },
 ]
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function DispatchPage({
   searchParams,

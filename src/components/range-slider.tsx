@@ -1,16 +1,11 @@
 'use client'
 
+import { moneyWhole as inr } from '@/lib/format'
 import { useRef, useState } from 'react'
 import * as Headless from '@headlessui/react'
 import { NumericInput } from '@/components/numeric-input'
 import clsx from 'clsx'
 import { BanknotesIcon, XMarkIcon } from '@heroicons/react/16/solid'
-
-const inr = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
 
 /** A round step for the slider: about 1% of the scale, never below ₹1. */
 function stepFor(ceiling: number) {

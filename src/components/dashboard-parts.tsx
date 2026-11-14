@@ -1,20 +1,15 @@
+import { moneyWhole, dateShort } from '@/lib/format'
+
+const day = dateShort
 import { Link } from '@/components/catalyst/link'
 
 /** The surface every dashboard card sits on. */
 export const CARD =
   'rounded-xl bg-white shadow-xs ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10'
 
-export const inr = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-export const shortDate = new Intl.DateTimeFormat('en-IN', {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
+/** Whole-rupee money and short dates, as the dashboard shows them. */
+export const inr = moneyWhole
+export const shortDate = dateShort
 
 export function Panel({
   title,
@@ -178,8 +173,6 @@ export function PeriodTile({
     <div className={box}>{body}</div>
   )
 }
-
-const day = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 /** Money in against money out, one pair of bars per day (or week). */
 export function MoneyBars({

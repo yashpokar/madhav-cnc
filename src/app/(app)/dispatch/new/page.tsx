@@ -1,3 +1,4 @@
+import { date as dateFormat } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Heading } from '@/components/catalyst/heading'
@@ -24,12 +25,6 @@ import { DispatchForm } from '../dispatch-form'
 export const metadata: Metadata = {
   title: 'New delivery challan',
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function NewDispatchPage({
   searchParams,

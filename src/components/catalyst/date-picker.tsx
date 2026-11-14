@@ -1,5 +1,6 @@
 'use client'
 
+import { date as display } from '@/lib/format'
 import * as Headless from '@headlessui/react'
 import { CalendarDaysIcon, XMarkIcon } from '@heroicons/react/16/solid'
 import clsx from 'clsx'
@@ -63,12 +64,6 @@ function quickDays() {
     { label: 'In a week', date: at(7) },
   ]
 }
-
-const display = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 /**
  * A themed calendar popover that stands in for <input type="date">. It keeps

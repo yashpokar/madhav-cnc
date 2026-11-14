@@ -1,3 +1,4 @@
+import { date as dateFormat, moneyWhole as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { ListControls } from '@/components/list-controls'
@@ -46,18 +47,6 @@ const TABS: { label: string; value: string; kind?: NoteKind }[] = [
   { label: 'Credit notes', value: 'credit', kind: 'CREDIT' },
   { label: 'Debit notes', value: 'debit', kind: 'DEBIT' },
 ]
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
   const user = await requireCapability('note:read')

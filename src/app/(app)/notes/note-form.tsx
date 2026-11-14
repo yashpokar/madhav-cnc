@@ -1,5 +1,6 @@
 'use client'
 
+import { money as currency } from '@/lib/format'
 import { useActionState, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlusIcon, TrashIcon } from '@heroicons/react/16/solid'
@@ -61,12 +62,6 @@ export type NoteFormValues = {
   reasonNote: string | null
   lines: NoteLineValue[]
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 const num = (value: string) => {
   const parsed = Number(value)

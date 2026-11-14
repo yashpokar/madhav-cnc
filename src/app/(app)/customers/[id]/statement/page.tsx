@@ -1,3 +1,4 @@
+import { date as dateFormat, money as currency } from '@/lib/format'
 import { RowActions } from '@/components/row-actions'
 import { deleteReceipt } from '@/lib/actions/payments'
 import type { Metadata } from 'next'
@@ -32,18 +33,6 @@ import { NOTE_REASON_LABELS, PAYMENT_MODE_LABELS } from '@/lib/labels'
 export const metadata: Metadata = {
   title: 'Customer statement',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function CustomerStatementPage({
   params,

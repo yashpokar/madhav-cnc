@@ -1,3 +1,4 @@
+import { date as dateFormat, moneyWhole as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
@@ -36,18 +37,6 @@ import { PaymentMode } from '@/generated/prisma/enums'
 export const metadata: Metadata = {
   title: 'Expenses',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function ExpensesPage({
   searchParams,

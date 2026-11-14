@@ -1,3 +1,4 @@
+import { date as dateFormat } from '@/lib/format'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -11,12 +12,6 @@ export const metadata: Metadata = {
   title: 'Order status',
   robots: { index: false, follow: false },
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 const DISPATCH_LABELS: Record<DispatchStatus, string> = {
   DRAFT: 'Being prepared',

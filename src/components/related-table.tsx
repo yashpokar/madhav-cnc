@@ -1,3 +1,4 @@
+import { date as dateFormat } from '@/lib/format'
 import { Badge } from '@/components/catalyst/badge'
 import { Link } from '@/components/catalyst/link'
 import {
@@ -14,13 +15,6 @@ export const inr = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
   minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
 })
 
 export function fmtDate(value: Date | null | undefined) {

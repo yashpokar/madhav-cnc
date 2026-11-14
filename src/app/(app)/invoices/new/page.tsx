@@ -1,3 +1,4 @@
+import { moneyWhole as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Badge } from '@/components/catalyst/badge'
 import { Heading } from '@/components/catalyst/heading'
@@ -26,12 +27,6 @@ import { InvoiceForm } from '../invoice-form'
 export const metadata: Metadata = {
   title: 'New invoice',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
 
 export default async function NewInvoicePage({
   searchParams,

@@ -1,5 +1,6 @@
 'use client'
 
+import { money as currency } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { TrashIcon } from '@heroicons/react/16/solid'
@@ -25,12 +26,6 @@ import {
 import { PAYMENT_MODE_LABELS, WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { whatsappLink } from '@/lib/whatsapp'
 import { InvoiceStatus, PaymentMode, WriteOffReason } from '@/generated/prisma/enums'
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
 
 export function InvoiceActions({
   id,

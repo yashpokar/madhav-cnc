@@ -1,3 +1,4 @@
+import { date, moneyWhole as money } from '@/lib/format'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { ListControls } from '@/components/list-controls'
@@ -36,19 +37,6 @@ import { requireCapability } from '@/lib/session'
 export const metadata: Metadata = {
   title: 'Vendors',
 }
-
-const money = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
-
-const date = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
 
 export default async function VendorsPage({ searchParams }: PageProps<'/vendors'>) {
   const user = await requireCapability('expense:read')

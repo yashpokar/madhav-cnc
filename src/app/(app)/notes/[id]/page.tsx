@@ -1,3 +1,4 @@
+import { date as dateFormat, money as currency } from '@/lib/format'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -35,18 +36,6 @@ import { NoteActions } from './note-actions'
 export const metadata: Metadata = {
   title: 'Note',
 }
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 2,
-})
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
 
 export default async function NoteDetailPage({
   params,

@@ -1,3 +1,4 @@
+import { moneyWhole as currency } from '@/lib/format'
 import type { Metadata } from 'next'
 import { Pagination } from '@/components/pagination'
 import { paginate } from '@/lib/pagination'
@@ -49,12 +50,6 @@ const TABS: { label: string; value: string; status?: OrderStatus }[] = [
   { label: 'Dispatched', value: 'dispatched', status: 'DISPATCHED' },
   { label: 'Completed', value: 'completed', status: 'COMPLETED' },
 ]
-
-const currency = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0,
-})
 
 export default async function OrdersPage({
   searchParams,

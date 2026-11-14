@@ -1,3 +1,4 @@
+import { date as dateFormat, dateTime as timeFormat } from '@/lib/format'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -32,20 +33,6 @@ import { PrintButton } from '@/components/print-button'
 export const metadata: Metadata = {
   title: 'Delivery challan',
 }
-
-const dateFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
-
-const timeFormat = new Intl.DateTimeFormat('en-IN', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export default async function DispatchDetailPage({
   params,

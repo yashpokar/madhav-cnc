@@ -6,6 +6,7 @@ import { SignInForm } from './sign-in-form'
 
 export const metadata: Metadata = {
   title: 'Sign in',
+  robots: { index: true, follow: true },
 }
 
 export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>) {

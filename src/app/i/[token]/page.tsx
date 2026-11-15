@@ -1,5 +1,7 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
 import type { Metadata } from 'next'
+import { PoweredBy } from '@/components/powered-by'
+import { shareMetadata } from '@/lib/share-metadata'
 import { notFound } from 'next/navigation'
 import { describeLineDetails } from '@/lib/line-details'
 import { UNIT_SHORT } from '@/lib/labels'
@@ -10,9 +12,23 @@ import {
 import { listDocumentPaymentModes } from '@/lib/queries/payment-modes'
 import { PrintButton } from './print-button'
 
-export const metadata: Metadata = {
-  title: 'Invoice',
-  robots: { index: false, follow: false },
+export async function generateMetadata({
+  params,
+}: PageProps<'/i/[token]'>): Promise<Metadata> {
+  const { token } = await params
+  const invoice = await getSharedInvoiceByToken(token)
+
+  if (!invoice) {
+    return shareMetadata({ kind: 'Invoice' })
+  }
+
+  const company = await getInvoiceCompany(invoice.companyId)
+
+  return shareMetadata({
+    kind: 'Invoice',
+    company: company?.companyName,
+    number: invoice.number,
+  })
 }
 
 const STATE_LABEL = {
@@ -337,6 +353,8 @@ export default async function SharedInvoicePage({
           </div>
         </section>
       ) : null}
+
+      <PoweredBy />
     </main>
   )
 }

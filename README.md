@@ -1,6 +1,14 @@
 # Prodlys
 
-Run your whole business in one place: quotations, orders, production, billing and payments for workshops, studios, salons, caterers, hotels and more. Each company on the platform keeps its own name, branding details and industry setup.
+**Run your whole business in one place.** Prodlys covers quotes, orders, production, billing and payments for workshops, studios, salons, caterers, hotels and more. Each company keeps its own name, branding details and industry setup.
+
+Where it runs:
+
+- `app.prodlys.com`: the product (sign in, staff app, customer share links)
+- `prodlys.com`: the future marketing site (not part of this repo)
+- `localhost:3000`: local development
+
+Brand assets and voice: see [`docs/BRAND.md`](docs/BRAND.md) and `public/brand/`.
 
 ## What it covers
 
@@ -40,7 +48,7 @@ See `.env.example`. The essentials are `DATABASE_URL`, `BETTER_AUTH_SECRET` and 
 ## Project layout
 
 - `src/app/(app)` – signed-in screens, one folder per area
-- `src/app/q`, `src/app/t` – public quotation and order-tracking pages
+- `src/app/q`, `src/app/t`, `src/app/i` – public quotation, order-tracking and invoice pages
 - `src/components` – shared UI (`catalyst/` holds the base kit)
 - `src/lib` – permissions, navigation, pricing, queries, server actions
 - `prisma/` – schema, migrations, seed

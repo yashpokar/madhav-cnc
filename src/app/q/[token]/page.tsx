@@ -1,5 +1,7 @@
 import { date as dateFormat, dateTimeShort as timeFormat, money as currency } from '@/lib/format'
 import type { Metadata } from 'next'
+import { PoweredBy } from '@/components/powered-by'
+import { shareMetadata } from '@/lib/share-metadata'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import {
@@ -14,9 +16,31 @@ import { listDocumentPaymentModes } from '@/lib/queries/payment-modes'
 import { CommentBox, RespondPanel } from './respond'
 import { PrintButton } from './print-button'
 
-export const metadata: Metadata = {
-  title: 'Quotation',
-  robots: { index: false, follow: false },
+export async function generateMetadata({
+  params,
+}: PageProps<'/q/[token]'>): Promise<Metadata> {
+  const { token } = await params
+  const share = await findShareByToken(token)
+
+  if (!share || !shareIsUsable(share)) {
+    return shareMetadata({ kind: 'Quotation' })
+  }
+
+  const [quotation, company] = await Promise.all([
+    prisma.quotation.findUnique({
+      where: { id: share.quotationId },
+      select: { number: true, revision: true },
+    }),
+    getPublicCompany(share.quotationId),
+  ])
+
+  return shareMetadata({
+    kind: 'Quotation',
+    company: company?.companyName,
+    number: quotation
+      ? `${quotation.number}${quotation.revision > 1 ? ` R${quotation.revision}` : ''}`
+      : null,
+  })
 }
 
 export default async function SharedQuotationPage({
@@ -419,6 +443,8 @@ export default async function SharedQuotationPage({
           <CommentBox token={token} label="Ask a question" />
         ) : null}
       </section>
+
+      <PoweredBy />
     </main>
   )
 }

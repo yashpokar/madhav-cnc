@@ -24,6 +24,7 @@ import { PartnerCombobox } from '@/components/partner-combobox'
 import { Textarea } from '@/components/catalyst/textarea'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
+import { LocationFields } from '@/components/location-fields'
 import type { FormState } from '@/lib/actions/customers'
 import type { PartnerOption } from '@/lib/queries/partners'
 import { CustomerStatus, CustomerType } from '@/generated/prisma/enums'
@@ -168,28 +169,12 @@ export function CustomerForm({
             <Label>Address</Label>
             <Textarea name="address" rows={2} defaultValue={keep('address', values.address)} />
           </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field>
-              <Label>City</Label>
-              <Input name="city" defaultValue={keep('city', values.city)} />
-            </Field>
-            <Field>
-              <Label>State</Label>
-              <Input name="state" defaultValue={keep('state', values.state)} />
-            </Field>
-            <Field>
-              <Label>Pincode</Label>
-              <Input
-                name="pincode"
-                inputMode="numeric"
-                defaultValue={keep('pincode', values.pincode)}
-                invalid={Boolean(errors.pincode)}
-              />
-              {errors.pincode ? (
-                <ErrorMessage>{errors.pincode}</ErrorMessage>
-              ) : null}
-            </Field>
-          </div>
+          <LocationFields
+            defaultState={keep('state', values.state)}
+            defaultCity={keep('city', values.city)}
+            defaultPincode={keep('pincode', values.pincode)}
+            errors={{ pincode: errors.pincode }}
+          />
         </FieldGroup>
       </Fieldset>
 

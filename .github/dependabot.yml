@@ -29,10 +29,12 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@prisma/*'
         update-types: ['version-update:semver-major']
+    # Held back on 1.7.2 (all update types): 1.7.22 dropped the Account `issuer`
+    # column from its schema, so sign-up fails with a Prisma "Argument `issuer` is
+    # missing" error against our schema (the smoke test caught it). Lift this once
+    # Better Auth's account schema and our Prisma model agree again.
       - dependency-name: better-auth
-        update-types: ['version-update:semver-major']
       - dependency-name: '@better-auth/*'
-        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /

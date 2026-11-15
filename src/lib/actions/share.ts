@@ -5,9 +5,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { logActivity } from '@/lib/activity'
-import { newShareToken } from '@/lib/share-token'
 import { findShareByToken, shareIsUsable } from '@/lib/queries/share'
 import type { SimpleResult } from '@/lib/actions/quotations'
+import * as quotations from '@/lib/services/quotations'
 
 export type { SimpleResult }
 
@@ -15,72 +15,32 @@ export async function createShareLink(
   quotationId: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await quotations.createShareLink(
+    { userId: user.id, name: user.name },
+    quotationId,
+    process.env.PUBLIC_BASE_URL ?? null,
+  )
 
-  const quotation = await prisma.quotation.findUnique({
-    where: { id: quotationId },
-    select: { id: true, validUntil: true },
-  })
+  if (!result.ok) return result
 
-  if (!quotation) {
-    return { ok: false, error: 'Quotation not found' }
+  if (result.created) {
+    revalidatePath(`/quotations/${quotationId}`)
   }
 
-  const existing = await prisma.quotationShare.findFirst({
-    where: { quotationId, isRevoked: false },
-    select: { id: true, token: true },
-  })
-
-  if (existing) {
-    return { ok: true, message: 'Link ready', id: existing.token }
-  }
-
-  const share = await prisma.quotationShare.create({
-    data: {
-      quotationId,
-      token: newShareToken(),
-      createdById: user.id,
-    },
-    select: { token: true },
-  })
-
-  await logActivity({
-    entity: 'quotation',
-    id: quotationId,
-    action: 'shared',
-    summary: 'shared the customer link',
-    actor: { id: user.id, name: user.name },
-  })
-
-  revalidatePath(`/quotations/${quotationId}`)
-
-  return { ok: true, message: 'Share link created', id: share.token }
+  return { ok: true, message: result.message, id: result.token }
 }
 
 export async function revokeShareLink(
   quotationId: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await quotations.revokeShareLink({ userId: user.id, name: user.name }, quotationId)
 
-  const result = await prisma.quotationShare.updateMany({
-    where: { quotationId, isRevoked: false },
-    data: { isRevoked: true },
-  })
-
-  if (result.count === 0) {
-    return { ok: false, error: 'No active link to revoke' }
-  }
-
-  await logActivity({
-    entity: 'quotation',
-    id: quotationId,
-    action: 'shared',
-    summary: 'revoked the customer link',
-    actor: { id: user.id, name: user.name },
-  })
+  if (!result.ok) return result
 
   revalidatePath(`/quotations/${quotationId}`)
 
-  return { ok: true, message: 'Link revoked. It will no longer open.' }
+  return { ok: true, message: result.message }
 }
 
 const responseSchema = z.object({
@@ -231,32 +191,16 @@ export async function addStaffComment(
   attachmentId?: string | null,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await quotations.addStaffComment(
+    { userId: user.id, name: user.name },
+    quotationId,
+    body,
+    attachmentId,
+  )
 
-  const parsed = z.string().trim().min(1, 'Write a comment first').max(1000).safeParse(body)
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
-  }
-
-  await prisma.quotationComment.create({
-    data: {
-      quotationId,
-      attachmentId: attachmentId ?? null,
-      body: parsed.data,
-      authorType: 'STAFF',
-      authorUserId: user.id,
-    },
-  })
-
-  await logActivity({
-    entity: 'quotation',
-    id: quotationId,
-    action: 'comment',
-    summary: 'added a comment',
-    actor: { id: user.id, name: user.name },
-  })
+  if (!result.ok) return result
 
   revalidatePath(`/quotations/${quotationId}`)
 
-  return { ok: true, message: 'Comment added' }
+  return { ok: true, message: result.message }
 }

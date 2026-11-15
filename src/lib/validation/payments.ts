@@ -31,3 +31,18 @@ export const receiptInputSchema = z.object({
 })
 
 export type ReceiptData = z.output<typeof receiptInputSchema>
+
+/**
+ * The same receipt as JSON (mobile API / services): the payment mode's fixed
+ * fields travel as an object (or the JSON text the web form posts), and are
+ * checked against the chosen mode by the service.
+ */
+export const receiptJsonSchema = receiptInputSchema.extend({
+  paymentDetails: z.unknown().optional(),
+})
+
+export type ReceiptJsonData = z.output<typeof receiptJsonSchema>
+
+/** What the service takes: parsed receipt fields plus the mode's raw details. */
+export type ReceiptInput = ReceiptData & { paymentDetails?: unknown }
+export type AllocationInput = { invoiceId: string; amount: number }

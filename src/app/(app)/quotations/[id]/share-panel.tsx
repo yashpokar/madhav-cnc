@@ -17,6 +17,7 @@ import {
   type SimpleResult,
 } from '@/lib/actions/share'
 import { whatsappLink } from '@/lib/whatsapp'
+import { isWhatsAppSafeToken } from '@/lib/share-token'
 import type { ShareDecision } from '@/generated/prisma/enums'
 
 export function SharePanel({
@@ -75,6 +76,27 @@ export function SharePanel({
     })
   }
 
+  // Revoke then create: the old link stops opening and a safe one replaces it.
+  function replaceLink() {
+    startTransition(async () => {
+      const revoked = await revokeShareLink(quotationId)
+
+      if (!revoked.ok) {
+        setResult(revoked)
+        return
+      }
+
+      const created = await createShareLink(quotationId)
+      setResult(created)
+
+      if (created.ok && created.id) {
+        setToken(created.id)
+      }
+
+      router.refresh()
+    })
+  }
+
   async function copy() {
     if (!url) return
 
@@ -118,7 +140,7 @@ export function SharePanel({
               outline
               href={whatsappLink(
                 contact.phone,
-                `Hello ${contact.name}, here is your quotation ${contact.number} from Madhav CNC. You can view it and approve it here: ${url}`,
+                `Hello ${contact.name}, here is your quotation ${contact.number} from Madhav CNC. You can view it and approve it here:\n\n${url}`,
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -145,6 +167,15 @@ export function SharePanel({
               />
             ) : null}
           </div>
+
+          {canManage && !isWhatsAppSafeToken(token) ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <span>This older link can break when sent on WhatsApp. Create a new link.</span>
+              <Button outline disabled={pending} onClick={replaceLink}>
+                Create new link
+              </Button>
+            </div>
+          ) : null}
 
           <Text>
             Anyone with this link can view the quotation and respond. It shows

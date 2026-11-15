@@ -31,6 +31,7 @@ import {
 } from '@/lib/actions/invoice-share'
 import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { whatsappLink } from '@/lib/whatsapp'
+import { isWhatsAppSafeToken } from '@/lib/share-token'
 import { InvoiceStatus, WriteOffReason } from '@/generated/prisma/enums'
 
 export function InvoiceActions({
@@ -92,7 +93,7 @@ export function InvoiceActions({
         ? `The amount due is ${currency.format(due)}`
         : `The total is ${currency.format(total)} (paid in full)`
 
-    return `Hello ${contact.name}, thank you for your business! Here is your invoice ${contact.number} from Madhav CNC. ${amount}. You can view it, see how to pay and download a PDF here: ${url}`
+    return `Hello ${contact.name}, thank you for your business! Here is your invoice ${contact.number} from Madhav CNC. ${amount}. You can view it, see how to pay and download a PDF here:\n\n${url}`
   }
 
   /** The customer link, made on first use. */
@@ -251,6 +252,12 @@ export function InvoiceActions({
           <Button outline disabled={pending} onClick={() => setOtherOpen((open) => !open)}>
             Send to another number
           </Button>
+        ) : null}
+
+        {canUpdate && status === 'ISSUED' && token && !isWhatsAppSafeToken(token) ? (
+          <p className="basis-full rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+            This older link can break when sent on WhatsApp. Create a new link. Use Regenerate link.
+          </p>
         ) : null}
 
         {canUpdate && status === 'ISSUED' && token ? (

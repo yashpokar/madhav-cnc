@@ -1,17 +1,13 @@
 'use server'
 
-import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { logActivity } from '@/lib/activity'
+import { newShareToken } from '@/lib/share-token'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
-
-function newToken() {
-  return randomBytes(24).toString('base64url')
-}
 
 /**
  * The customer link for an issued invoice, made on first use. Anyone who can
@@ -39,7 +35,7 @@ export async function ensureInvoiceShareLink(
     return { ok: true, message: 'Link ready', id: invoice.shareToken }
   }
 
-  const token = newToken()
+  const token = newShareToken()
 
   // Only fills an empty slot, so two quick clicks cannot replace each other's link.
   const result = await prisma.invoice.updateMany({
@@ -90,7 +86,7 @@ export async function regenerateInvoiceShareLink(
     return { ok: false, error: 'Only an issued invoice can be shared' }
   }
 
-  const token = newToken()
+  const token = newShareToken()
 
   await prisma.invoice.update({
     where: { id: invoiceId },

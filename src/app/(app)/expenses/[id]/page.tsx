@@ -44,7 +44,7 @@ export default async function ExpensePage({
   const modes = await listPaymentModeOptions(expense.channelId)
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{expense.number}</Heading>
         <Text>

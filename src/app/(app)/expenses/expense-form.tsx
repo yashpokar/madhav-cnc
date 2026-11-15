@@ -108,7 +108,7 @@ export function ExpenseForm({
   const total = Math.round((base + tax) * 100) / 100
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}
@@ -119,7 +119,7 @@ export function ExpenseForm({
       <Fieldset>
         <Legend>Expense</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Date</Label>
               <Input
@@ -199,7 +199,7 @@ export function ExpenseForm({
       <Fieldset>
         <Legend>Amount</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Amount before tax</Label>
               <Input
@@ -258,7 +258,7 @@ export function ExpenseForm({
             />
           </SwitchField>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Vendor GSTIN</Label>
               <Input
@@ -283,7 +283,7 @@ export function ExpenseForm({
       <Fieldset>
         <Legend>Payment</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Mode</Label>
               <PaymentModeSelect
@@ -325,7 +325,7 @@ export function ExpenseForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

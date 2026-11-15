@@ -20,7 +20,7 @@ export default async function NewPartnerPage({
     requested === 'CARPENTER' ? 'CARPENTER' : 'ARCHITECT'
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>Add partner</Heading>
         <Text>Architects and carpenters who refer customers to you.</Text>

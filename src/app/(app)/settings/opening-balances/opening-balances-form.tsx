@@ -48,7 +48,7 @@ export function OpeningBalancesForm({ rows: initial }: { rows: Row[] }) {
   if (rows.length === 0) {
     return (
       <Text>
-        There are no payment modes yet. Add them under Payment modes, then come
+        There are no payment methods yet. Add them under Payment methods, then come
         back to enter their opening balances.
       </Text>
     )
@@ -99,7 +99,7 @@ export function OpeningBalancesForm({ rows: initial }: { rows: Row[] }) {
         })}
       </ul>
 
-      <Text>Use a minus sign for a negative balance, such as an overdraft. Leave the amount blank to have no opening balance for a mode.</Text>
+      <Text>Use a minus sign for a negative balance, such as an overdraft. Leave the amount blank to have no opening balance for a method.</Text>
 
       <div>
         <Button disabled={pending} onClick={save}>

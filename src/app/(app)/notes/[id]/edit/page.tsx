@@ -41,7 +41,7 @@ export default async function EditNotePage({
   const action = updateNote.bind(null, note.id)
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{note.number}</Heading>
         <Text>{NOTE_KIND_LABELS[note.kind]} · draft</Text>

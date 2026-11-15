@@ -161,7 +161,7 @@ export function InvoiceForm({
   )?.[1]
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       <input type="hidden" name="customerId" value={values.customerId} />
       <input type="hidden" name="orderId" value={values.orderId ?? ''} />
       <input type="hidden" name="lines" value={serialised} />
@@ -183,7 +183,7 @@ export function InvoiceForm({
         <FieldGroup>
           <Text>Billing {values.customerName}</Text>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-4">
             <Field>
               <Label>Invoice date</Label>
               <Input
@@ -201,7 +201,7 @@ export function InvoiceForm({
                 defaultValue={keep('dueDate', values.dueDate)}
               />
             </Field>
-            <Field>
+            <Field className="sm:col-span-2">
               <Label>Place of supply</Label>
               <Input
                 name="placeOfSupply"
@@ -211,7 +211,7 @@ export function InvoiceForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Customer GSTIN</Label>
               <Input
@@ -356,7 +356,7 @@ export function InvoiceForm({
         <Fieldset>
           <Legend>Charges</Legend>
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Discount type</Label>
                 <Listbox
@@ -384,7 +384,7 @@ export function InvoiceForm({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Transport charge</Label>
                 <Input
@@ -495,7 +495,7 @@ export function InvoiceForm({
 
       <Fieldset>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Notes</Label>
               <Textarea
@@ -516,7 +516,7 @@ export function InvoiceForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

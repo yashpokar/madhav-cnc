@@ -117,8 +117,8 @@ export function CompaniesManager({
           </Button>
         </div>
         <Text className="max-w-xl">
-          It starts with the production stages, expense categories and payment modes of the company
-          you are working in. Add its address, GSTIN, bank and logo under Company details after
+          It starts with the production stages, expense categories and payment methods of the company
+          you are working in. Add its address, GSTIN, bank and logo under Business profile after
           switching to it.
         </Text>
       </section>

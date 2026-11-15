@@ -42,7 +42,7 @@ export default async function EditQuotationPage({
   const action = updateQuotation.bind(null, quotation.id)
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>
           {quotation.number}

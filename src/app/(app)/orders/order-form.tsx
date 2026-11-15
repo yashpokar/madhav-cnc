@@ -228,7 +228,7 @@ export function OrderForm({
   )?.[1]
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-6xl grid-cols-1 gap-6">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
       <input type="hidden" name="siteCity" value={siteCity} />
@@ -245,8 +245,8 @@ export function OrderForm({
       <Fieldset>
         <Legend>Order</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
               <Label>Customer</Label>
               <CustomerCombobox
                 options={customers}
@@ -262,7 +262,7 @@ export function OrderForm({
                 </Description>
               )}
             </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Order date</Label>
               <Input
                 name="orderDate"
@@ -271,18 +271,7 @@ export function OrderForm({
                 required
               />
             </Field>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
-              <Label>Subject</Label>
-              <Input
-                name="subject"
-                defaultValue={keep('subject', values.subject)}
-                placeholder="Kitchen and wardrobes, 3BHK"
-              />
-            </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Due date</Label>
               <Input
                 name="dueDate"
@@ -292,9 +281,16 @@ export function OrderForm({
               />
             </Field>
           </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Field key={`arch-${partnerKey}`}>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
+              <Label>Subject</Label>
+              <Input
+                name="subject"
+                defaultValue={keep('subject', values.subject)}
+                placeholder="Kitchen and wardrobes, 3BHK"
+              />
+            </Field>
+            <Field className="sm:col-span-3" key={`arch-${partnerKey}`}>
               <Label>Architect</Label>
               <PartnerCombobox
                 name="architectId"
@@ -305,7 +301,7 @@ export function OrderForm({
                 noneLabel="No architect"
               />
             </Field>
-            <Field key={`carp-${partnerKey}`}>
+            <Field className="sm:col-span-3" key={`carp-${partnerKey}`}>
               <Label>Carpenter</Label>
               <PartnerCombobox
                 name="carpenterId"
@@ -325,7 +321,7 @@ export function OrderForm({
       <Fieldset>
         <Legend>When and where</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-4">
             <Field>
               <Label>Starts on</Label>
               <Input
@@ -367,10 +363,10 @@ export function OrderForm({
               />
             </Field>
           </div>
-          <Description>
+          <p className="text-xs/5 text-zinc-500 dark:text-zinc-400">
             Optional. Leave the times blank for an all-day {term.toLowerCase()}.
             It then shows on the calendar. Times are India time.
-          </Description>
+          </p>
 
           {shownConflicts.length > 0 ? (
             <FormBanner tone="error">
@@ -388,8 +384,8 @@ export function OrderForm({
             </FormBanner>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
               <Label>Venue or location</Label>
               <Input
                 name="venue"
@@ -397,7 +393,7 @@ export function OrderForm({
                 placeholder="Where it takes place"
               />
             </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Guests or headcount</Label>
               <Input
                 name="headcount"
@@ -417,26 +413,26 @@ export function OrderForm({
       <Fieldset>
         <Legend>Site</Legend>
         <FieldGroup>
-          <Field>
-            <Label>Site address</Label>
-            <Textarea
-              rows={2}
-              value={siteAddress}
-              onChange={(event) => setSiteAddress(event.target.value)}
-            />
-            <Description>
-              Prefilled from the customer. Change it if the job is elsewhere.
-            </Description>
-          </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
+              <Label>Site address</Label>
+              <Textarea
+                rows={2}
+                value={siteAddress}
+                onChange={(event) => setSiteAddress(event.target.value)}
+              />
+              <Description>
+                Prefilled from the customer. Change it if the job is elsewhere.
+              </Description>
+            </Field>
+            <Field className="sm:col-span-3">
               <Label>City</Label>
               <Input
                 value={siteCity}
                 onChange={(event) => setSiteCity(event.target.value)}
               />
             </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Pincode</Label>
               <Input
                 inputMode="numeric"
@@ -472,7 +468,7 @@ export function OrderForm({
         <Fieldset>
           <Legend>Discount</Legend>
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Type</Label>
                 <Listbox
@@ -500,7 +496,7 @@ export function OrderForm({
                 />
               </Field>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Transport charge</Label>
                 <Input
@@ -526,7 +522,7 @@ export function OrderForm({
                 <Description>Set 0 if transport is not taxed.</Description>
               </Field>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Advance received</Label>
                 <Input
@@ -605,7 +601,7 @@ export function OrderForm({
 
       <Fieldset>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Notes</Label>
               <Textarea name="notes" rows={4} defaultValue={keep('notes', values.notes)} />
@@ -619,7 +615,7 @@ export function OrderForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

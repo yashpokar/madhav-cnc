@@ -116,7 +116,7 @@ export function ItemForm({
   const isService = supplyType === 'SERVICE'
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}
@@ -127,7 +127,7 @@ export function ItemForm({
       <Fieldset>
         <Legend>Item</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field className="sm:col-span-2">
               <Label>Name</Label>
               <Input
@@ -150,7 +150,7 @@ export function ItemForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Material</Label>
               <MaterialCombobox
@@ -218,7 +218,7 @@ export function ItemForm({
       <Fieldset>
         <Legend>Pricing</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>
                 {isFlatRate ? 'Amount' : `Rate per ${UNIT_SHORT[unit]}`}
@@ -299,7 +299,7 @@ export function ItemForm({
           <Fieldset>
             <Legend>Specification</Legend>
             <FieldGroup>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
                 <Field>
                   <Label>Brand</Label>
                   <Input name="brand" defaultValue={keep('brand', values.brand)} />
@@ -309,7 +309,7 @@ export function ItemForm({
                   <Input name="shade" defaultValue={keep('shade', values.shade)} />
                 </Field>
               </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
                 <Field className="sm:col-span-2">
                   <Label>Measured in</Label>
                   <Listbox
@@ -329,7 +329,7 @@ export function ItemForm({
                 </Field>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
                 <Field>
                   <Label>Thickness ({DIMENSION_UNIT_SHORT[dimensionUnit]})</Label>
                   <Input
@@ -427,7 +427,7 @@ export function ItemForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

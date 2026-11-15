@@ -91,7 +91,7 @@ export function CustomerForm({
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}
@@ -102,7 +102,7 @@ export function CustomerForm({
       <Fieldset>
         <Legend>Customer</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field className="sm:col-span-2">
               <Label>Name</Label>
               <Input
@@ -125,7 +125,7 @@ export function CustomerForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Phone</Label>
               <Input
@@ -168,7 +168,7 @@ export function CustomerForm({
             <Label>Address</Label>
             <Textarea name="address" rows={2} defaultValue={keep('address', values.address)} />
           </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>City</Label>
               <Input name="city" defaultValue={keep('city', values.city)} />
@@ -198,7 +198,7 @@ export function CustomerForm({
       <Fieldset>
         <Legend>Preferred partners</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Preferred architect</Label>
               <PartnerCombobox
@@ -232,7 +232,7 @@ export function CustomerForm({
       <Fieldset>
         <Legend>Occasions</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Date of birth</Label>
               <Input
@@ -258,7 +258,7 @@ export function CustomerForm({
       <Fieldset>
         <Legend>Tax &amp; terms</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>GSTIN</Label>
               <Input
@@ -302,7 +302,7 @@ export function CustomerForm({
       <Fieldset>
         <Legend>Opening balance</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Opening balance (they owe you)</Label>
               <Input
@@ -342,7 +342,7 @@ export function CustomerForm({
 
       <Fieldset>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Status</Label>
               <Listbox name="status" defaultValue={keep('status', values.status)}>
@@ -361,7 +361,7 @@ export function CustomerForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

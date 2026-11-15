@@ -24,14 +24,14 @@ export function DashboardRangeBar({
   }
   const pill = (active: boolean) =>
     active
-      ? 'rounded-md bg-white px-3 py-1.5 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
-      : 'rounded-md px-3 py-1.5 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
+      ? 'flex h-8 items-center rounded-md bg-white px-3 text-sm/5 font-medium text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-white'
+      : 'flex h-8 items-center rounded-md px-3 text-sm/5 font-medium text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white'
 
   return (
-    <div className="flex flex-wrap items-center gap-2 print:hidden">
+    <div className="flex flex-wrap items-center gap-3 print:hidden">
       <nav
         aria-label="Period"
-        className="flex gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5"
+        className="flex h-10 items-center gap-1 rounded-lg bg-zinc-950/5 p-1 dark:bg-white/5"
       >
         {PRESETS.map((preset) => (
           <Link

@@ -115,7 +115,7 @@ export function OrderForm({
   )
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-6xl grid-cols-1 gap-6">
       <input type="hidden" name="vendorId" value={vendorId} />
       <input type="hidden" name="lines" value={serialised} />
 
@@ -127,7 +127,7 @@ export function OrderForm({
       <Fieldset>
         <Legend>Order</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Vendor</Label>
               <VendorPicker
@@ -196,7 +196,7 @@ export function OrderForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

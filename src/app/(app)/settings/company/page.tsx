@@ -15,7 +15,7 @@ export default async function CompanySettingsPage() {
   const setting = await getCompanySetting()
 
   return (
-    <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-4xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>Company details</Heading>
         <Text>

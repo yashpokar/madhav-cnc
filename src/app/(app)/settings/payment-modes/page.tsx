@@ -6,7 +6,7 @@ import { requireCapability } from '@/lib/session'
 import { ModesManager } from './modes-manager'
 
 export const metadata: Metadata = {
-  title: 'Payment modes',
+  title: 'Payment methods',
 }
 
 export default async function PaymentModesPage() {
@@ -15,9 +15,9 @@ export default async function PaymentModesPage() {
   const rows = await listPaymentModesWithUse()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid gap-2">
-        <Heading>Payment modes</Heading>
+        <Heading>Payment methods</Heading>
         <Text className="max-w-2xl">
           The ways money comes in and goes out: cash, a bank account, a UPI handle, a cheque book,
           anything else. Add the details you want to show (bank name, account number, IFSC, UPI ID)

@@ -220,8 +220,8 @@ export default async function PaymentsPage({
   const toBillPaged = paginate(toBillRows, params, { pageKey: 'bp', sizeKey: 'bs' })
 
   return (
-    <div className="grid grid-cols-1 gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="grid grid-cols-1 gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="grid grid-cols-1 gap-2">
           <Heading>Payments</Heading>
           <Text>What is still to be recovered, and what has come in.</Text>

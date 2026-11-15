@@ -33,7 +33,7 @@ export default async function TeamPage() {
   }))
 
   return (
-    <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-4xl grid-cols-1 gap-6">
       <div className="grid gap-2">
         <Heading>Team</Heading>
         <Text>

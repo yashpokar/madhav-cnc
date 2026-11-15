@@ -37,7 +37,7 @@ export default async function NewBillPage({
   const today = todayIso()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New purchase bill</Heading>
         <Text>Record what a vendor has billed you. Post it once it is checked.</Text>

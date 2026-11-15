@@ -73,8 +73,8 @@ export default async function PayablesPage({ searchParams }: PageProps<'/payable
   const sortParams = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'page'))
 
   return (
-    <div className="grid grid-cols-1 gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="grid grid-cols-1 gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="grid grid-cols-1 gap-2">
           <Heading>Payables</Heading>
           <Text>What you owe your vendors, and how late it is.</Text>

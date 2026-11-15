@@ -37,7 +37,7 @@ export default async function NewReceiptPage({
     const open = orders.filter((order) => order.status === 'SENT' || order.status === 'PARTIAL')
 
     return (
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-6">
         <div className="grid grid-cols-1 gap-2">
           <Heading>Receive goods</Heading>
           <Text>Choose what the goods arrived against.</Text>

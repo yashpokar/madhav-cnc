@@ -51,7 +51,7 @@ export default async function EditOrderPage({
       ]
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{order.number}</Heading>
         <Text>{order.vendor.name}</Text>

@@ -105,7 +105,7 @@ export function PaymentForm({
   const dueTotal = round2(bills.reduce((sum, bill) => sum + bill.due, 0))
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       <input type="hidden" name="vendorId" value={vendorId} />
       <input type="hidden" name="allocations" value={serialised} />
       <input type="hidden" name="openingApplied" value={openingAmount || ''} />
@@ -115,7 +115,7 @@ export function PaymentForm({
       <Fieldset>
         <Legend>Payment</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Vendor</Label>
               <Select
@@ -160,7 +160,7 @@ export function PaymentForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Paid on</Label>
               <Input
@@ -251,7 +251,7 @@ export function PaymentForm({
         </div>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

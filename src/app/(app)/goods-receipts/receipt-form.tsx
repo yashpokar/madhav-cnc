@@ -58,7 +58,7 @@ export function ReceiptForm({
     .filter((line) => line.qty > 0)
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? <FormBanner tone="error">{state.message}</FormBanner> : null}
 
       <input type="hidden" name={source.kind === 'bill' ? 'billId' : 'poId'} value={source.id} />
@@ -116,7 +116,7 @@ export function ReceiptForm({
       </div>
 
       <FieldGroup>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
           <Field>
             <Label>Received on</Label>
             <Input
@@ -135,7 +135,7 @@ export function ReceiptForm({
         </Field>
       </FieldGroup>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

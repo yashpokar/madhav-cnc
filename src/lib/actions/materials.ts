@@ -1,48 +1,32 @@
 'use server'
 
+// Thin web adapter: permission check, the service in
+// src/lib/services/materials.ts, then cache refresh.
+
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import * as materials from '@/lib/services/materials'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
 
-const nameSchema = z.string().trim().min(1, 'Material name is required').max(100)
+function refresh() {
+  revalidatePath('/items')
+  revalidatePath('/items/materials')
+}
 
 export async function createMaterial(name: string): Promise<SimpleResult> {
   const user = await requireCapability('item:create')
-  const parsed = nameSchema.safeParse(name)
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  const result = await materials.createMaterial(user, name)
+
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
 
-  const clash = await prisma.material.findFirst({
-    where: { name: { equals: parsed.data, mode: 'insensitive' } },
-  })
+  refresh()
 
-  if (clash) {
-    return { ok: false, error: 'A material with that name already exists' }
-  }
-
-  const last = await prisma.material.findFirst({
-    orderBy: { sortOrder: 'desc' },
-    select: { sortOrder: true },
-  })
-
-  await prisma.material.create({
-    data: {
-      name: parsed.data,
-      sortOrder: (last?.sortOrder ?? -1) + 1,
-      createdById: user.id,
-    },
-  })
-
-  revalidatePath('/items')
-  revalidatePath('/items/materials')
-
-  return { ok: true, message: `${parsed.data} added` }
+  return { ok: true, message: result.message }
 }
 
 export async function renameMaterial(
@@ -50,32 +34,16 @@ export async function renameMaterial(
   name: string,
 ): Promise<SimpleResult> {
   await requireCapability('item:update')
-  const parsed = nameSchema.safeParse(name)
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  const result = await materials.renameMaterial(id, name)
+
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
 
-  const clash = await prisma.material.findFirst({
-    where: {
-      name: { equals: parsed.data, mode: 'insensitive' },
-      id: { not: id },
-    },
-  })
+  refresh()
 
-  if (clash) {
-    return { ok: false, error: 'A material with that name already exists' }
-  }
-
-  await prisma.material.update({
-    where: { id },
-    data: { name: parsed.data },
-  })
-
-  revalidatePath('/items')
-  revalidatePath('/items/materials')
-
-  return { ok: true, message: 'Material renamed' }
+  return { ok: true, message: result.message }
 }
 
 export async function moveMaterial(
@@ -84,38 +52,15 @@ export async function moveMaterial(
 ): Promise<SimpleResult> {
   await requireCapability('item:update')
 
-  const materials = await prisma.material.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true },
-  })
+  const result = await materials.moveMaterial(id, direction)
 
-  const index = materials.findIndex((material) => material.id === id)
-
-  if (index === -1) {
-    return { ok: false, error: 'Material not found' }
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
 
-  const swapWith = direction === 'up' ? index - 1 : index + 1
+  refresh()
 
-  if (swapWith < 0 || swapWith >= materials.length) {
-    return { ok: false, error: 'Already at the end' }
-  }
-
-  await prisma.$transaction([
-    prisma.material.update({
-      where: { id: materials[index].id },
-      data: { sortOrder: swapWith },
-    }),
-    prisma.material.update({
-      where: { id: materials[swapWith].id },
-      data: { sortOrder: index },
-    }),
-  ])
-
-  revalidatePath('/items')
-  revalidatePath('/items/materials')
-
-  return { ok: true, message: 'Order updated' }
+  return { ok: true, message: result.message }
 }
 
 export async function setMaterialActive(
@@ -124,55 +69,30 @@ export async function setMaterialActive(
 ): Promise<SimpleResult> {
   await requireCapability('item:update')
 
-  if (!isActive) {
-    const inUse = await prisma.item.count({
-      where: { materialId: id, isActive: true },
-    })
+  const result = await materials.setMaterialActive(id, isActive)
 
-    if (inUse > 0) {
-      return {
-        ok: false,
-        error: `${inUse} active item${inUse === 1 ? '' : 's'} still use this material`,
-      }
-    }
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
 
-  await prisma.material.update({
-    where: { id },
-    data: { isActive },
-  })
+  refresh()
 
-  revalidatePath('/items')
-  revalidatePath('/items/materials')
-
-  return { ok: true, message: isActive ? 'Material enabled' : 'Material retired' }
+  return { ok: true, message: result.message }
 }
 
 export async function deleteMaterial(id: string) {
   await requireCapability('item:delete')
 
-  const material = await prisma.material.findUnique({
-    where: { id },
-    select: { name: true, _count: { select: { items: true } } },
-  })
+  const result = await materials.deleteMaterial(id)
 
-  if (!material) {
-    return { ok: false as const, error: 'Material not found' }
+  if (!result.ok) {
+    return { ok: false as const, error: result.error }
   }
-
-  if (material._count.items > 0) {
-    return {
-      ok: false as const,
-      error: `${material.name} is used by ${material._count.items} item(s). Mark it inactive instead.`,
-    }
-  }
-
-  await prisma.material.delete({ where: { id } })
 
   revalidatePath('/items/materials')
   revalidatePath('/items')
 
-  return { ok: true as const, message: `${material.name} deleted` }
+  return { ok: true as const, message: result.message }
 }
 
 /** Turns stock tracking on or off for a material, and sets its reorder level. */
@@ -183,17 +103,14 @@ export async function setMaterialStock(
 ): Promise<SimpleResult> {
   await requireCapability('item:update')
 
-  if (reorderLevel !== null && (!Number.isFinite(reorderLevel) || reorderLevel < 0)) {
-    return { ok: false, error: 'Reorder level cannot be negative' }
-  }
+  const result = await materials.setMaterialStock(id, stockTracked, reorderLevel)
 
-  await prisma.material.update({
-    where: { id },
-    data: { stockTracked, reorderLevel: stockTracked ? reorderLevel : null },
-  })
+  if (!result.ok) {
+    return { ok: false, error: result.error }
+  }
 
   revalidatePath('/items/materials')
   revalidatePath('/stock')
 
-  return { ok: true, message: stockTracked ? 'Stock tracking on' : 'Stock tracking off' }
+  return { ok: true, message: result.message }
 }

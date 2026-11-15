@@ -1,11 +1,14 @@
 'use server'
 
+// Thin web adapter: permission, FormData parsing, then the service in
+// src/lib/services/vendors.ts, then cache refresh and redirects.
+
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { vendorInputSchema } from '@/lib/validation/vendors'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
+import * as vendors from '@/lib/services/vendors'
 
 export type { FormState }
 
@@ -25,18 +28,6 @@ function parse(formData: FormData) {
   })
 }
 
-async function findByName(name: string, exceptId?: string) {
-  const other = await prisma.vendor.findFirst({
-    where: {
-      name: { equals: name, mode: 'insensitive' },
-      ...(exceptId ? { id: { not: exceptId } } : {}),
-    },
-    select: { id: true },
-  })
-
-  return other?.id ?? null
-}
-
 export async function createVendor(
   _previous: FormState,
   formData: FormData,
@@ -53,22 +44,20 @@ export async function createVendor(
     }
   }
 
-  const taken = await findByName(parsed.data.name)
+  const result = await vendors.createVendor(parsed.data)
 
-  if (taken) {
+  if (!result.ok) {
     return {
       status: 'error',
-      message: 'A vendor with this name already exists',
-      fieldErrors: { name: 'A vendor with this name already exists' },
+      message: result.error,
+      fieldErrors: result.fieldErrors,
       values: rawValues(formData),
-      existingId: taken,
+      existingId: result.existingId,
     }
   }
 
-  const vendor = await prisma.vendor.create({ data: parsed.data })
-
   revalidatePath('/vendors')
-  redirect(`/vendors/${vendor.id}?created=1`)
+  redirect(`/vendors/${result.id}?created=1`)
 }
 
 export async function updateVendor(
@@ -88,32 +77,20 @@ export async function updateVendor(
     }
   }
 
-  const taken = await findByName(parsed.data.name, id)
+  const result = await vendors.updateVendor(id, parsed.data)
 
-  if (taken) {
-    return {
-      status: 'error',
-      message: 'A vendor with this name already exists',
-      fieldErrors: { name: 'A vendor with this name already exists' },
-      values: rawValues(formData),
-      existingId: taken,
-    }
+  if (!result.ok) {
+    // A duplicate name echoes the form back; "not found" has no fields to show.
+    return result.existingId
+      ? {
+          status: 'error',
+          message: result.error,
+          fieldErrors: result.fieldErrors,
+          values: rawValues(formData),
+          existingId: result.existingId,
+        }
+      : { status: 'error', message: result.error }
   }
-
-  const existing = await prisma.vendor.findUnique({ where: { id }, select: { id: true } })
-
-  if (!existing) {
-    return { status: 'error', message: 'Vendor not found' }
-  }
-
-  await prisma.$transaction([
-    prisma.vendor.update({ where: { id }, data: parsed.data }),
-    // Keep the name printed on past expenses in step with the vendor.
-    prisma.expense.updateMany({
-      where: { vendorId: id },
-      data: { payeeName: parsed.data.name },
-    }),
-  ])
 
   revalidatePath('/vendors')
   revalidatePath(`/vendors/${id}`)
@@ -125,27 +102,15 @@ export async function updateVendor(
 export async function deleteVendor(id: string) {
   await requireCapability('expense:delete')
 
-  const vendor = await prisma.vendor.findUnique({
-    where: { id },
-    select: { name: true, _count: { select: { expenses: true } } },
-  })
+  const result = await vendors.deleteVendor(id)
 
-  if (!vendor) {
-    return { ok: false as const, error: 'Vendor not found' }
+  if (!result.ok) {
+    return { ok: false as const, error: result.error }
   }
-
-  if (vendor._count.expenses > 0) {
-    return {
-      ok: false as const,
-      error: `${vendor.name} has ${vendor._count.expenses} expense(s). Mark the vendor inactive instead.`,
-    }
-  }
-
-  await prisma.vendor.delete({ where: { id } })
 
   revalidatePath('/vendors')
 
-  return { ok: true as const, message: `${vendor.name} deleted` }
+  return { ok: true as const, message: result.message }
 }
 
 /** A vendor added on the spot from a picker; returns it so it can be selected. */
@@ -159,34 +124,13 @@ export async function quickCreateVendor(input: {
 }) {
   await requireCapability('expense:create')
 
-  const parsed = vendorInputSchema.safeParse({ ...input, isActive: true })
+  const result = await vendors.quickCreateVendor(input)
 
-  if (!parsed.success) {
-    return { ok: false as const, error: parsed.error.issues[0].message }
+  if (!result.ok) {
+    return { ok: false as const, error: result.error }
   }
-
-  const known = await prisma.vendor.findFirst({
-    where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
-    select: { id: true, name: true },
-  })
-
-  if (known) {
-    return { ok: false as const, error: `${known.name} is already a vendor. Pick it from the list.` }
-  }
-
-  const vendor = await prisma.vendor.create({
-    data: parsed.data,
-    select: { id: true, name: true, phone: true, city: true, description: true },
-  })
 
   revalidatePath('/vendors')
 
-  return {
-    ok: true as const,
-    vendor: {
-      id: vendor.id,
-      name: vendor.name,
-      detail: [vendor.phone, vendor.city].filter(Boolean).join(' · ') || vendor.description || '',
-    },
-  }
+  return { ok: true as const, vendor: result.vendor }
 }

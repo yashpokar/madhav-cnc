@@ -1,16 +1,17 @@
 'use server'
 
+// Thin web adapter: permission, FormData parsing, then the service in
+// src/lib/services/partners.ts, then cache refresh and redirects.
+
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { nextPartnerCode } from '@/lib/codes'
 import { partnerInputSchema } from '@/lib/validation/partners'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
-
-export type { FormState }
+import * as partners from '@/lib/services/partners'
 import type { PartnerType } from '@/generated/prisma/enums'
 
+export type { FormState }
 
 function parse(formData: FormData) {
   return partnerInputSchema.safeParse({
@@ -45,19 +46,14 @@ export async function createPartner(
     }
   }
 
-  const code = await nextPartnerCode(parsed.data.type as PartnerType)
+  const result = await partners.createPartner(user, parsed.data)
 
-  const partner = await prisma.partner.create({
-    data: {
-      ...parsed.data,
-      code,
-      createdById: user.id,
-      updatedById: user.id,
-    },
-  })
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
+  }
 
   revalidatePath('/partners')
-  redirect(`/partners?created=${encodeURIComponent(partner.code)}`)
+  redirect(`/partners?created=${encodeURIComponent(result.code)}`)
 }
 
 export async function updatePartner(
@@ -77,41 +73,35 @@ export async function updatePartner(
     }
   }
 
-  const existing = await prisma.partner.findUnique({ where: { id } })
+  const result = await partners.updatePartner(user, id, parsed.data)
 
-  if (!existing) {
-    return { status: 'error', message: 'Record not found' }
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
   }
-
-  const partner = await prisma.partner.update({
-    where: { id },
-    data: {
-      ...parsed.data,
-      type: existing.type,
-      updatedById: user.id,
-    },
-  })
 
   revalidatePath('/partners')
   revalidatePath(`/partners/${id}`)
 
-  return { status: 'success', message: `${partner.name} updated`, id: partner.id }
+  return { status: 'success', message: `${result.name} updated`, id: result.id }
 }
 
 export async function setPartnerActive(id: string, isActive: boolean) {
   const user = await requireCapability('partner:update')
 
-  await prisma.partner.update({
-    where: { id },
-    data: { isActive, updatedById: user.id },
-  })
+  const result = await partners.setPartnerActive(user, id, isActive)
+
+  // This action returns nothing to its caller, so a missing partner surfaces
+  // as an error, as it always has.
+  if (!result.ok) {
+    throw new Error(result.error)
+  }
 
   revalidatePath('/partners')
   revalidatePath(`/partners/${id}`)
 }
 
 export type QuickCreateResult =
-  | { ok: true; partner: { id: string; code: string; name: string; firmName: string | null; city: string | null } }
+  | { ok: true; partner: partners.QuickPartner }
   | { ok: false; error: string }
 
 export async function quickCreatePartner(input: {
@@ -124,73 +114,27 @@ export async function quickCreatePartner(input: {
 }): Promise<QuickCreateResult> {
   const user = await requireCapability('partner:create')
 
-  const parsed = partnerInputSchema.safeParse({
-    type: input.type,
-    name: input.name,
-    phone: input.phone,
-    firmName: input.firmName ?? '',
-    city: input.city ?? '',
-    pincode: input.pincode ?? '',
-    isActive: true,
-  })
+  const result = await partners.quickCreatePartner(user, input)
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
-
-  const code = await nextPartnerCode(parsed.data.type as PartnerType)
-
-  const partner = await prisma.partner.create({
-    data: {
-      ...parsed.data,
-      code,
-      createdById: user.id,
-      updatedById: user.id,
-    },
-    select: { id: true, code: true, name: true, firmName: true, city: true },
-  })
 
   revalidatePath('/partners')
 
-  return { ok: true, partner }
+  return { ok: true, partner: result.partner }
 }
 
 export async function deletePartner(id: string) {
   await requireCapability('partner:delete')
 
-  const partner = await prisma.partner.findUnique({
-    where: { id },
-    select: { name: true },
-  })
+  const result = await partners.deletePartner(id)
 
-  if (!partner) {
-    return { ok: false as const, error: 'Partner not found' }
+  if (!result.ok) {
+    return { ok: false as const, error: result.error }
   }
-
-  const [customers, quotations, orders] = await Promise.all([
-    prisma.customer.count({
-      where: {
-        OR: [{ preferredArchitectId: id }, { preferredCarpenterId: id }],
-      },
-    }),
-    prisma.quotation.count({
-      where: { OR: [{ architectId: id }, { carpenterId: id }] },
-    }),
-    prisma.order.count({
-      where: { OR: [{ architectId: id }, { carpenterId: id }] },
-    }),
-  ])
-
-  if (customers + quotations + orders > 0) {
-    return {
-      ok: false as const,
-      error: `${partner.name} is referenced by ${customers} customer(s), ${quotations} quotation(s) and ${orders} order(s). Mark the partner inactive instead.`,
-    }
-  }
-
-  await prisma.partner.delete({ where: { id } })
 
   revalidatePath('/partners')
 
-  return { ok: true as const, message: `${partner.name} deleted` }
+  return { ok: true as const, message: result.message }
 }

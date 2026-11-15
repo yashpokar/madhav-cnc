@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { requireCompanyId } from '@/lib/active-company'
+import { companyMemberWhere } from '@/lib/tenant'
 
 const ACTIVE_ORDER_STATUSES = ['IN_PRODUCTION', 'READY'] as const
 
@@ -71,8 +73,14 @@ export async function listTasksForOrder(orderId: string) {
 }
 
 export async function listOperators() {
+  // Only people of this company: User is a global table.
   return prisma.user.findMany({
-    where: { isActive: true, role: { in: ['OPERATOR', 'ADMIN'] } },
+    where: {
+      AND: [
+        companyMemberWhere(await requireCompanyId()),
+        { role: { in: ['OPERATOR', 'ADMIN'] } },
+      ],
+    },
     orderBy: { name: 'asc' },
     select: { id: true, name: true },
   })

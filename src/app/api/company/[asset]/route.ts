@@ -48,6 +48,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
       headers: {
         'Content-Type': (setting?.[spec.mime] as string | null) ?? 'image/png',
         'Cache-Control': 'private, max-age=600',
+        Vary: 'Cookie',
       },
     })
   } catch {

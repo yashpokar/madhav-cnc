@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { requireCompanyId } from '@/lib/active-company'
+import { companyMemberWhere } from '@/lib/tenant'
 import { requireCapability } from '@/lib/session'
 import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -202,17 +204,24 @@ export async function assignTask(
     return { ok: false, error: 'Task not found' }
   }
 
+  // User is a global table: only someone who works in this company may be assigned.
+  const assignee = userId
+    ? await prisma.user.findFirst({
+        where: {
+          AND: [companyMemberWhere(await requireCompanyId()), { id: userId }],
+        },
+        select: { name: true },
+      })
+    : null
+
+  if (userId && !assignee) {
+    return { ok: false, error: 'That person is not part of this company' }
+  }
+
   await prisma.productionTask.update({
     where: { id: taskId },
     data: { assignedToId: userId },
   })
-
-  const assignee = userId
-    ? await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      })
-    : null
 
   await logActivity({
     entity: 'order',

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # uploaded design references (local dev only; production uses the S3 bucket)
 /storage
+
+# local browser-automation artefacts
+/.playwright-mcp

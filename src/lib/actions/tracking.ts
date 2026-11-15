@@ -1,5 +1,6 @@
 'use server'
 
+import { getPublicBaseUrl } from '@/lib/public-url'
 import { revalidatePath } from 'next/cache'
 import { requireCapability } from '@/lib/session'
 import * as orders from '@/lib/services/orders'
@@ -16,7 +17,7 @@ export async function createTrackingLink(
   const result = await orders.createTrackingLink(
     { userId: user.id, name: user.name },
     orderId,
-    process.env.PUBLIC_BASE_URL ?? null,
+    (await getPublicBaseUrl()) || null,
   )
 
   if (!result.ok) return result
@@ -49,7 +50,7 @@ export async function replaceTrackingLink(
   const result = await orders.replaceTrackingLink(
     { userId: user.id, name: user.name },
     orderId,
-    process.env.PUBLIC_BASE_URL ?? null,
+    (await getPublicBaseUrl()) || null,
   )
 
   if (!result.ok) return result

@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { requireCompanyId } from '@/lib/active-company'
 import { listInvitations } from '@/lib/services/invitations'
 import { prisma } from '@/lib/prisma'
+import { pickPublicBaseUrl } from '@/lib/public-url'
 import { requireCapability } from '@/lib/session'
 import { TeamManager } from './team-manager'
 
@@ -22,10 +23,12 @@ export default async function TeamPage() {
     headers(),
   ])
 
-  // PUBLIC_BASE_URL when set, otherwise the address this page was opened on.
-  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host')
-  const proto = requestHeaders.get('x-forwarded-proto') ?? (host?.startsWith('localhost') ? 'http' : 'https')
-  const baseUrl = process.env.PUBLIC_BASE_URL || (host ? `${proto}://${host}` : '')
+  const baseUrl = pickPublicBaseUrl({
+    env: process.env.PUBLIC_BASE_URL,
+    host: requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host'),
+    proto: requestHeaders.get('x-forwarded-proto'),
+    production: process.env.NODE_ENV === 'production',
+  })
 
   const rows = await prisma.userCompany.findMany({
     where: { companyId },

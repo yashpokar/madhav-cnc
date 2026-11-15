@@ -1092,6 +1092,15 @@ model PaymentChannel {
   sortOrder Int            @default(0) @map("sort_order")
   isActive  Boolean        @default(true) @map("is_active")
 
+  /// Facts the owner chooses to show with this mode: [{label, value}], such as
+  /// bank name, account number, IFSC or a UPI ID. Anything can be added.
+  details         Json    @default("[]")
+  /// Printed on invoices and quotations as a way to pay.
+  showOnDocuments Boolean @default(false) @map("show_on_documents")
+  /// An optional QR code to pay with (a UPI QR, for example).
+  qrStoredName    String? @map("qr_stored_name")
+  qrMimeType      String? @map("qr_mime_type")
+
   expenses Expense[]
   payments Payment[]
 
@@ -1117,6 +1126,9 @@ model Payment {
   /// The business's own name for how it came in, e.g. HDFC NEFT (optional).
   channelId String?         @map("channel_id")
   channel   PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  /// The mode's name as it was when this was recorded, so renaming or removing
+  /// a payment mode later never rewrites history.
+  modeName  String?         @map("mode_name")
   reference String?
   paidOn    DateTime        @map("paid_on") @db.Date
   notes     String?
@@ -1223,6 +1235,8 @@ model Expense {
   vendor      Vendor?         @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   channelId   String?         @map("channel_id")
   channel     PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  /// The mode's name as it was when this was recorded (see Payment.modeName).
+  modeName    String?         @map("mode_name")
   description String?
 
   amount         Decimal @db.Decimal(14, 2)

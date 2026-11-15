@@ -5,7 +5,6 @@ import { requireCompanyId } from '@/lib/active-company'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { companySettingSchema } from '@/lib/validation/company'
-import { deleteUpload } from '@/lib/storage'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
@@ -27,12 +26,6 @@ export async function updateCompanySetting(
     email: formData.get('email'),
     gstin: formData.get('gstin'),
     pan: formData.get('pan'),
-    bankAccountName: formData.get('bankAccountName'),
-    bankName: formData.get('bankName'),
-    bankBranch: formData.get('bankBranch'),
-    accountNumber: formData.get('accountNumber'),
-    ifscCode: formData.get('ifscCode'),
-    upiId: formData.get('upiId'),
     defaultAdvancePercent: formData.get('defaultAdvancePercent') || 0,
     invoiceTerms: formData.get('invoiceTerms'),
     signatoryName: formData.get('signatoryName'),
@@ -57,28 +50,4 @@ export async function updateCompanySetting(
   revalidatePath('/settings/company')
 
   return { status: 'success', message: 'Company details saved' }
-}
-
-export async function removeUpiQr(): Promise<SimpleResult> {
-  const user = await requireCapability('settings:update')
-
-  const setting = await prisma.companySetting.findUnique({
-    where: { id: await requireCompanyId() },
-    select: { upiQrStoredName: true },
-  })
-
-  if (!setting?.upiQrStoredName) {
-    return { ok: false, error: 'No QR code to remove' }
-  }
-
-  await deleteUpload(setting.upiQrStoredName)
-
-  await prisma.companySetting.update({
-    where: { id: await requireCompanyId() },
-    data: { upiQrStoredName: null, upiQrMimeType: null, updatedById: user.id },
-  })
-
-  revalidatePath('/settings/company')
-
-  return { ok: true, message: 'QR code removed' }
 }

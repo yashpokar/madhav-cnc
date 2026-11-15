@@ -158,6 +158,7 @@ export async function getPublicCompany(quotationId: string) {
   const setting = await prisma.companySetting.findUnique({
     where: { id: owner?.companyId ?? '' },
     select: {
+      id: true,
       companyName: true,
       addressLine: true,
       city: true,
@@ -166,14 +167,6 @@ export async function getPublicCompany(quotationId: string) {
       phone: true,
       email: true,
       gstin: true,
-      bankAccountName: true,
-      bankName: true,
-      bankBranch: true,
-      accountNumber: true,
-      ifscCode: true,
-      upiId: true,
-      upiQrStoredName: true,
-      upiQrMimeType: true,
       logoStoredName: true,
     },
   })

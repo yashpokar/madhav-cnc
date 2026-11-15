@@ -1,5 +1,7 @@
 'use client'
 
+import { PaymentModeSelect } from '@/components/payment-mode-select'
+import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -37,6 +39,7 @@ export function InvoiceActions({
   canWriteOff,
   canCreate,
   contact,
+  modes,
 }: {
   id: string
   contact: { name: string; phone: string | null; number: string }
@@ -48,13 +51,14 @@ export function InvoiceActions({
   canTakePayment: boolean
   canWriteOff: boolean
   canCreate: boolean
+  modes: PaymentModeOption[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState<SimpleResult | null>(null)
   const [payOpen, setPayOpen] = useState(false)
   const [amount, setAmount] = useState(String(due > 0 ? due : ''))
-  const [mode, setMode] = useState<PaymentMode>('UPI')
+  const [channelId, setChannelId] = useState(modes[0]?.id ?? '')
   const [reference, setReference] = useState('')
   const [paidOn, setPaidOn] = useState(new Date().toISOString().slice(0, 10))
   const [offOpen, setOffOpen] = useState(false)
@@ -274,13 +278,7 @@ export function InvoiceActions({
             </Field>
             <Field>
               <Label>Mode</Label>
-              <Listbox value={mode} onChange={setMode}>
-                {Object.values(PaymentMode).map((value) => (
-                  <ListboxOption key={value} value={value}>
-                    <ListboxLabel>{PAYMENT_MODE_LABELS[value]}</ListboxLabel>
-                  </ListboxOption>
-                ))}
-              </Listbox>
+              <PaymentModeSelect modes={modes} value={channelId} onChange={setChannelId} />
             </Field>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -309,7 +307,7 @@ export function InvoiceActions({
                   () =>
                     recordPayment(id, {
                       amount,
-                      mode,
+                      channelId,
                       reference: reference.trim() || undefined,
                       paidOn,
                     }),

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { resolvePaymentMode } from '@/lib/payment-modes'
 import { requireCapability } from '@/lib/session'
 import { nextExpenseNumber } from '@/lib/codes'
 import { round2 } from '@/lib/pricing'
@@ -28,7 +29,7 @@ function parse(formData: FormData) {
     isInputCredit: formData.get('isInputCredit') === 'true',
     vendorGstin: formData.get('vendorGstin'),
     billNumber: formData.get('billNumber'),
-    paymentMode: formData.get('paymentMode') ?? undefined,
+    channelId: formData.get('channelId'),
     reference: formData.get('reference'),
     notes: formData.get('notes'),
     orderId: formData.get('orderId'),
@@ -54,6 +55,17 @@ export async function createExpense(_previous: FormState, formData: FormData): P
     }
   }
 
+  const method = await resolvePaymentMode(parsed.data.channelId)
+
+  if (!method) {
+    return {
+      status: 'error',
+      message: 'Choose a payment mode',
+      fieldErrors: { channelId: 'Choose a payment mode' },
+      values: rawValues(formData),
+    }
+  }
+
   const number = await nextExpenseNumber()
   const vendor = await resolveVendor(parsed.data.payeeName)
 
@@ -70,7 +82,9 @@ export async function createExpense(_previous: FormState, formData: FormData): P
       isInputCredit: parsed.data.isInputCredit,
       vendorGstin: parsed.data.vendorGstin,
       billNumber: parsed.data.billNumber,
-      paymentMode: parsed.data.paymentMode,
+      paymentMode: method.mode,
+      channelId: method.channelId,
+      modeName: method.modeName,
       reference: parsed.data.reference,
       notes: parsed.data.notes,
       orderId: parsed.data.orderId,
@@ -100,6 +114,17 @@ export async function updateExpense(
     }
   }
 
+  const method = await resolvePaymentMode(parsed.data.channelId)
+
+  if (!method) {
+    return {
+      status: 'error',
+      message: 'Choose a payment mode',
+      fieldErrors: { channelId: 'Choose a payment mode' },
+      values: rawValues(formData),
+    }
+  }
+
   const existing = await prisma.expense.findUnique({
     where: { id },
     select: { id: true },
@@ -124,7 +149,9 @@ export async function updateExpense(
       isInputCredit: parsed.data.isInputCredit,
       vendorGstin: parsed.data.vendorGstin,
       billNumber: parsed.data.billNumber,
-      paymentMode: parsed.data.paymentMode,
+      paymentMode: method.mode,
+      channelId: method.channelId,
+      modeName: method.modeName,
       reference: parsed.data.reference,
       notes: parsed.data.notes,
       orderId: parsed.data.orderId,

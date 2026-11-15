@@ -65,6 +65,7 @@ export async function getVendor(id: string) {
           expenseDate: true,
           description: true,
           paymentMode: true,
+          modeName: true,
           total: true,
           channel: { select: { name: true } },
         },

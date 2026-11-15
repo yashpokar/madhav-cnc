@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { listDocumentPaymentModes } from '@/lib/queries/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -51,6 +52,7 @@ export default async function QuotationDetailPage({
   const query = await searchParams
   const justCreated = query.created === '1'
 
+  const documentModes = await listDocumentPaymentModes()
   const [quotation, company] = await Promise.all([
     getQuotation(id),
     getCompanySetting(),
@@ -332,8 +334,8 @@ export default async function QuotationDetailPage({
       <PaymentTerms
         total={quotation.total}
         advancePercent={quotation.advancePercent}
-        company={company}
-        qrSrc={company.upiQrStoredName ? '/api/company/qr' : null}
+        modes={documentModes}
+        qrSrc={(modeId) => `/api/payment-modes/${modeId}/qr`}
       />
 
       {quotation.notes || quotation.terms ? (

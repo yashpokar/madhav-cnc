@@ -1,5 +1,7 @@
 'use client'
 
+import { PaymentModeSelect } from '@/components/payment-mode-select'
+import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { date as dateFormat, money as currency } from '@/lib/format'
 import { useActionState, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -37,10 +39,12 @@ export function ReceiptForm({
   customers: initialCustomers,
   initialCustomerId,
   initialInvoices,
+  modes,
 }: {
   customers: { id: string; name: string; phone: string }[]
   initialCustomerId: string
   initialInvoices: OpenInvoice[]
+  modes: PaymentModeOption[]
 }) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -188,13 +192,7 @@ export function ReceiptForm({
             </Field>
             <Field>
               <Label>Mode</Label>
-              <Select name="mode" defaultValue="UPI">
-                {Object.values(PaymentMode).map((mode) => (
-                  <option key={mode} value={mode}>
-                    {PAYMENT_MODE_LABELS[mode]}
-                  </option>
-                ))}
-              </Select>
+              <PaymentModeSelect name="channelId" modes={modes} />
             </Field>
             <Field>
               <Label>Reference</Label>

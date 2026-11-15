@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { createOrder } from '@/lib/actions/orders'
@@ -23,6 +24,8 @@ export default async function NewOrderPage() {
 
   const today = new Date().toISOString().slice(0, 10)
 
+  const modes = await listPaymentModeOptions()
+
   return (
     <div className="grid grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
@@ -31,6 +34,7 @@ export default async function NewOrderPage() {
       </div>
 
       <OrderForm
+        modes={modes}
         action={createOrder}
         submitLabel="Save order"
         customers={customers}
@@ -51,7 +55,7 @@ export default async function NewOrderPage() {
           discountType: 'NONE',
           discountValue: 0,
           advanceAmount: 0,
-          advanceMode: 'CASH',
+          advanceChannelId: null,
           transportCharge: 0,
           transportTaxRatePercent: 0,
           notes: null,

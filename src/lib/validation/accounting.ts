@@ -43,7 +43,7 @@ export const expenseInputSchema = z.object({
   isInputCredit: z.boolean().default(false),
   vendorGstin: optionalText(20),
   billNumber: optionalText(60),
-  paymentMode: z.enum(PaymentMode).default('BANK_TRANSFER'),
+  channelId: z.string().trim().min(1, 'Choose a payment mode'),
   reference: optionalText(120),
   notes: optionalText(1000),
   orderId: optionalId,

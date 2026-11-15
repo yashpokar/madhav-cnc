@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { createExpense } from '@/lib/actions/expenses'
@@ -23,6 +24,8 @@ export default async function NewExpensePage() {
     listVendorOptions(),
   ])
 
+  const modes = await listPaymentModeOptions()
+
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
@@ -31,6 +34,7 @@ export default async function NewExpensePage() {
       </div>
 
       <ExpenseForm
+        modes={modes}
         action={createExpense}
         submitLabel="Save expense"
         categories={categories.map(({ id, name }) => ({ id, name }))}
@@ -46,7 +50,7 @@ export default async function NewExpensePage() {
           isInputCredit: false,
           vendorGstin: null,
           billNumber: null,
-          paymentMode: 'BANK_TRANSFER',
+          channelId: null,
           reference: null,
           notes: null,
           orderId: null,

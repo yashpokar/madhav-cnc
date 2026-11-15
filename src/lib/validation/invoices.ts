@@ -80,7 +80,7 @@ export const paymentInputSchema = z.object({
     .number()
     .gt(0, 'Amount must be greater than zero')
     .max(99_999_999),
-  mode: z.enum(PaymentMode).default('UPI'),
+  channelId: z.string().trim().min(1, 'Choose a payment mode'),
   reference: optionalText(120),
   paidOn: requiredDate,
   notes: optionalText(500),

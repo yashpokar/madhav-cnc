@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
 import { RowActions } from '@/components/row-actions'
 import { deleteReceipt } from '@/lib/actions/payments'
 import type { Metadata } from 'next'
@@ -28,7 +29,7 @@ import { customerAccount } from '@/lib/queries/payments'
 import { getCompanySetting } from '@/lib/queries/company'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
-import { NOTE_REASON_LABELS, PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { NOTE_REASON_LABELS } from '@/lib/labels'
 
 export const metadata: Metadata = {
   title: 'Customer statement',
@@ -62,7 +63,7 @@ export default async function CustomerStatementPage({
   const receipts = sortRows(matching, query, {
     receipt: (row) => row.number,
     date: (row) => row.paidOn,
-    mode: (row) => PAYMENT_MODE_LABELS[row.mode],
+    mode: (row) => modeText(row),
     reference: (row) => row.reference,
     amount: (row) => row.amount,
     applied: (row) => row.allocated,
@@ -282,7 +283,7 @@ export default async function CustomerStatementPage({
                     <TableCell className="text-zinc-500 dark:text-zinc-400">
                       {dateFormat.format(receipt.paidOn)}
                     </TableCell>
-                    <TableCell>{PAYMENT_MODE_LABELS[receipt.mode]}</TableCell>
+                    <TableCell>{modeText(receipt)}</TableCell>
                     <TableCell className="text-zinc-500 dark:text-zinc-400">
                       {receipt.reference ?? '—'}
                     </TableCell>

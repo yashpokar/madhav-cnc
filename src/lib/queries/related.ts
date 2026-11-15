@@ -68,6 +68,7 @@ export async function customerRelated(customerId: string) {
           number: true,
           paidOn: true,
           mode: true,
+          modeName: true,
           amount: true,
         },
       }),

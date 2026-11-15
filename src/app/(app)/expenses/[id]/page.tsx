@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import { LocalTime } from '@/components/local-time'
 import { notFound } from 'next/navigation'
@@ -40,6 +41,8 @@ export default async function ExpensePage({
 
   const action = updateExpense.bind(null, expense.id)
 
+  const modes = await listPaymentModeOptions(expense.channelId)
+
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
@@ -51,6 +54,7 @@ export default async function ExpensePage({
       </div>
 
       <ExpenseForm
+        modes={modes}
         action={action}
         submitLabel="Save changes"
         categories={categories.map(({ id: categoryId, name }) => ({
@@ -69,7 +73,7 @@ export default async function ExpensePage({
           isInputCredit: expense.isInputCredit,
           vendorGstin: expense.vendorGstin,
           billNumber: expense.billNumber,
-          paymentMode: expense.paymentMode,
+          channelId: expense.channelId,
           reference: expense.reference,
           notes: expense.notes,
           orderId: expense.orderId,

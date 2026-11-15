@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireCompanyId } from '@/lib/active-company'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { resolvePaymentMode } from '@/lib/payment-modes'
 import { requireCapability } from '@/lib/session'
 import { nextInvoiceNumber, nextPaymentNumber } from '@/lib/codes'
 import { documentTotals, lineTotals, splitGst, sameState } from '@/lib/pricing'
@@ -331,7 +332,7 @@ export async function recordPayment(
   invoiceId: string,
   input: {
     amount: string
-    mode: string
+    channelId: string
     reference?: string
     paidOn: string
     notes?: string
@@ -389,6 +390,12 @@ export async function recordPayment(
     }
   }
 
+  const method = await resolvePaymentMode(parsed.data.channelId)
+
+  if (!method) {
+    return { ok: false, error: 'Choose a payment mode' }
+  }
+
   const number = await nextPaymentNumber()
 
   const payment = await prisma.payment.create({
@@ -396,7 +403,9 @@ export async function recordPayment(
       number,
       customerId: invoice.customerId,
       amount: parsed.data.amount,
-      mode: parsed.data.mode,
+      mode: method.mode,
+      channelId: method.channelId,
+      modeName: method.modeName,
       reference: parsed.data.reference,
       paidOn: parsed.data.paidOn,
       notes: parsed.data.notes,
@@ -413,7 +422,7 @@ export async function recordPayment(
     entity: 'invoice',
     id: invoiceId,
     action: 'payment',
-    summary: `recorded a payment of ${paidText} (${PAYMENT_MODE_LABELS[parsed.data.mode]})`,
+    summary: `recorded a payment of ${paidText} (${method.modeName})`,
     actor: actorOf(user),
   })
   await logActivity({

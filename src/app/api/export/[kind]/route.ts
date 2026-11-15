@@ -101,7 +101,7 @@ async function build(
       return {
         headers: ['Receipt', 'Date', 'Customer', 'Mode', 'Reference', 'Amount (INR)', 'Applied (INR)', 'Invoices'],
         rows: rows.map((p) => [
-          p.number, p.paidOn, p.customer, p.mode, p.reference, p.amount, p.allocated, p.invoices,
+          p.number, p.paidOn, p.customer, p.modeName ?? p.mode, p.reference, p.amount, p.allocated, p.invoices,
         ]),
       }
     }
@@ -113,7 +113,7 @@ async function build(
         rows: rows.map((e) => [
           e.number, e.expenseDate, e.payeeName, e.category?.name, e.description,
           e.billNumber, e.order?.number, e.amount, e.taxAmount, e.total,
-          e.isInputCredit ? 'Yes' : 'No', e.paymentMode,
+          e.isInputCredit ? 'Yes' : 'No', e.modeName ?? e.paymentMode,
         ]),
       }
     }

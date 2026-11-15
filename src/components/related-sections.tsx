@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { modeText } from '@/lib/payment-modes'
 import {
   fmtDate,
   inr,
@@ -16,7 +17,6 @@ import {
   NOTE_STATUS_LABELS,
   ORDER_STATUS_COLORS,
   ORDER_STATUS_LABELS,
-  PAYMENT_MODE_LABELS,
   QUOTATION_STATUS_COLORS,
   QUOTATION_STATUS_LABELS,
 } from '@/lib/labels'
@@ -235,7 +235,7 @@ async function CustomerBody({ id, name, role }: { id: string; name: string; role
           rows={data.payments.rows.map((r) => ({
             key: r.id,
             href: `/payments/${r.id}`,
-            cells: [r.number, fmtDate(r.paidOn), PAYMENT_MODE_LABELS[r.mode], money(r.amount)],
+            cells: [r.number, fmtDate(r.paidOn), modeText(r), money(r.amount)],
           }))}
           empty="No payments received from this customer yet."
           allHref={`/payments?q=${q}`}

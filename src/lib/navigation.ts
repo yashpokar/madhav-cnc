@@ -37,6 +37,7 @@ export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/users', label: 'Users', capability: 'user:update' },
   { href: '/admin/companies', label: 'Companies', capability: 'user:update' },
   { href: '/admin/activity', label: 'Activity log', capability: 'user:update' },
+  { href: '/settings/payment-modes', label: 'Payment modes', capability: 'settings:update' },
   {
     href: '/settings/company',
     label: 'Company details',

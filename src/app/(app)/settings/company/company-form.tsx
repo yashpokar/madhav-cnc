@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useState, useTransition } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -17,9 +17,10 @@ import { Input } from '@/components/catalyst/input'
 import { Textarea } from '@/components/catalyst/textarea'
 import { Subheading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
+import { Link } from '@/components/catalyst/link'
 import { FormBanner } from '@/components/form-banner'
 import { ImageSlot } from './image-slot'
-import { removeUpiQr, updateCompanySetting } from '@/lib/actions/company'
+import { updateCompanySetting } from '@/lib/actions/company'
 import type { FormState, SimpleResult } from '@/lib/actions/company'
 import type { CompanySetting } from '@/lib/queries/company'
 
@@ -33,11 +34,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [logoVersion, setLogoVersion] = useState(0)
   const [hasLogo, setHasLogo] = useState(Boolean(setting.logoStoredName))
-  const qrInputRef = useRef<HTMLInputElement>(null)
-  const [qrPending, startTransition] = useTransition()
-  const [qrResult, setQrResult] = useState<SimpleResult | null>(null)
-  const [qrVersion, setQrVersion] = useState(0)
-  const [hasQr, setHasQr] = useState(Boolean(setting.upiQrStoredName))
+  const [logoResult, setLogoResult] = useState<SimpleResult | null>(null)
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
@@ -49,7 +46,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
     endpoint: string,
     onDone: () => void,
   ) {
-    setQrResult(null)
+    setLogoResult(null)
 
     const body = new FormData()
     body.append('file', file)
@@ -60,33 +57,11 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }
         | null
-      setQrResult({ ok: false, error: payload?.error ?? 'Upload failed' })
+      setLogoResult({ ok: false, error: payload?.error ?? 'Upload failed' })
       return
     }
 
     onDone()
-    router.refresh()
-  }
-
-  async function uploadQr(file: File) {
-    setQrResult(null)
-
-    const body = new FormData()
-    body.append('file', file)
-
-    const response = await fetch('/api/company/qr', { method: 'POST', body })
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null
-      setQrResult({ ok: false, error: payload?.error ?? 'Upload failed' })
-      return
-    }
-
-    setHasQr(true)
-    setQrVersion((value) => value + 1)
-    setQrResult({ ok: true, message: 'QR code updated' })
     router.refresh()
   }
 
@@ -189,80 +164,13 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
           </FieldGroup>
         </Fieldset>
 
-        <Divider />
-
-        <Fieldset>
-          <Legend>Bank details</Legend>
-          <FieldGroup>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Field>
-                <Label>Account name</Label>
-                <Input
-                  name="bankAccountName"
-                  defaultValue={keep('bankAccountName', setting.bankAccountName)}
-                />
-              </Field>
-              <Field>
-                <Label>Bank name</Label>
-                <Input name="bankName" defaultValue={keep('bankName', setting.bankName)} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-              <Field>
-                <Label>Account number</Label>
-                <Input
-                  name="accountNumber"
-                  inputMode="numeric"
-                  defaultValue={keep('accountNumber', setting.accountNumber)}
-                  invalid={Boolean(errors.accountNumber)}
-                />
-                {errors.accountNumber ? (
-                  <ErrorMessage>{errors.accountNumber}</ErrorMessage>
-                ) : null}
-              </Field>
-              <Field>
-                <Label>IFSC code</Label>
-                <Input
-                  name="ifscCode"
-                  className="uppercase"
-                  defaultValue={keep('ifscCode', setting.ifscCode)}
-                  invalid={Boolean(errors.ifscCode)}
-                />
-                {errors.ifscCode ? (
-                  <ErrorMessage>{errors.ifscCode}</ErrorMessage>
-                ) : null}
-              </Field>
-              <Field>
-                <Label>Branch</Label>
-                <Input name="bankBranch" defaultValue={keep('bankBranch', setting.bankBranch)} />
-              </Field>
-            </div>
-          </FieldGroup>
-        </Fieldset>
-
-        <Divider />
-
-        <Fieldset>
-          <Legend>UPI</Legend>
-          <FieldGroup>
-            <Field>
-              <Label>UPI ID</Label>
-              <Input
-                name="upiId"
-                placeholder="madhavcnc@okhdfcbank"
-                defaultValue={keep('upiId', setting.upiId)}
-                invalid={Boolean(errors.upiId)}
-              />
-              {errors.upiId ? (
-                <ErrorMessage>{errors.upiId}</ErrorMessage>
-              ) : (
-                <Description>
-                  Shown alongside the QR code on invoices.
-                </Description>
-              )}
-            </Field>
-          </FieldGroup>
-        </Fieldset>
+        <Text>
+          Bank details, UPI and other ways to pay are now set up under{' '}
+          <Link href="/settings/payment-modes" className="font-medium underline">
+            Payment modes
+          </Link>
+          .
+        </Text>
 
         <Divider />
 
@@ -329,6 +237,12 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
       <div className="grid grid-cols-1 gap-4">
         <Subheading level={2}>Logo</Subheading>
 
+        {logoResult ? (
+          <FormBanner tone={logoResult.ok ? 'success' : 'error'}>
+            {logoResult.ok ? logoResult.message : logoResult.error}
+          </FormBanner>
+        ) : null}
+
         <div className="flex flex-wrap items-start gap-6">
           <div className="flex size-28 items-center justify-center rounded-lg bg-zinc-100 p-2 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
             {hasLogo ? (
@@ -351,7 +265,6 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
             <div>
               <Button
                 outline
-                disabled={qrPending}
                 onClick={() => logoInputRef.current?.click()}
               >
                 {hasLogo ? 'Replace logo' : 'Upload logo'}
@@ -372,7 +285,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               void uploadImage(file, '/api/company/logo', () => {
                 setHasLogo(true)
                 setLogoVersion((value) => value + 1)
-                setQrResult({ ok: true, message: 'Logo updated' })
+                setLogoResult({ ok: true, message: 'Logo updated' })
               })
             }
 
@@ -400,83 +313,6 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
         emptyLabel="No stamp"
         help="The company seal, printed beside the signature on invoices. Optional."
       />
-
-      <Divider />
-
-      <div className="grid grid-cols-1 gap-4">
-        <Subheading level={2}>UPI QR code</Subheading>
-
-        {qrResult ? (
-          <FormBanner tone={qrResult.ok ? 'success' : 'error'}>
-            {qrResult.ok ? qrResult.message : qrResult.error}
-          </FormBanner>
-        ) : null}
-
-        <div className="flex flex-wrap items-start gap-6">
-          <div className="flex size-44 items-center justify-center rounded-lg bg-zinc-100 p-2 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
-            {hasQr ? (
-              <img
-                key={qrVersion}
-                src={`/api/company/qr?v=${qrVersion}`}
-                alt="UPI QR code"
-                className="size-full object-contain"
-              />
-            ) : (
-              <Text className="text-center text-xs/5">No QR code uploaded</Text>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            <Text>
-              Upload the QR code from your UPI app. Customers scan it to pay.
-            </Text>
-            <div className="flex gap-3">
-              <Button
-                outline
-                disabled={qrPending}
-                onClick={() => qrInputRef.current?.click()}
-              >
-                {hasQr ? 'Replace QR code' : 'Upload QR code'}
-              </Button>
-              {hasQr ? (
-                <Button
-                  plain
-                  disabled={qrPending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      const outcome = await removeUpiQr()
-                      setQrResult(outcome)
-
-                      if (outcome.ok) {
-                        setHasQr(false)
-                        router.refresh()
-                      }
-                    })
-                  }
-                >
-                  Remove
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        <input
-          ref={qrInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          hidden
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-
-            if (file) {
-              void uploadQr(file)
-            }
-
-            event.target.value = ''
-          }}
-        />
-      </div>
     </div>
   )
 }

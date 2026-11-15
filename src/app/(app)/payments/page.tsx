@@ -1,4 +1,5 @@
 import { date as dateFormat, money as exact, moneyWhole as currency } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
 import { RowActions } from '@/components/row-actions'
 import { deleteReceipt } from '@/lib/actions/payments'
 import { DateRangeFilter } from '@/components/date-range-filter'
@@ -106,7 +107,7 @@ export default async function PaymentsPage({
         row.number,
         row.reference,
         row.invoiceNumbers.join(' '),
-        PAYMENT_MODE_LABELS[row.mode],
+        modeText(row),
       ) &&
       (!mode || row.mode === mode) &&
       (minPaid === undefined || row.amount >= minPaid) &&
@@ -123,7 +124,7 @@ export default async function PaymentsPage({
     recv_date: (row) => row.paidOn,
     recv_customer: (row) => row.customer.name,
     recv_applied: appliedTo,
-    recv_mode: (row) => PAYMENT_MODE_LABELS[row.mode],
+    recv_mode: (row) => modeText(row),
     recv_reference: (row) => row.reference,
     recv_amount: (row) => row.amount,
   })
@@ -684,7 +685,7 @@ export default async function PaymentsPage({
                         </div>
                       ) : null}
                     </TableCell>
-                    <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
+                    <TableCell>{modeText(payment)}</TableCell>
                     <TableCell className="text-zinc-500 dark:text-zinc-400">
                       {payment.reference ?? '—'}
                     </TableCell>

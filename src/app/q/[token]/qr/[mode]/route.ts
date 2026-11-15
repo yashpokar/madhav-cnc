@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { findShareByToken, shareIsUsable } from '@/lib/queries/share'
 import { readUpload } from '@/lib/storage'
 
+/** A payment mode's QR code, for a customer looking at a shared quotation. */
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ token: string }> },
+  { params }: { params: Promise<{ token: string; mode: string }> },
 ) {
-  const { token } = await params
+  const { token, mode } = await params
   const share = await findShareByToken(token)
 
   if (!share || !shareIsUsable(share)) {
@@ -18,21 +19,22 @@ export async function GET(
     where: { id: share.quotationId },
     select: { companyId: true },
   })
-  const setting = await prisma.companySetting.findUnique({
-    where: { id: owner?.companyId ?? '' },
-    select: { upiQrStoredName: true, upiQrMimeType: true },
+  // Only modes the company has chosen to show on its documents.
+  const channel = await prisma.paymentChannel.findFirst({
+    where: { id: mode, companyId: owner?.companyId ?? '', isActive: true, showOnDocuments: true },
+    select: { qrStoredName: true, qrMimeType: true },
   })
 
-  if (!setting?.upiQrStoredName) {
+  if (!channel?.qrStoredName) {
     return new NextResponse('No QR code', { status: 404 })
   }
 
   try {
-    const bytes = await readUpload(setting.upiQrStoredName)
+    const bytes = await readUpload(channel.qrStoredName)
 
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
-        'Content-Type': setting.upiQrMimeType ?? 'image/png',
+        'Content-Type': channel.qrMimeType ?? 'image/png',
         'Cache-Control': 'private, max-age=600',
       },
     })

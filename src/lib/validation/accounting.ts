@@ -43,7 +43,6 @@ export const expenseInputSchema = z.object({
   vendorGstin: optionalText(20),
   billNumber: optionalText(60),
   channelId: z.string().trim().min(1, 'Choose a payment mode'),
-  reference: optionalText(120),
   notes: optionalText(1000),
   orderId: optionalId,
 })

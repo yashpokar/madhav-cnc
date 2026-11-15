@@ -235,6 +235,7 @@ export default async function PaymentMethodsPage({
                           <span className="block truncate font-medium">{e.party}</span>
                           <span className="block truncate text-xs/5 text-zinc-500 dark:text-zinc-400">
                             {dateShort.format(e.date)} · {e.number}
+                            {e.reference ? ` · ${e.reference}` : ''}
                           </span>
                         </span>
                         <span

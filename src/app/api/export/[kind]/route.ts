@@ -11,6 +11,7 @@ import { listVendorPayments } from '@/lib/queries/vendor-payments'
 import { listStock } from '@/lib/queries/stock'
 import { listExpenses } from '@/lib/queries/accounting'
 import { listPaymentsForExport } from '@/lib/queries/reports'
+import { detailsText } from '@/lib/payment-methods'
 import {
   CustomerStatus,
   InvoiceStatus,
@@ -108,9 +109,10 @@ async function build(
       const rows = await listPaymentsForExport({ search })
 
       return {
-        headers: ['Receipt', 'Date', 'Customer', 'Mode', 'Reference', 'Amount (INR)', 'Applied (INR)', 'Invoices'],
+        headers: ['Receipt', 'Date', 'Customer', 'Mode', 'Reference', 'Amount (INR)', 'Applied (INR)', 'Invoices', 'Details'],
         rows: rows.map((p) => [
           p.number, p.paidOn, p.customer, p.modeName ?? p.mode, p.reference, p.amount, p.allocated, p.invoices,
+          detailsText(p.mode, p.paymentDetails, 'in'),
         ]),
       }
     }
@@ -118,11 +120,12 @@ async function build(
       const rows = await listExpenses({ search })
 
       return {
-        headers: ['Number', 'Date', 'Payee', 'Category', 'Description', 'Bill no.', 'Order', 'Amount (INR)', 'Tax (INR)', 'Total (INR)', 'Input credit', 'Mode'],
+        headers: ['Number', 'Date', 'Payee', 'Category', 'Description', 'Bill no.', 'Order', 'Amount (INR)', 'Tax (INR)', 'Total (INR)', 'Input credit', 'Mode', 'Reference', 'Details'],
         rows: rows.map((e) => [
           e.number, e.expenseDate, e.payeeName, e.category?.name, e.description,
           e.billNumber, e.order?.number, e.amount, e.taxAmount, e.total,
           e.isInputCredit ? 'Yes' : 'No', e.modeName ?? e.paymentMode,
+          e.reference, detailsText(e.paymentMode, e.paymentDetails, 'out'),
         ]),
       }
     }
@@ -157,10 +160,11 @@ async function build(
       const rows = await listVendorPayments({ search })
 
       return {
-        headers: ['Number', 'Date', 'Vendor', 'Mode', 'Reference', 'Applied to', 'Amount (INR)', 'Applied to bills (INR)', 'Applied to opening (INR)', 'Advance (INR)'],
+        headers: ['Number', 'Date', 'Vendor', 'Mode', 'Reference', 'Applied to', 'Amount (INR)', 'Applied to bills (INR)', 'Applied to opening (INR)', 'Advance (INR)', 'Details'],
         rows: rows.map((p) => [
           p.number, p.paidOn, p.vendor.name, p.modeName ?? p.mode, p.reference,
           p.billNumbers.join(', '), p.amount, p.allocated, p.openingApplied, p.advance,
+          detailsText(p.mode, p.paymentDetails, 'out'),
         ]),
       }
     }

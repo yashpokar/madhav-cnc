@@ -1,5 +1,6 @@
 import { date as dateFormat, moneyWhole as currency } from '@/lib/format'
 import { modeText } from '@/lib/payment-modes'
+import { shortReference } from '@/lib/payment-methods'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
@@ -256,6 +257,11 @@ export default async function ExpensesPage({
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
                   {modeText(expense)}
+                  {shortReference(expense.paymentMode, expense.paymentDetails, expense.reference) ? (
+                    <div className="font-mono text-xs">
+                      {shortReference(expense.paymentMode, expense.paymentDetails, expense.reference)}
+                    </div>
+                  ) : null}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {currency.format(expense.taxAmount)}

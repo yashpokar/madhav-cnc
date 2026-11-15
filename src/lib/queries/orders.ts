@@ -93,7 +93,7 @@ export async function getOrder(id: string) {
       quotation: { select: { id: true, number: true, revision: true } },
       createdBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
-      advancePayment: { select: { id: true, mode: true, channelId: true } },
+      advancePayment: { select: { id: true, mode: true, channelId: true, paymentDetails: true, reference: true } },
     },
   })
 

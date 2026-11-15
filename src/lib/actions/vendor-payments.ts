@@ -28,7 +28,7 @@ function parse(formData: FormData) {
     vendorId: formData.get('vendorId'),
     amount: formData.get('amount') || 0,
     channelId: formData.get('channelId'),
-    reference: formData.get('reference'),
+    paymentDetails: formData.get('paymentDetails') ?? '',
     paidOn: formData.get('paidOn'),
     notes: formData.get('notes'),
     allocations,
@@ -65,7 +65,12 @@ export async function createVendorPayment(
   const result = await createPayment(user.id, parsed.data)
 
   if (!result.ok) {
-    return { status: 'error', message: result.error, values: rawValues(formData) }
+    return {
+      status: 'error',
+      message: result.error,
+      fieldErrors: result.fieldErrors,
+      values: rawValues(formData),
+    }
   }
 
   refresh(parsed.data.vendorId, parsed.data.allocations.map((row) => row.billId))

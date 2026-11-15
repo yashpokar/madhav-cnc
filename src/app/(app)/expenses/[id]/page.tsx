@@ -15,6 +15,7 @@ import {
 import { can } from '@/lib/permissions'
 import { listVendorOptions } from '@/lib/queries/vendors'
 import { requireCapability } from '@/lib/session'
+import { methodFor, readStoredDetails } from '@/lib/payment-methods'
 import { ExpenseForm } from '../expense-form'
 import { DeleteExpense } from './delete-expense'
 
@@ -42,6 +43,12 @@ export default async function ExpensePage({
   const action = updateExpense.bind(null, expense.id)
 
   const modes = await listPaymentModeOptions(expense.channelId)
+
+  // Older entries only have a free reference: offer it as the method's main field.
+  const primary = methodFor(expense.paymentMode)?.primary
+  const storedDetails = readStoredDetails(expense.paymentMode, expense.paymentDetails)
+
+  if (primary && expense.reference && !storedDetails[primary]) storedDetails[primary] = expense.reference
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
@@ -75,6 +82,7 @@ export default async function ExpensePage({
           billNumber: expense.billNumber,
           channelId: expense.channelId,
           reference: expense.reference,
+          paymentDetails: storedDetails,
           notes: expense.notes,
           orderId: expense.orderId,
         }}

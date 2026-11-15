@@ -23,7 +23,8 @@ export const vendorPaymentInputSchema = z.object({
     .gt(0, 'Amount must be greater than zero')
     .max(99_999_999),
   channelId: z.string().trim().min(1, 'Choose a payment mode'),
-  reference: optionalText(120),
+  /** The method's fields as posted (JSON); the service validates them against the chosen method. */
+  paymentDetails: z.string().max(4000).default(''),
   paidOn: requiredDate,
   notes: optionalText(500),
   allocations: z.array(billAllocationSchema).default([]),

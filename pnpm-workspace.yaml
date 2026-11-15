@@ -7,3 +7,7 @@ allowBuilds:
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@aws-sdk/client-s3@3.1130.0'
+# Keep Better Auth's core on 1.7.2 with better-auth itself (see the hold-back note in
+# .github/dependabot.yml); @better-auth/expo's peer range would otherwise pull 1.7.22.
+overrides:
+  '@better-auth/core': 1.7.2

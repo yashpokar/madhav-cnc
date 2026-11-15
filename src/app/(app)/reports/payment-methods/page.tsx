@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/form-banner'
 import { readDateRange } from '@/lib/list-controls'
 import { paymentsByMethod } from '@/lib/queries/payment-methods'
 import { getChannelBalances } from '@/lib/queries/cash'
+import { AdjustBalanceButton } from '@/components/adjust-balance-dialog'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 
@@ -42,6 +43,7 @@ export default async function PaymentMethodsPage({
   ])
   const withOpening = balances.filter((b) => b.closing !== null)
   const canSetOpening = can(user.role, 'settings:update')
+  const canAdjust = canSetOpening
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -61,6 +63,14 @@ export default async function PaymentMethodsPage({
             <Subheading level={2}>Balance by payment mode</Subheading>
             {canSetOpening ? (
               <Link
+                href="/adjustments"
+                className="text-sm/6 text-zinc-500 underline dark:text-zinc-400"
+              >
+                Adjustments
+              </Link>
+            ) : null}
+            {canSetOpening ? (
+              <Link
                 href="/settings/opening-balances"
                 className="text-sm/6 text-zinc-500 underline dark:text-zinc-400"
               >
@@ -75,14 +85,16 @@ export default async function PaymentMethodsPage({
             </Text>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-left text-sm/6">
+              <table className="w-full min-w-[44rem] text-left text-sm/6">
                 <thead className="text-zinc-500 dark:text-zinc-400">
                   <tr>
                     <th className="pb-2 pr-3 font-medium">Payment mode</th>
                     <th className="pb-2 pr-3 text-right font-medium">Opening</th>
                     <th className="pb-2 pr-3 text-right font-medium">In</th>
                     <th className="pb-2 pr-3 text-right font-medium">Out</th>
+                    <th className="pb-2 pr-3 text-right font-medium">Adjustments</th>
                     <th className="pb-2 text-right font-medium">Closing</th>
+                    {canAdjust ? <th className="pb-2 pl-3 font-medium"><span className="sr-only">Adjust</span></th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -105,9 +117,24 @@ export default async function PaymentMethodsPage({
                       <td className="py-2 pr-3 text-right tabular-nums text-rose-600 dark:text-rose-400">
                         {inr.format(b.outflow)}
                       </td>
+                      <td className={`py-2 pr-3 text-right tabular-nums ${b.adjustments === 0 ? 'text-zinc-400' : netTone(b.adjustments)}`}>
+                        {b.adjustments === 0 ? '—' : signed(b.adjustments)}
+                      </td>
                       <td className={`py-2 text-right font-semibold tabular-nums ${netTone(b.closing ?? 0)}`}>
                         {signed(b.closing ?? 0)}
                       </td>
+                      {canAdjust ? (
+                        <td className="py-2 pl-3 text-right">
+                          <AdjustBalanceButton
+                            target={{
+                              kind: 'CHANNEL',
+                              id: b.channelId,
+                              name: b.name,
+                              current: b.closing ?? 0,
+                            }}
+                          />
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
@@ -194,7 +221,13 @@ export default async function PaymentMethodsPage({
                   {g.entries.map((e) => (
                     <li key={`${e.kind}-${e.id}`}>
                       <Link
-                        href={e.kind === 'in' ? `/payments/${e.id}` : `/expenses/${e.id}`}
+                        href={
+                          e.source === 'adjustment'
+                            ? `/adjustments?q=${e.number}`
+                            : e.kind === 'in'
+                              ? `/payments/${e.id}`
+                              : `/expenses/${e.id}`
+                        }
                         className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-4 py-2.5 text-sm/6 hover:bg-zinc-950/2.5 dark:hover:bg-white/5"
                       >
                         <span className="min-w-0">
@@ -209,6 +242,7 @@ export default async function PaymentMethodsPage({
                           {e.kind === 'in' ? '+' : '−'}
                           {inr.format(e.amount)}
                           <span className="block text-xs/5 text-zinc-500 dark:text-zinc-400">
+                            {e.source === 'adjustment' ? 'Adjustment · ' : ''}
                             {e.kind === 'in' ? 'In' : 'Out'}
                           </span>
                         </span>

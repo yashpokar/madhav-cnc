@@ -33,6 +33,7 @@ export const SCOPED = new Set([
   'StockMovement',
   'VendorPayment',
   'ChannelOpeningBalance',
+  'BalanceAdjustment',
   'ActivityLog',
 ])
 
@@ -63,7 +64,7 @@ export const CHILD_PARENT: Record<string, readonly string[]> = {
  */
 const RELATIONS = `
 Partner: preferredByArchitect>Customer preferredByCarpenter>Customer quotationsAsArchitect>Quotation quotationsAsCarpenter>Quotation ordersAsArchitect>Order ordersAsCarpenter>Order
-Customer: preferredArchitect>Partner@preferredArchitectId preferredCarpenter>Partner@preferredCarpenterId quotations>Quotation orders>Order invoices>Invoice creditDebitNotes>CreditDebitNote payments>Payment
+Customer: preferredArchitect>Partner@preferredArchitectId preferredCarpenter>Partner@preferredCarpenterId quotations>Quotation orders>Order invoices>Invoice creditDebitNotes>CreditDebitNote payments>Payment adjustments>BalanceAdjustment
 Material: items>Item stockMovements>StockMovement purchaseOrderLines>PurchaseOrderLine purchaseBillLines>PurchaseBillLine goodsReceiptLines>GoodsReceiptLine
 Item: material>Material@materialId stockMovements>StockMovement purchaseOrderLines>PurchaseOrderLine purchaseBillLines>PurchaseBillLine goodsReceiptLines>GoodsReceiptLine quotationLines>QuotationLine orderLines>OrderLine invoiceLines>InvoiceLine
 Quotation: parent>Quotation@parentId revisions>Quotation customer>Customer@customerId architect>Partner@architectId carpenter>Partner@carpenterId lines>QuotationLine orders>Order attachments>QuotationAttachment shares>QuotationShare comments>QuotationComment
@@ -81,7 +82,7 @@ QuotationShareResponse: share>QuotationShare@shareId
 Invoice: order>Order@orderId customer>Customer@customerId lines>InvoiceLine paymentAllocations>PaymentAllocation writeOffs>InvoiceWriteOff creditDebitNotes>CreditDebitNote
 InvoiceLine: invoice>Invoice@invoiceId item>Item@itemId
 InvoiceWriteOff: invoice>Invoice@invoiceId
-PaymentChannel: expenses>Expense payments>Payment vendorPayments>VendorPayment openingBalances>ChannelOpeningBalance
+PaymentChannel: expenses>Expense payments>Payment vendorPayments>VendorPayment openingBalances>ChannelOpeningBalance adjustments>BalanceAdjustment
 Payment: customer>Customer@customerId channel>PaymentChannel@channelId order>Order@orderId allocations>PaymentAllocation
 PaymentAllocation: payment>Payment@paymentId invoice>Invoice@invoiceId
 ExpenseCategory: expenses>Expense
@@ -99,6 +100,7 @@ StockMovement: item>Item@itemId material>Material@materialId receiptLine>GoodsRe
 VendorPayment: vendor>Vendor@vendorId channel>PaymentChannel@channelId allocations>VendorPaymentAllocation
 VendorPaymentAllocation: vendorPayment>VendorPayment@vendorPaymentId bill>PurchaseBill@billId
 ChannelOpeningBalance: channel>PaymentChannel@channelId
+BalanceAdjustment: channel>PaymentChannel@channelId customer>Customer@customerId
 `
 
 export type Relation = { target: string; fk?: string }

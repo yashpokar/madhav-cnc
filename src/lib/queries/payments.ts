@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { customerAdjustmentSplit, customerBalance } from '@/lib/adjustments-math'
+import { customerAdjustmentRows } from '@/lib/queries/adjustments'
 import { daysOverdue, openingRemaining } from '@/lib/receivables-math'
 
 type DecimalLike = { toNumber: () => number }
@@ -153,7 +155,7 @@ export async function getReceipt(id: string) {
 }
 
 export async function customerAccount(customerId: string) {
-  const [customer, invoices, receipts, credits, opening] = await Promise.all([
+  const [customer, invoices, receipts, credits, opening, adjustments] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: customerId },
       select: { id: true, name: true, phone: true },
@@ -192,6 +194,7 @@ export async function customerAccount(customerId: string) {
       },
     }),
     openingBalanceFor(customerId),
+    customerAdjustmentRows(customerId),
   ])
 
   if (!customer) {
@@ -201,9 +204,6 @@ export async function customerAccount(customerId: string) {
   const invoiceDueTotal = round2(
     invoices.reduce((sum, invoice) => sum + invoice.due, 0),
   )
-  // The one definition of a customer's due: open invoices plus what is left
-  // of the balance carried from before the system.
-  const due = round2(invoiceDueTotal + opening.remaining)
   const onAccount = round2(
     receipts.reduce((sum, receipt) => {
       const allocated = receipt.allocations.reduce(
@@ -224,9 +224,20 @@ export async function customerAccount(customerId: string) {
     ...note,
     total: num(note.total),
   }))
-  const credit = round2(
+  const creditNotesTotal = round2(
     creditNotes.reduce((sum, note) => sum + note.total, 0),
   )
+  // The one definition of a customer's account: open invoices plus what is
+  // left of the opening balance plus any net balance adjustment that raises
+  // it (`due`); credit notes plus any net adjustment that lowers it (`credit`).
+  const balance = customerBalance({
+    invoiceDue: invoiceDueTotal,
+    openingRemaining: opening.remaining,
+    onAccount,
+    creditNotes: creditNotesTotal,
+    adjustments,
+  })
+  const { due, credit } = balance
 
   return {
     customer,
@@ -239,7 +250,13 @@ export async function customerAccount(customerId: string) {
     onAccount,
     credit,
     creditNotes,
-    net: round2(due - onAccount - credit),
+    /** Credit notes alone, before any adjustment that lowers the balance. */
+    creditNotesTotal,
+    adjustments,
+    adjustmentNet: balance.adjustmentNet,
+    adjustmentDebit: balance.adjustmentDebit,
+    adjustmentCredit: balance.adjustmentCredit,
+    net: balance.net,
     receipts: receipts.map((receipt) => {
       const allocated = round2(
         receipt.allocations.reduce(
@@ -307,6 +324,13 @@ export async function customerFinancials(customerId: string) {
     daysOverdue(account.openingAsOf, new Date()) > 0
       ? account.opening
       : 0
+  const adjustmentFrom = customerAdjustmentSplit(account.adjustments).agingFrom
+  const adjustmentLate =
+    account.adjustmentDebit > 0 &&
+    adjustmentFrom &&
+    daysOverdue(adjustmentFrom, new Date()) > 0
+      ? account.adjustmentDebit
+      : 0
   const rows = writeOffs.map((row) => ({ ...row, amount: num(row.amount) }))
 
   return {
@@ -316,11 +340,15 @@ export async function customerFinancials(customerId: string) {
       account.receipts.reduce((sum, receipt) => sum + receipt.amount, 0),
     ),
     outstanding: account.due,
-    overdue: round2(overdue + openingLate),
+    overdue: round2(overdue + openingLate + adjustmentLate),
     opening: account.opening,
     openingAsOf: account.openingAsOf,
     onAccount: account.onAccount,
     credit: account.credit,
+    creditNotes: account.creditNotesTotal,
+    adjustmentNet: account.adjustmentNet,
+    adjustmentDebit: account.adjustmentDebit,
+    adjustmentCredit: account.adjustmentCredit,
     writtenOff: round2(rows.reduce((sum, row) => sum + row.amount, 0)),
     writeOffs: rows,
   }

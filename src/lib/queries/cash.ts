@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { channelClosing, round2 } from '@/lib/receivables-math'
+import { channelAdjustmentTotal, channelClosingWithAdjustments } from '@/lib/adjustments-math'
+import { round2 } from '@/lib/receivables-math'
 
 export type ChannelBalance = {
   channelId: string
@@ -12,7 +13,9 @@ export type ChannelBalance = {
   inflow: number
   /** Expenses and vendor payments on or after the as-of date. */
   outflow: number
-  /** opening + inflow - outflow (signed; negative is an overdraft). */
+  /** Signed corrections dated on or after the as-of date (see adjustments-math). */
+  adjustments: number
+  /** opening + inflow - outflow + adjustments (signed; negative is an overdraft). */
   closing: number | null
 }
 
@@ -43,7 +46,7 @@ export async function listOpeningBalances() {
 
 /**
  * Balance per payment mode: the opening amount (signed) plus receipts in, less
- * expenses and vendor payments out, counting only entries dated on or after
+ * expenses and vendor payments out, plus signed balance adjustments, counting only entries dated on or after
  * the opening "as of" date, so history from before the system is never
  * counted twice.
  */
@@ -61,13 +64,14 @@ export async function getChannelBalances(): Promise<ChannelBalance[]> {
           asOf: null,
           inflow: 0,
           outflow: 0,
+          adjustments: 0,
           closing: null,
         }
       }
 
       const since = { gte: row.asOf }
 
-      const [received, spent, paidToVendors] = await Promise.all([
+      const [received, spent, paidToVendors, adjusted] = await Promise.all([
         prisma.payment.aggregate({
           where: { channelId: row.id, paidOn: since },
           _sum: { amount: true },
@@ -80,12 +84,22 @@ export async function getChannelBalances(): Promise<ChannelBalance[]> {
           where: { channelId: row.id, paidOn: since },
           _sum: { amount: true },
         }),
+        prisma.balanceAdjustment.findMany({
+          where: { kind: 'CHANNEL', channelId: row.id, adjustedOn: since },
+          select: { amount: true, adjustedOn: true },
+        }),
       ])
 
       const inflow = round2(received._sum.amount?.toNumber() ?? 0)
       const outflow = round2(
         (spent._sum.total?.toNumber() ?? 0) +
           (paidToVendors._sum.amount?.toNumber() ?? 0),
+      )
+
+      // The query already limits to the as-of date; the helper states the rule.
+      const adjustments = channelAdjustmentTotal(
+        adjusted.map((a) => ({ amount: a.amount.toNumber(), adjustedOn: a.adjustedOn })),
+        row.asOf,
       )
 
       return {
@@ -96,7 +110,13 @@ export async function getChannelBalances(): Promise<ChannelBalance[]> {
         asOf: row.asOf,
         inflow,
         outflow,
-        closing: channelClosing(row.amount, inflow, outflow),
+        adjustments,
+        closing: channelClosingWithAdjustments({
+          opening: row.amount,
+          inflow,
+          outflow,
+          adjustments,
+        }),
       }
     }),
   )

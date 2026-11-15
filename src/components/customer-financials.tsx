@@ -78,7 +78,14 @@ export async function CustomerFinancials({ id }: { id: string }) {
         {data.onAccount > 0 ? (
           <Tile label="Advance on account" value={data.onAccount} hint="Received, not yet applied" />
         ) : null}
-        {data.credit > 0 ? <Tile label="Credit notes" value={data.credit} /> : null}
+        {data.creditNotes > 0 ? <Tile label="Credit notes" value={data.creditNotes} /> : null}
+        {data.adjustmentNet !== 0 ? (
+          <Tile
+            label="Balance adjustments"
+            value={Math.abs(data.adjustmentNet)}
+            hint={data.adjustmentNet > 0 ? 'Added to what is owed' : 'Taken off what is owed'}
+          />
+        ) : null}
         {data.writtenOff > 0 ? (
           <Tile
             label="Not recoverable"

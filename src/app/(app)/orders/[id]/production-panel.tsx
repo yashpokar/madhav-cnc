@@ -61,6 +61,7 @@ import {
   formatDuration,
   holdReason,
   initials,
+  isFinished,
   progressCounts,
   reopenCheck,
   stageState,
@@ -299,6 +300,9 @@ export function ProductionPanel({
               task={task}
               tasks={tasks}
               last={index === tasks.length - 1}
+              nextFinished={
+                index < tasks.length - 1 && isFinished(tasks[index + 1].status)
+              }
               state={stageState(tasks, task.id)}
               current={isCurrent}
               open={expanded[task.id] ?? isCurrent}
@@ -453,6 +457,7 @@ function StageRow({
   task,
   tasks,
   last,
+  nextFinished,
   state,
   current,
   open,
@@ -470,6 +475,7 @@ function StageRow({
   task: OrderTask
   tasks: OrderTask[]
   last: boolean
+  nextFinished: boolean
   state: StageState
   current: boolean
   open: boolean
@@ -518,25 +524,25 @@ function StageRow({
     ) : null
 
   return (
-    <li className="relative pl-10">
+    <li className="relative py-0.5 pl-11">
       {last ? null : (
         <span
           aria-hidden
-          className={`absolute -bottom-2 left-3.5 w-px -translate-x-1/2 ${
-            current ? 'top-10' : 'top-9'
-          } ${
-            finished ? 'bg-lime-500/60' : 'bg-zinc-950/10 dark:bg-white/10'
+          className={`absolute top-[42px] -bottom-[6px] left-3.5 w-px -translate-x-1/2 ${
+            finished && nextFinished
+              ? 'bg-lime-500/60'
+              : 'bg-zinc-950/15 dark:bg-white/20'
           }`}
         />
       )}
-      <span className={`absolute left-0 ${current ? 'top-3' : 'top-2'}`}>
+      <span className="absolute top-2.5 left-0">
         <StageNode task={task} state={state} />
       </span>
 
       <div
-        className={`-ml-2 rounded-xl pl-2 ${
+        className={`rounded-xl px-3 ${
           current
-            ? 'my-1 bg-zinc-50 pr-2 pb-3 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10'
+            ? 'bg-zinc-50 pb-3 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10'
             : ''
         }`}
       >
@@ -549,7 +555,7 @@ function StageRow({
             className="group flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-500 sm:flex-none"
           >
             <span
-              className={`truncate text-sm/6 ${
+              className={`max-w-40 shrink-0 truncate text-sm/6 ${
                 queued
                   ? 'text-zinc-600 dark:text-zinc-400'
                   : 'font-medium text-zinc-950 dark:text-white'

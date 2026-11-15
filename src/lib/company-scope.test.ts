@@ -77,7 +77,7 @@ describe('company scope extension', () => {
     const { result } = await run('QuotationAttachment', 'findUnique', { where: { id: 'a' } })
 
     expect(await result).toEqual({
-      where: { AND: [{ id: 'a' }, { quotation: { companyId: 'c1' } }] },
+      where: { id: 'a', AND: [{ quotation: { companyId: 'c1' } }] },
     })
   })
 
@@ -146,7 +146,7 @@ describe('company scope extension', () => {
     const child = await run('InvoiceLine', 'findMany', {})
 
     expect(await child.result).toEqual({
-      where: { AND: [{}, { invoice: { companyId: '__no_company__' } }] },
+      where: { AND: [{ invoice: { companyId: '__no_company__' } }] },
     })
   })
 

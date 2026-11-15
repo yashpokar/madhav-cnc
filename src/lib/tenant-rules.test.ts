@@ -146,9 +146,18 @@ describe('scopeWhere', () => {
   it('scopes a child through its parent without clobbering a relation filter', () => {
     expect(
       scopeWhere('ProductionTask', 'findMany', { order: { status: 'READY' } }, 'c1'),
-    ).toEqual({ AND: [{ order: { status: 'READY' } }, { order: { companyId: 'c1' } }] })
+    ).toEqual({ order: { status: 'READY' }, AND: [{ order: { companyId: 'c1' } }] })
+  })
+
+  it('keeps the unique id at the top level for a child looked up by id', () => {
+    // Prisma only accepts a unique lookup when the id is a top-level key.
     expect(scopeWhere('QuotationAttachment', 'findUnique', { id: 'a' }, 'c1')).toEqual({
-      AND: [{ id: 'a' }, { quotation: { companyId: 'c1' } }],
+      id: 'a',
+      AND: [{ quotation: { companyId: 'c1' } }],
+    })
+    expect(scopeWhere('OrderLine', 'update', { id: 'l', AND: [{ notes: 'x' }] }, 'c1')).toEqual({
+      id: 'l',
+      AND: [{ notes: 'x' }, { order: { companyId: 'c1' } }],
     })
   })
 
@@ -161,7 +170,8 @@ describe('scopeWhere', () => {
 
   it('also shows company-less activity entries, except on upsert', () => {
     expect(scopeWhere('ActivityLog', 'findMany', { entityId: 'e' }, 'c1')).toEqual({
-      AND: [{ entityId: 'e' }, { OR: [{ companyId: 'c1' }, { companyId: null }] }],
+      entityId: 'e',
+      AND: [{ OR: [{ companyId: 'c1' }, { companyId: null }] }],
     })
   })
 

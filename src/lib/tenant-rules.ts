@@ -194,7 +194,7 @@ export function scopeWhere(
     if ('companyId' in current) return current
 
     return model === 'ActivityLog' && operation !== 'upsert'
-      ? { AND: [current, { OR: [{ companyId }, { companyId: null }] }] }
+      ? withAnd(current, { OR: [{ companyId }, { companyId: null }] })
       : { ...current, companyId }
   }
 
@@ -202,8 +202,22 @@ export function scopeWhere(
 
   if (!owned) return where
 
-  // AND, never a spread: the caller's own filter may already use the relation.
-  return { AND: [current, owned] }
+  // Added through AND so the caller's own filter may already use the relation,
+  // and kept beside the caller's unique fields (id) so a lookup by id stays a
+  // valid unique lookup.
+  return withAnd(current, owned)
+}
+
+function withAnd(
+  current: Record<string, unknown>,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const existing = current.AND
+
+  return {
+    ...current,
+    AND: [...(Array.isArray(existing) ? existing : existing ? [existing] : []), extra],
+  }
 }
 
 /** A foreign id a write points at, which must belong to the company. */

@@ -34,6 +34,7 @@ export const SCOPED = new Set([
   'VendorPayment',
   'ChannelOpeningBalance',
   'BalanceAdjustment',
+  'Invitation',
   'ActivityLog',
 ])
 

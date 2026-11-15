@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { PaymentMode } from '@/generated/prisma/enums'
+import { Prisma } from '@/generated/prisma/client'
+import { parseReceivingDetails } from '@/lib/payment-methods'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
@@ -23,6 +25,8 @@ const modeSchema = z.object({
     .max(20, 'Add up to 20 details')
     .default([])
     .transform((rows) => rows.filter((row) => row.label || row.value)),
+  /** How we receive money in this kind of mode (UPI ID, account number, IFSC...), checked per kind below. */
+  accountDetails: z.record(z.string(), z.unknown()).default({}),
   showOnDocuments: z.boolean().default(false),
 })
 
@@ -30,7 +34,13 @@ type ModeInput = {
   name: string
   kind: string
   details?: { label: string; value: string }[]
+  accountDetails?: Record<string, string>
   showOnDocuments?: boolean
+}
+
+/** Checks the kind's fixed receiving fields; formats always, filled-in-ness once printed on documents. */
+function checkAccount(data: z.output<typeof modeSchema>) {
+  return parseReceivingDetails(data.kind, data.accountDetails, data.showOnDocuments)
 }
 
 function refresh() {
@@ -63,6 +73,14 @@ export async function addPaymentMode(input: ModeInput): Promise<SimpleResult> {
     return { ok: false, error: 'There is already a mode with that name' }
   }
 
+  if (parsed.data.kind === 'BANK_TRANSFER') {
+    return { ok: false, error: 'Choose NEFT, RTGS, IMPS or net banking: they replace the generic bank transfer' }
+  }
+
+  const account = checkAccount(parsed.data)
+
+  if (!account.ok) return { ok: false, error: account.error }
+
   const last = await prisma.paymentChannel.aggregate({ _max: { sortOrder: true } })
 
   const created = await prisma.paymentChannel.create({
@@ -70,6 +88,7 @@ export async function addPaymentMode(input: ModeInput): Promise<SimpleResult> {
       name: parsed.data.name,
       mode: parsed.data.kind,
       details: parsed.data.details,
+      accountDetails: account.details ?? Prisma.DbNull,
       showOnDocuments: parsed.data.showOnDocuments,
       sortOrder: (last._max.sortOrder ?? 0) + 10,
     },
@@ -99,9 +118,18 @@ export async function updatePaymentMode(
     return { ok: false, error: 'There is already a mode with that name' }
   }
 
-  const existing = await prisma.paymentChannel.findUnique({ where: { id }, select: { id: true } })
+  const existing = await prisma.paymentChannel.findUnique({ where: { id }, select: { id: true, mode: true } })
 
   if (!existing) return { ok: false, error: 'That mode no longer exists' }
+
+  // A legacy bank-transfer mode may stay as it is, but nothing new can be made one.
+  if (parsed.data.kind === 'BANK_TRANSFER' && existing.mode !== 'BANK_TRANSFER') {
+    return { ok: false, error: 'Choose NEFT, RTGS, IMPS or net banking: they replace the generic bank transfer' }
+  }
+
+  const account = checkAccount(parsed.data)
+
+  if (!account.ok) return { ok: false, error: account.error }
 
   await prisma.paymentChannel.update({
     where: { id },
@@ -109,6 +137,7 @@ export async function updatePaymentMode(
       name: parsed.data.name,
       mode: parsed.data.kind,
       details: parsed.data.details,
+      accountDetails: account.details ?? Prisma.DbNull,
       showOnDocuments: parsed.data.showOnDocuments,
     },
   })

@@ -33,6 +33,7 @@ import { getCustomerLedger, getReceivables } from '@/lib/queries/receivables'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { PAYMENT_MODE_LABELS, ORDER_STATUS_LABELS } from '@/lib/labels'
+import { shortReference } from '@/lib/payment-methods'
 
 export const metadata: Metadata = {
   title: 'Payments',
@@ -690,7 +691,7 @@ export default async function PaymentsPage({
                     </TableCell>
                     <TableCell>{modeText(payment)}</TableCell>
                     <TableCell className="text-zinc-500 dark:text-zinc-400">
-                      {payment.reference ?? '—'}
+                      {shortReference(payment.mode, payment.paymentDetails, payment.reference) || '—'}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {exact.format(payment.amount)}

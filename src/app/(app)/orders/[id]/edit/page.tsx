@@ -1,3 +1,4 @@
+import { readStoredDetails } from '@/lib/payment-methods'
 import type { Metadata } from 'next'
 import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { notFound } from 'next/navigation'
@@ -78,6 +79,9 @@ export default async function EditOrderPage({
           discountValue: order.discountValue,
           advanceAmount: order.advanceAmount,
           advanceChannelId: order.advancePayment?.channelId ?? null,
+          advancePaymentDetails: order.advancePayment
+            ? readStoredDetails(order.advancePayment.mode, order.advancePayment.paymentDetails)
+            : null,
           transportCharge: order.transportCharge,
           transportTaxRatePercent: order.transportTaxRatePercent,
           notes: order.notes,

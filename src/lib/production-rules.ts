@@ -60,6 +60,27 @@ export function nextActionableTask<T extends RuleTask>(
   return headTask(tasks)
 }
 
+/**
+ * The stage the panel shows expanded: the one in progress, else one on hold,
+ * else the next one to start. Null when every stage is finished.
+ */
+export function currentTask<T extends RuleTask>(tasks: readonly T[]): T | null {
+  const sorted = sortTasks(tasks)
+
+  return (
+    sorted.find((task) => task.status === 'IN_PROGRESS') ??
+    sorted.find((task) => task.status === 'ON_HOLD') ??
+    headTask(tasks)
+  )
+}
+
+/** Ids of the rows open by default: just the current stage. */
+export function defaultExpandedIds(tasks: readonly RuleTask[]): string[] {
+  const current = currentTask(tasks)
+
+  return current ? [current.id] : []
+}
+
 /** The unfinished stage ahead of this one that it is waiting for, if any. */
 export function blockingTask<T extends RuleTask>(
   tasks: readonly T[],

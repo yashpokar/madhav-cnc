@@ -23,7 +23,6 @@ export const receiptInputSchema = z.object({
     .gt(0, 'Amount must be greater than zero')
     .max(99_999_999),
   channelId: z.string().trim().min(1, 'Choose a payment mode'),
-  reference: optionalText(120),
   paidOn: requiredDate,
   notes: optionalText(500),
   allocations: z.array(allocationSchema).default([]),

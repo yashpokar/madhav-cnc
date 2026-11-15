@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { Prisma } from '@/generated/prisma/client'
 import type { PaymentMode } from '@/generated/prisma/enums'
+import type { DetailValues } from '@/lib/payment-methods'
 
 /**
  * What a recorded payment or expense stores about how it was paid: the mode the
@@ -32,4 +34,9 @@ export function modeText(row: { mode?: PaymentMode; paymentMode?: PaymentMode; m
   const kind = row.mode ?? row.paymentMode
 
   return row.modeName ?? (kind ? PAYMENT_MODE_LABELS[kind] : '')
+}
+
+/** What to write to a nullable JSON column: the details, or SQL NULL (also clears old ones on update). */
+export function detailsColumn(details: DetailValues | null) {
+  return details ?? Prisma.DbNull
 }

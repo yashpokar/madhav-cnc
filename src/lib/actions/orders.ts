@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { resolvePaymentMode } from '@/lib/payment-modes'
+import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
+import { parsePaymentDetails } from '@/lib/payment-methods'
 import { requireCapability } from '@/lib/session'
 import { nextOrderNumber } from '@/lib/codes'
 import { applySizeRule, documentTotals, lineTotals } from '@/lib/pricing'
@@ -44,8 +45,12 @@ async function syncAdvancePayment(
   }
 
   const method = await resolvePaymentMode(data.advanceChannelId)
+  const details = method ? parsePaymentDetails(method.mode, data.advancePaymentDetails, 'in') : null
 
   const fields = {
+    ...(details?.ok
+      ? { reference: details.reference, paymentDetails: detailsColumn(details.details) }
+      : {}),
     customerId: data.customerId,
     amount: data.advanceAmount,
     ...(method
@@ -102,6 +107,7 @@ function parse(formData: FormData) {
     discountValue: formData.get('discountValue') || 0,
     advanceAmount: formData.get('advanceAmount') || 0,
     advanceChannelId: formData.get('advanceChannelId') ?? undefined,
+    advancePaymentDetails: formData.get('advancePaymentDetails') ?? undefined,
     transportCharge: formData.get('transportCharge') || 0,
     transportTaxRatePercent: formData.get('transportTaxRatePercent') || 0,
     notes: formData.get('notes'),
@@ -120,8 +126,14 @@ async function assertReferences(data: OrderData) {
     return 'Selected customer no longer exists'
   }
 
-  if (data.advanceAmount > 0 && !(await resolvePaymentMode(data.advanceChannelId))) {
-    return 'Choose how the advance was paid'
+  if (data.advanceAmount > 0) {
+    const method = await resolvePaymentMode(data.advanceChannelId)
+
+    if (!method) return 'Choose how the advance was paid'
+
+    const details = parsePaymentDetails(method.mode, data.advancePaymentDetails, 'in')
+
+    if (!details.ok) return `Advance: ${details.error}`
   }
 
   const partnerIds = [data.architectId, data.carpenterId].filter(

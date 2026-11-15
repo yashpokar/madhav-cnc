@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   blockingTask,
+  currentTask,
+  defaultExpandedIds,
   dueLabel,
   followingTask,
   formatDuration,
@@ -196,5 +198,29 @@ describe('notes helpers', () => {
     expect(initials('Yash Pokar')).toBe('YP')
     expect(initials('madonna')).toBe('MA')
     expect(initials('')).toBe('?')
+  })
+})
+
+describe('currentTask and defaultExpandedIds', () => {
+  it('opens the first stage when nothing has started', () => {
+    const tasks = [t(1, 'PENDING'), t(2, 'PENDING')]
+    expect(currentTask(tasks)?.id).toBe('t1')
+    expect(defaultExpandedIds(tasks)).toEqual(['t1'])
+  })
+
+  it('prefers the stage in progress over earlier pending ones', () => {
+    const tasks = [t(1, 'DONE'), t(2, 'PENDING'), t(3, 'IN_PROGRESS')]
+    expect(currentTask(tasks)?.id).toBe('t3')
+  })
+
+  it('opens a stage on hold', () => {
+    const tasks = [t(1, 'DONE'), t(2, 'ON_HOLD'), t(3, 'PENDING')]
+    expect(defaultExpandedIds(tasks)).toEqual(['t2'])
+  })
+
+  it('opens nothing when every stage is finished', () => {
+    const tasks = [t(1, 'DONE'), t(2, 'SKIPPED')]
+    expect(currentTask(tasks)).toBeNull()
+    expect(defaultExpandedIds(tasks)).toEqual([])
   })
 })

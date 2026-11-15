@@ -49,5 +49,5 @@ export async function updateCompanySetting(
 
   revalidatePath('/settings/company')
 
-  return { status: 'success', message: 'Company details saved' }
+  return { status: 'success', message: 'Business profile saved' }
 }

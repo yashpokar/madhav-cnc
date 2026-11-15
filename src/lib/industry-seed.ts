@@ -23,7 +23,7 @@ export type CompanySeed = {
 const PAYMENT_CHANNELS: CompanySeed['channels'] = [
   { name: 'Cash', mode: 'CASH', sortOrder: 10, isActive: true },
   { name: 'UPI', mode: 'UPI', sortOrder: 20, isActive: true },
-  { name: 'Bank transfer', mode: 'BANK_TRANSFER', sortOrder: 30, isActive: true },
+  { name: 'Bank transfer', mode: 'NEFT', sortOrder: 30, isActive: true },
   { name: 'Cheque', mode: 'CHEQUE', sortOrder: 40, isActive: true },
   { name: 'Card', mode: 'CARD', sortOrder: 50, isActive: true },
 ]

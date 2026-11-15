@@ -1,6 +1,7 @@
 'use client'
 
 import { PaymentModeSelect } from '@/components/payment-mode-select'
+import { PaymentMethodFields, detailsFromJson } from '@/components/payment-method-fields'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { date as dateFormat, money as currency } from '@/lib/format'
 import { useActionState, useState, useTransition, useRef } from 'react'
@@ -79,6 +80,8 @@ export function ReceiptForm({
   const [applied, setApplied] = useState<Record<string, string>>({})
   const [openingLeft, setOpeningLeft] = useState(initialOpeningLeft)
   const [openingApplied, setOpeningApplied] = useState('')
+  const [channelId, setChannelId] = useState(modes[0]?.id ?? '')
+  const method = modes.find((mode) => mode.id === channelId)?.kind
 
   function pickCustomer(nextId: string) {
     setCustomerId(nextId)
@@ -197,7 +200,7 @@ export function ReceiptForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Received on</Label>
               <Input
@@ -209,13 +212,22 @@ export function ReceiptForm({
             </Field>
             <Field>
               <Label>Mode</Label>
-              <PaymentModeSelect name="channelId" modes={modes} remember />
-            </Field>
-            <Field>
-              <Label>Reference</Label>
-              <Input name="reference" placeholder="UTR, cheque no." />
+              <PaymentModeSelect
+                name="channelId"
+                modes={modes}
+                value={channelId}
+                onChange={setChannelId}
+                remember
+              />
+              {errors.channelId ? <ErrorMessage>{errors.channelId}</ErrorMessage> : null}
             </Field>
           </div>
+
+          <PaymentMethodFields
+            mode={method}
+            errors={errors}
+            defaultValues={detailsFromJson(state.status === 'error' ? state.values?.paymentDetails : null)}
+          />
 
           <Field>
             <Label>Notes</Label>

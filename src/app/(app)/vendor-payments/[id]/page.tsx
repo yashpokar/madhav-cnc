@@ -1,5 +1,8 @@
+import { Fragment } from 'react'
 import { date as dateFormat, money as currency } from '@/lib/format'
 import { modeText } from '@/lib/payment-modes'
+import { PaymentDetailsList } from '@/components/payment-details-list'
+import { detailRows } from '@/lib/payment-methods'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { LocalTime } from '@/components/local-time'
@@ -106,13 +109,23 @@ export default async function VendorPaymentPage({
           <dd>{dateFormat.format(payment.paidOn)}</dd>
           <dt className="text-zinc-500">Mode</dt>
           <dd>{modeText(payment)}</dd>
-          {payment.reference ? (
+          {detailRows(payment.mode, payment.paymentDetails, 'out').map((row) => (
+            <Fragment key={row.key}>
+              <dt className="text-zinc-500">{row.label}</dt>
+              <dd>{row.value}</dd>
+            </Fragment>
+          ))}
+          {payment.reference && detailRows(payment.mode, payment.paymentDetails, 'out').length === 0 ? (
             <>
               <dt className="text-zinc-500">Reference</dt>
               <dd>{payment.reference}</dd>
             </>
           ) : null}
         </dl>
+      </div>
+
+      <div className="print:hidden">
+        <PaymentDetailsList mode={payment.mode} details={payment.paymentDetails} direction="out" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

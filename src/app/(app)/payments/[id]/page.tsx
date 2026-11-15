@@ -1,5 +1,6 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
 import { modeText } from '@/lib/payment-modes'
+import { PaymentDetailsList } from '@/components/payment-details-list'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { LocalTime } from '@/components/local-time'
@@ -121,6 +122,8 @@ export default async function ReceiptPage({
           </div>
         </div>
       </div>
+
+      <PaymentDetailsList mode={receipt.mode} details={receipt.paymentDetails} direction="in" />
 
       {receipt.allocations.length > 0 || receipt.openingApplied > 0 ? (
         <div>

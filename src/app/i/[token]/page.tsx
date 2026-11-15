@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { PoweredBy } from '@/components/powered-by'
 import { shareMetadata } from '@/lib/share-metadata'
 import { notFound } from 'next/navigation'
+import { HowToPay } from '@/components/payment-terms'
 import { describeLineDetails } from '@/lib/line-details'
 import { UNIT_SHORT } from '@/lib/labels'
 import {
@@ -278,40 +279,14 @@ export default async function SharedInvoicePage({
       </section>
 
       {invoice.due > 0 && modes.length > 0 ? (
-        <section className="mt-10 grid grid-cols-1 gap-4 break-inside-avoid">
-          <h2 className="text-base/6 font-semibold text-zinc-950">How to pay</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {modes.map((mode) => (
-              <div
-                key={mode.id}
-                className="flex items-start justify-between gap-4 break-inside-avoid rounded-lg p-4 ring-1 ring-zinc-950/10"
-              >
-                <div className="min-w-0 text-sm/6">
-                  <div className="font-medium text-zinc-950">{mode.name}</div>
-                  {mode.details.length > 0 ? (
-                    <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                      {mode.details.map((detail, index) => (
-                        <div key={index} className="contents">
-                          <dt className="text-zinc-500">{detail.label}</dt>
-                          <dd className="min-w-0 break-words font-medium text-zinc-950">
-                            {detail.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : null}
-                </div>
-                {mode.hasQr ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- QR served by our token route; next/image cannot optimise it
-                  <img
-                    src={`/i/${token}/qr/${mode.id}`}
-                    alt={`${mode.name} QR code`}
-                    className="size-24 shrink-0 rounded-md bg-white object-contain p-1 ring-1 ring-zinc-950/10"
-                  />
-                ) : null}
-              </div>
-            ))}
-          </div>
+        <section className="mt-10 break-inside-avoid">
+          <HowToPay
+            light
+            modes={modes}
+            qrSrc={(modeId) => `/i/${token}/qr/${modeId}`}
+            amount={invoice.due}
+            note={invoice.number}
+          />
         </section>
       ) : null}
 

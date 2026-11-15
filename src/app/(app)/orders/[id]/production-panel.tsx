@@ -1,15 +1,25 @@
 'use client'
 
-import { useRef, useState, useSyncExternalStore, useTransition } from 'react'
+import {
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  CheckCircleIcon,
-  ClockIcon,
+  ChatBubbleLeftEllipsisIcon,
+  ChevronRightIcon,
   EllipsisVerticalIcon,
-  ForwardIcon,
-  PauseCircleIcon,
-  PlayCircleIcon,
+  PlusIcon,
 } from '@heroicons/react/20/solid'
+import {
+  CheckIcon,
+  ForwardIcon,
+  PauseIcon,
+  PlayIcon,
+} from '@heroicons/react/16/solid'
 import { Avatar } from '@/components/catalyst/avatar'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
@@ -46,6 +56,7 @@ import {
 import type { SimpleResult } from '@/lib/actions/production'
 import {
   blockingTask,
+  currentTask,
   dueLabel,
   formatDuration,
   holdReason,
@@ -67,36 +78,6 @@ const STATUS_LABELS: Record<ProductionTaskStatus, string> = {
   ON_HOLD: 'On hold',
   DONE: 'Done',
   SKIPPED: 'Skipped',
-}
-
-const STATUS_COLORS: Record<
-  ProductionTaskStatus,
-  'zinc' | 'blue' | 'amber' | 'lime'
-> = {
-  PENDING: 'zinc',
-  IN_PROGRESS: 'blue',
-  ON_HOLD: 'amber',
-  DONE: 'lime',
-  SKIPPED: 'zinc',
-}
-
-const STATUS_ICONS: Record<
-  ProductionTaskStatus,
-  React.ComponentType<React.ComponentPropsWithoutRef<'svg'>>
-> = {
-  PENDING: ClockIcon,
-  IN_PROGRESS: PlayCircleIcon,
-  ON_HOLD: PauseCircleIcon,
-  DONE: CheckCircleIcon,
-  SKIPPED: ForwardIcon,
-}
-
-const NODE_STYLES: Record<ProductionTaskStatus, string> = {
-  PENDING: 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500',
-  IN_PROGRESS: 'bg-blue-500 text-white',
-  ON_HOLD: 'bg-amber-400 text-amber-950',
-  DONE: 'bg-lime-500 text-white',
-  SKIPPED: 'bg-zinc-300 text-zinc-600 dark:bg-zinc-600 dark:text-zinc-200',
 }
 
 const SEGMENT_STYLES: Record<ProductionTaskStatus, string> = {
@@ -152,6 +133,7 @@ export function ProductionPanel({
   const [result, setResult] = useState<SimpleResult | null>(null)
   const [dialogue, setDialogue] = useState<Dialogue>(null)
   const [reason, setReason] = useState('')
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const now = useNow()
 
   function run(action: () => Promise<SimpleResult>, after?: () => void) {
@@ -225,22 +207,29 @@ export function ProductionPanel({
     )
   }
 
-  const current =
-    tasks.find((task) => task.status === 'IN_PROGRESS') ??
-    tasks.find((task) => task.status === 'ON_HOLD') ??
-    tasks.find((task) => task.status === 'PENDING') ??
-    null
-  const currentLabel =
-    now && current ? taskDurationLabel(current, now) : null
+  const current = currentTask(tasks)
   const total = now ? totalElapsedMs(tasks, now) : null
   const due = dueDate && now ? dueLabel(dueDate, now) : null
 
   return (
     <div className="grid grid-cols-1 gap-5">
       <div className="grid grid-cols-1 gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <Subheading level={2}>Production</Subheading>
           <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm/6 text-zinc-500 dark:text-zinc-400">
+              <span className="font-medium text-zinc-950 tabular-nums dark:text-white">
+                {counts.finished} of {counts.total}
+              </span>{' '}
+              complete
+              {counts.skipped > 0 ? ` (${counts.skipped} skipped)` : ''}
+            </span>
+            {total !== null ? (
+              <Badge color="zinc">
+                {formatDuration(total)}
+                {counts.complete ? ' in total' : ' elapsed'}
+              </Badge>
+            ) : null}
             {counts.complete ? (
               <Badge color="lime">All stages complete</Badge>
             ) : due ? (
@@ -259,43 +248,38 @@ export function ProductionPanel({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <Text>
-            <span className="font-medium text-zinc-950 dark:text-white">
-              {counts.finished} of {counts.total}
-            </span>{' '}
-            stages complete
-            {counts.skipped > 0 ? ` (${counts.skipped} skipped)` : ''}
-          </Text>
-          <Text>
-            {[
-              current && currentLabel && current.status === 'IN_PROGRESS'
-                ? `${current.stage.name}: ${currentLabel}`
-                : null,
-              total !== null
-                ? `${formatDuration(total)} ${counts.complete ? 'in total' : 'since production started'}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-        </div>
-
         <ol
-          className="flex gap-1"
+          className="flex gap-1.5"
           aria-label={`${counts.finished} of ${counts.total} stages complete`}
         >
-          {tasks.map((task) => (
-            <li
-              key={task.id}
-              title={`${task.stage.name}: ${STATUS_LABELS[task.status]}`}
-              className={`h-2 flex-1 rounded-full ${SEGMENT_STYLES[task.status]} ${
-                task.id === current?.id
-                  ? 'ring-2 ring-blue-500/40 ring-offset-1 ring-offset-white dark:ring-offset-zinc-900'
-                  : ''
-              }`}
-            />
-          ))}
+          {tasks.map((task) => {
+            const isCurrent = task.id === current?.id
+
+            return (
+              <li
+                key={task.id}
+                title={`${task.stage.name}: ${STATUS_LABELS[task.status]}`}
+                className="min-w-0 flex-1"
+              >
+                <div
+                  className={`h-1.5 rounded-full ${
+                    isCurrent && task.status === 'PENDING'
+                      ? 'bg-blue-500/40'
+                      : SEGMENT_STYLES[task.status]
+                  }`}
+                />
+                <div
+                  className={`mt-1.5 hidden truncate text-xs/5 sm:block ${
+                    isCurrent
+                      ? 'font-medium text-zinc-950 dark:text-white'
+                      : 'text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  {task.stage.name}
+                </div>
+              </li>
+            )
+          })}
         </ol>
       </div>
 
@@ -306,25 +290,36 @@ export function ProductionPanel({
       ) : null}
 
       <ol className="grid grid-cols-1">
-        {tasks.map((task, index) => (
-          <StageRow
-            key={task.id}
-            task={task}
-            tasks={tasks}
-            last={index === tasks.length - 1}
-            state={stageState(tasks, task.id)}
-            current={task.id === current?.id}
-            now={now}
-            active={active}
-            canUpdate={canUpdate}
-            isAdmin={isAdmin}
-            orderStatus={orderStatus}
-            operators={operators}
-            pending={pending}
-            run={run}
-            openDialogue={openDialogue}
-          />
-        ))}
+        {tasks.map((task, index) => {
+          const isCurrent = task.id === current?.id
+
+          return (
+            <StageRow
+              key={task.id}
+              task={task}
+              tasks={tasks}
+              last={index === tasks.length - 1}
+              state={stageState(tasks, task.id)}
+              current={isCurrent}
+              open={expanded[task.id] ?? isCurrent}
+              onToggle={() =>
+                setExpanded((prev) => ({
+                  ...prev,
+                  [task.id]: !(prev[task.id] ?? isCurrent),
+                }))
+              }
+              now={now}
+              active={active}
+              canUpdate={canUpdate}
+              isAdmin={isAdmin}
+              orderStatus={orderStatus}
+              operators={operators}
+              pending={pending}
+              run={run}
+              openDialogue={openDialogue}
+            />
+          )
+        })}
       </ol>
 
       <Dialog
@@ -395,12 +390,73 @@ export function ProductionPanel({
   )
 }
 
+/** The marker on the rail: one distinct shape per state. */
+function StageNode({
+  task,
+  state,
+}: {
+  task: OrderTask
+  state: StageState
+}) {
+  const base = 'relative grid size-7 shrink-0 place-items-center rounded-full'
+
+  if (task.status === 'DONE') {
+    return (
+      <span className={`${base} bg-lime-500 text-white`}>
+        <CheckIcon className="size-4" aria-hidden />
+      </span>
+    )
+  }
+
+  if (task.status === 'SKIPPED') {
+    return (
+      <span className={`${base} bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-300`}>
+        <ForwardIcon className="size-4" aria-hidden />
+      </span>
+    )
+  }
+
+  if (task.status === 'IN_PROGRESS') {
+    return (
+      <span className={`${base} bg-blue-500 text-white`}>
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full bg-blue-500/40 motion-safe:animate-ping"
+        />
+        <PlayIcon className="relative size-4 translate-x-px" aria-hidden />
+      </span>
+    )
+  }
+
+  if (task.status === 'ON_HOLD') {
+    return (
+      <span className={`${base} bg-amber-400 text-amber-950`}>
+        <PauseIcon className="size-4" aria-hidden />
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className={`${base} bg-white text-xs/none font-medium tabular-nums dark:bg-zinc-900 ${
+        state === 'next'
+          ? 'text-blue-600 ring-2 ring-blue-500 dark:text-blue-400'
+          : 'text-zinc-500 ring-1 ring-zinc-950/15 dark:text-zinc-400 dark:ring-white/20'
+      }`}
+    >
+      {task.position}
+    </span>
+  )
+}
+
 function StageRow({
   task,
   tasks,
   last,
   state,
   current,
+  open,
+  onToggle,
   now,
   active,
   canUpdate,
@@ -416,6 +472,8 @@ function StageRow({
   last: boolean
   state: StageState
   current: boolean
+  open: boolean
+  onToggle: () => void
   now: Date | null
   active: boolean
   canUpdate: boolean
@@ -426,13 +484,17 @@ function StageRow({
   run: (action: () => Promise<SimpleResult>, after?: () => void) => void
   openDialogue: (next: Dialogue) => void
 }) {
-  const Icon = STATUS_ICONS[task.status]
+  const [notesOpen, setNotesOpen] = useState(false)
+  const bodyId = useId()
   const blocker = blockingTask(tasks, task.id)
   const duration = now ? taskDurationLabel(task, now) : null
   const reopen = reopenCheck(tasks, task.id, orderStatus)
   const outOfOrder = startNeedsForce(tasks, task.id)
   const queued = state === 'queued'
+  const finished = state === 'finished'
   const reason = task.status === 'ON_HOLD' ? holdReason(task.notes) : null
+  const person = task.assignedTo
+  const canEditNotes = active && canUpdate
 
   const hasMenu =
     active &&
@@ -440,157 +502,255 @@ function StageRow({
       state === 'held' ||
       state === 'next' ||
       state === 'queued' ||
-      (state === 'finished' && reopen.ok))
+      (finished && reopen.ok))
+
+  const chip =
+    task.status === 'IN_PROGRESS' ? (
+      <Badge color="blue">In progress</Badge>
+    ) : task.status === 'ON_HOLD' ? (
+      <Badge color="amber">On hold</Badge>
+    ) : task.status === 'DONE' ? (
+      <Badge color="lime" className="max-sm:hidden">
+        Done
+      </Badge>
+    ) : task.status === 'SKIPPED' ? (
+      <Badge color="zinc">Skipped</Badge>
+    ) : null
 
   return (
-    <li className="relative flex gap-3 pb-6 last:pb-0 sm:gap-4">
+    <li className="relative pl-10">
       {last ? null : (
         <span
           aria-hidden
-          className={`absolute top-8 bottom-0 left-3.5 w-px -translate-x-1/2 ${
-            task.status === 'DONE' || task.status === 'SKIPPED'
-              ? 'bg-lime-500/60'
-              : 'bg-zinc-950/10 dark:bg-white/10'
+          className={`absolute -bottom-2 left-3.5 w-px -translate-x-1/2 ${
+            current ? 'top-10' : 'top-9'
+          } ${
+            finished ? 'bg-lime-500/60' : 'bg-zinc-950/10 dark:bg-white/10'
           }`}
         />
       )}
-      <span
-        className={`relative z-10 mt-0.5 grid size-7 shrink-0 place-items-center rounded-full ${NODE_STYLES[task.status]} ${
-          current ? 'ring-4 ring-blue-500/20' : ''
-        }`}
-      >
-        <Icon className="size-5" aria-hidden />
+      <span className={`absolute left-0 ${current ? 'top-3' : 'top-2'}`}>
+        <StageNode task={task} state={state} />
       </span>
 
       <div
-        className={`min-w-0 flex-1 rounded-lg ${
+        className={`-ml-2 rounded-xl pl-2 ${
           current
-            ? 'bg-blue-50/60 p-3 -m-3 ring-1 ring-blue-500/20 dark:bg-blue-400/5'
+            ? 'my-1 bg-zinc-50 pr-2 pb-3 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10'
             : ''
-        } ${queued ? 'opacity-70' : ''}`}
+        }`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="text-sm/6 font-medium">
-              <span className="mr-1.5 tabular-nums text-zinc-400 dark:text-zinc-500">
-                {task.position}.
-              </span>
+        <div className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            onClick={onToggle}
+            className="group flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-500 sm:flex-none"
+          >
+            <span
+              className={`truncate text-sm/6 ${
+                queued
+                  ? 'text-zinc-600 dark:text-zinc-400'
+                  : 'font-medium text-zinc-950 dark:text-white'
+              }`}
+            >
               {task.stage.name}
             </span>
-            <Badge color={STATUS_COLORS[task.status]}>
-              <Icon className="size-3.5" aria-hidden />
-              {STATUS_LABELS[task.status]}
-            </Badge>
-          </div>
+            {chip}
+            {queued ? (
+              <span className="truncate text-sm/6 text-zinc-400 dark:text-zinc-500">
+                Waiting for {blocker?.stage.name ?? 'the previous stage'}
+              </span>
+            ) : null}
+            {finished ? (
+              <span className="flex min-w-0 items-center gap-2 text-sm/6 text-zinc-500 dark:text-zinc-400">
+                {person ? (
+                  <Avatar
+                    initials={initials(person.name)}
+                    className="size-5 shrink-0 bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900"
+                    aria-label={person.name}
+                  />
+                ) : null}
+                {duration ? (
+                  <span className="truncate font-medium text-zinc-700 dark:text-zinc-300">
+                    {duration}
+                  </span>
+                ) : null}
+                {task.completedAt ? (
+                  <span className="truncate max-sm:hidden">
+                    <LocalTime value={task.completedAt} />
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+            {task.notes && !open ? (
+              <ChatBubbleLeftEllipsisIcon
+                className="size-4 shrink-0 text-zinc-400 dark:text-zinc-500"
+                aria-label="Has a note"
+              />
+            ) : null}
+            <ChevronRightIcon
+              aria-hidden
+              className={`size-4 shrink-0 text-zinc-400 transition-transform motion-reduce:transition-none dark:text-zinc-500 ${
+                open ? 'rotate-90' : ''
+              }`}
+            />
+          </button>
 
-          {active ? (
-            <div className="flex items-center gap-1">
-              {state === 'next' ? (
-                <Button
-                  disabled={pending}
-                  onClick={() => run(() => startTask(task.id))}
-                >
-                  Start {task.stage.name}
-                </Button>
-              ) : null}
-              {state === 'active' ? (
-                <Button
-                  disabled={pending}
-                  onClick={() => run(() => completeTask(task.id))}
-                >
-                  Mark done
-                </Button>
-              ) : null}
-              {state === 'held' && !outOfOrder ? (
-                <Button
-                  disabled={pending}
-                  onClick={() => run(() => startTask(task.id))}
-                >
-                  Resume
-                </Button>
-              ) : null}
-
-              {hasMenu ? (
-                <Dropdown>
-                  <DropdownButton plain aria-label={`More actions for ${task.stage.name}`}>
-                    <EllipsisVerticalIcon />
-                  </DropdownButton>
-                  <DropdownMenu anchor="bottom end">
-                    {state === 'active' ? (
-                      <DropdownItem onClick={() => openDialogue({ kind: 'hold', task })}>
-                        <DropdownLabel>Put on hold</DropdownLabel>
-                      </DropdownItem>
-                    ) : null}
-                    {state === 'held' && outOfOrder && isAdmin ? (
-                      <DropdownItem onClick={() => openDialogue({ kind: 'anyway', task })}>
-                        <DropdownLabel>Resume anyway</DropdownLabel>
-                      </DropdownItem>
-                    ) : null}
-                    {state === 'queued' && isAdmin ? (
-                      <DropdownItem onClick={() => openDialogue({ kind: 'anyway', task })}>
-                        <DropdownLabel>Start anyway</DropdownLabel>
-                      </DropdownItem>
-                    ) : null}
-                    {state === 'finished' && reopen.ok ? (
-                      <DropdownItem onClick={() => openDialogue({ kind: 'reopen', task })}>
-                        <DropdownLabel>Reopen</DropdownLabel>
-                      </DropdownItem>
-                    ) : null}
-                    {state !== 'finished' ? (
-                      <>
-                        <DropdownDivider />
-                        <DropdownItem onClick={() => openDialogue({ kind: 'skip', task })}>
-                          <DropdownLabel>Skip stage</DropdownLabel>
-                        </DropdownItem>
-                      </>
-                    ) : null}
-                  </DropdownMenu>
-                </Dropdown>
-              ) : null}
+          {current ? (
+            <div className="max-sm:basis-full">
+              <Assignee
+                task={task}
+                operators={operators}
+                canAssign={active}
+                pending={pending}
+                run={run}
+              />
             </div>
           ) : null}
+
+          <div
+            className={`ml-auto flex items-center gap-1 ${
+              current ? 'max-sm:order-last max-sm:w-full' : ''
+            }`}
+          >
+            {active && state === 'next' ? (
+              <Button
+                className="max-sm:flex-1"
+                disabled={pending}
+                onClick={() => run(() => startTask(task.id))}
+              >
+                Start {task.stage.name}
+              </Button>
+            ) : null}
+            {active && state === 'active' ? (
+              <Button
+                className="max-sm:flex-1"
+                disabled={pending}
+                onClick={() => run(() => completeTask(task.id))}
+              >
+                Mark done
+              </Button>
+            ) : null}
+            {active && state === 'held' && !outOfOrder ? (
+              <Button
+                className="max-sm:flex-1"
+                disabled={pending}
+                onClick={() => run(() => startTask(task.id))}
+              >
+                Resume
+              </Button>
+            ) : null}
+
+            {hasMenu ? (
+              <Dropdown>
+                <DropdownButton
+                  plain
+                  aria-label={`More actions for ${task.stage.name}`}
+                >
+                  <EllipsisVerticalIcon />
+                </DropdownButton>
+                <DropdownMenu anchor="bottom end">
+                  {state === 'active' ? (
+                    <DropdownItem onClick={() => openDialogue({ kind: 'hold', task })}>
+                      <DropdownLabel>Put on hold</DropdownLabel>
+                    </DropdownItem>
+                  ) : null}
+                  {state === 'held' && outOfOrder && isAdmin ? (
+                    <DropdownItem onClick={() => openDialogue({ kind: 'anyway', task })}>
+                      <DropdownLabel>Resume anyway</DropdownLabel>
+                    </DropdownItem>
+                  ) : null}
+                  {state === 'queued' && isAdmin ? (
+                    <DropdownItem onClick={() => openDialogue({ kind: 'anyway', task })}>
+                      <DropdownLabel>Start anyway</DropdownLabel>
+                    </DropdownItem>
+                  ) : null}
+                  {finished && reopen.ok ? (
+                    <DropdownItem onClick={() => openDialogue({ kind: 'reopen', task })}>
+                      <DropdownLabel>Reopen</DropdownLabel>
+                    </DropdownItem>
+                  ) : null}
+                  {!finished ? (
+                    <>
+                      <DropdownDivider />
+                      <DropdownItem onClick={() => openDialogue({ kind: 'skip', task })}>
+                        <DropdownLabel>Skip stage</DropdownLabel>
+                      </DropdownItem>
+                    </>
+                  ) : null}
+                </DropdownMenu>
+              </Dropdown>
+            ) : null}
+          </div>
         </div>
 
-        {queued ? (
-          <Text className="mt-1">
-            Waiting for {blocker?.stage.name ?? 'the previous stage'}
-          </Text>
-        ) : null}
+        {open ? (
+          <div id={bodyId} className="grid grid-cols-1 gap-2 pb-2">
+            {task.status === 'ON_HOLD' ? (
+              <div className="rounded-md bg-amber-50 px-3 py-2 text-sm/5 text-amber-900 ring-1 ring-amber-500/20 dark:bg-amber-400/10 dark:text-amber-200">
+                On hold{reason ? `: ${reason}` : ''}
+              </div>
+            ) : null}
 
-        {task.status === 'ON_HOLD' ? (
-          <div className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm/5 text-amber-900 ring-1 ring-amber-500/20 dark:bg-amber-400/10 dark:text-amber-200">
-            On hold{reason ? `: ${reason}` : ''}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
+              {current ? null : (
+                <Assignee
+                  task={task}
+                  operators={operators}
+                  canAssign={active}
+                  pending={pending}
+                  run={run}
+                />
+              )}
+              {task.startedAt ? (
+                <span>
+                  Started <LocalTime value={task.startedAt} />
+                </span>
+              ) : null}
+              {task.completedAt ? (
+                <span>
+                  {task.status === 'SKIPPED' ? 'Skipped' : 'Finished'}{' '}
+                  <LocalTime value={task.completedAt} />
+                  {task.completedBy ? ` by ${task.completedBy.name}` : ''}
+                </span>
+              ) : null}
+              {duration && !finished ? (
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {duration}
+                </span>
+              ) : null}
+              {task.notes || canEditNotes ? (
+                <button
+                  type="button"
+                  aria-expanded={notesOpen}
+                  onClick={() => setNotesOpen((value) => !value)}
+                  className="relative -my-1 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-zinc-600 hover:bg-zinc-950/5 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-zinc-300 dark:hover:bg-white/5"
+                >
+                  <ChatBubbleLeftEllipsisIcon className="size-4 text-zinc-400 dark:text-zinc-500" aria-hidden />
+                  {task.notes ? 'Note' : 'Add note'}
+                  {task.notes ? (
+                    <span
+                      aria-hidden
+                      className="size-1.5 rounded-full bg-blue-500"
+                    />
+                  ) : null}
+                </button>
+              ) : null}
+            </div>
+
+            {notesOpen ? (
+              <Notes
+                key={task.notes ?? ''}
+                task={task}
+                canEdit={canEditNotes}
+                run={run}
+                onClose={() => setNotesOpen(false)}
+              />
+            ) : null}
           </div>
         ) : null}
-
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          <Assignee
-            task={task}
-            operators={operators}
-            canAssign={active}
-            pending={pending}
-            run={run}
-          />
-          {task.startedAt ? (
-            <span>
-              Started <LocalTime value={task.startedAt} />
-            </span>
-          ) : null}
-          {task.completedAt ? (
-            <span>
-              {task.status === 'SKIPPED' ? 'Skipped' : 'Finished'}{' '}
-              <LocalTime value={task.completedAt} />
-              {task.completedBy ? ` by ${task.completedBy.name}` : ''}
-            </span>
-          ) : null}
-          {duration ? (
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">
-              {duration}
-            </span>
-          ) : null}
-        </div>
-
-        <Notes key={task.notes ?? ''} task={task} canEdit={active && canUpdate} run={run} />
       </div>
     </li>
   )
@@ -620,11 +780,18 @@ function Assignee({
       <span>{person.name}</span>
     </>
   ) : (
-    <span>Unassigned</span>
+    <>
+      <span className="grid size-5 place-items-center rounded-full border border-dashed border-zinc-400 text-zinc-500 dark:border-zinc-500 dark:text-zinc-400">
+        <PlusIcon className="size-3" aria-hidden />
+      </span>
+      <span>{canAssign ? 'Assign' : 'Unassigned'}</span>
+    </>
   )
 
   if (!canAssign) {
-    return <span className="inline-flex items-center gap-1.5">{face}</span>
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs/5">{face}</span>
+    )
   }
 
   return (
@@ -632,13 +799,10 @@ function Assignee({
       <DropdownButton
         plain
         disabled={pending}
-        className="-mx-2 -my-1 px-2 py-1 text-xs/5! font-normal"
-        aria-label={`Assign ${task.stage.name}`}
+        className="gap-1.5! rounded-full! py-0.5! pr-2.5! pl-1! text-xs/5! font-normal text-zinc-700! dark:text-zinc-200! ring-1 ring-zinc-950/10 dark:ring-white/15"
+        aria-label={person ? `Change assignee for ${task.stage.name}` : `Assign ${task.stage.name}`}
       >
         {face}
-        <span className="text-blue-600 dark:text-blue-400">
-          {person ? 'Change' : 'Assign'}
-        </span>
       </DropdownButton>
       <DropdownMenu anchor="bottom start">
         {operators.map((operator) => (
@@ -666,12 +830,14 @@ function Notes({
   task,
   canEdit,
   run,
+  onClose,
 }: {
   task: OrderTask
   canEdit: boolean
   run: (action: () => Promise<SimpleResult>) => void
+  onClose: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(canEdit && !task.notes)
   const [draft, setDraft] = useState(task.notes ?? '')
   const saved = useRef(task.notes ?? '')
 
@@ -684,25 +850,19 @@ function Notes({
     run(() => saveTaskNotes(task.id, draft))
   }
 
-  if (!open) {
-    if (!task.notes && !canEdit) {
-      return null
-    }
-
+  if (!editing) {
     return (
-      <div className="mt-2 text-sm/5">
-        {task.notes ? (
-          <p className="whitespace-pre-line text-zinc-700 dark:text-zinc-300">
-            {task.notes}
-          </p>
-        ) : null}
+      <div className="text-sm/5">
+        <p className="whitespace-pre-line text-zinc-700 dark:text-zinc-300">
+          {task.notes}
+        </p>
         {canEdit ? (
           <button
             type="button"
-            onClick={() => setOpen(true)}
-            className="text-xs/5 text-blue-600 hover:underline dark:text-blue-400"
+            onClick={() => setEditing(true)}
+            className="mt-1 text-xs/5 text-blue-600 hover:underline dark:text-blue-400"
           >
-            {task.notes ? 'Edit notes' : 'Add a note'}
+            Edit note
           </button>
         ) : null}
       </div>
@@ -710,7 +870,7 @@ function Notes({
   }
 
   return (
-    <div className="mt-2 grid grid-cols-1 gap-2">
+    <div className="grid grid-cols-1 gap-2">
       <Textarea
         aria-label={`Notes for ${task.stage.name}`}
         rows={3}
@@ -724,7 +884,7 @@ function Notes({
         <Button
           onClick={() => {
             save()
-            setOpen(false)
+            onClose()
           }}
         >
           Save
@@ -733,7 +893,7 @@ function Notes({
           plain
           onClick={() => {
             setDraft(saved.current)
-            setOpen(false)
+            onClose()
           }}
         >
           Close

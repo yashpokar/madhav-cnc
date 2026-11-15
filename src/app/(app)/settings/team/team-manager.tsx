@@ -10,6 +10,7 @@ import { FormBanner } from '@/components/form-banner'
 import { addMember, changeMemberRole, removeMember } from '@/lib/actions/team'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
+import { InviteSection, type PendingInvite } from './invite-section'
 
 type Member = {
   id: string
@@ -21,10 +22,25 @@ type Member = {
 
 const ROLES = Object.values(UserRole)
 
-export function TeamManager({ members, currentUserId }: { members: Member[]; currentUserId: string }) {
+export function TeamManager({
+  members,
+  currentUserId,
+  invites,
+  baseUrl,
+  inviterName,
+  companyName,
+}: {
+  members: Member[]
+  currentUserId: string
+  invites: PendingInvite[]
+  baseUrl: string
+  inviterName: string
+  companyName: string
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [email, setEmail] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
   const [role, setRole] = useState<UserRole>('VIEWER')
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -45,37 +61,57 @@ export function TeamManager({ members, currentUserId }: { members: Member[]; cur
     <div className="grid grid-cols-1 gap-8">
       {message ? <FormBanner tone={message.ok ? 'success' : 'error'}>{message.text}</FormBanner> : null}
 
+      <InviteSection
+        invites={invites}
+        baseUrl={baseUrl}
+        inviterName={inviterName}
+        companyName={companyName}
+      />
+
       <section className="grid grid-cols-1 gap-3">
-        <Subheading level={2}>Add a person</Subheading>
-        <div className="flex max-w-2xl flex-wrap items-start gap-2">
-          <Input
-            type="email"
-            className="min-w-0 flex-1 basis-60"
-            value={email}
-            placeholder="Their email address"
-            aria-label="Email address"
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <Select
-            className="w-40"
-            aria-label="Role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-          >
-            {ROLES.map((value) => (
-              <option key={value} value={value}>
-                {ROLE_LABELS[value]}
-              </option>
-            ))}
-          </Select>
-          <Button
-            className="shrink-0 whitespace-nowrap"
-            disabled={pending || !email.trim()}
-            onClick={() => run(() => addMember(email, role), () => setEmail(''))}
-          >
-            Add
+        <div>
+          <Button plain onClick={() => setShowAdd((value) => !value)}>
+            {showAdd ? 'Hide' : 'Add existing account'}
           </Button>
         </div>
+        {showAdd ? (
+          <>
+            <p className="max-w-2xl text-sm/6 text-zinc-500">
+              Inviting with a link is the easier way and works for anyone. Use this only if the
+              person already has a Prodlys account: enter the exact email they registered with.
+            </p>
+            <div className="flex max-w-2xl flex-wrap items-start gap-2">
+              <Input
+                type="email"
+                className="min-w-0 flex-1 basis-60"
+                value={email}
+                placeholder="Their email address"
+                aria-label="Email address"
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <Select
+                className="w-40"
+                aria-label="Role"
+                value={role}
+                onChange={(event) => setRole(event.target.value as UserRole)}
+              >
+                {ROLES.map((value) => (
+                  <option key={value} value={value}>
+                    {ROLE_LABELS[value]}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                className="shrink-0 whitespace-nowrap"
+                disabled={pending || !email.trim()}
+                onClick={() => run(() => addMember(email, role), () => setEmail(''))}
+              >
+                Add
+              </Button>
+            </div>
+      
+          </>
+        ) : null}
       </section>
 
       <section className="grid grid-cols-1 gap-3">

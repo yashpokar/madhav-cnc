@@ -8,6 +8,8 @@ import { getOrder } from '@/lib/queries/orders'
 import { listCustomerOptions, listItemOptions } from '@/lib/queries/quotations'
 import { listPartnerOptions } from '@/lib/queries/partners'
 import { requireCapability } from '@/lib/session'
+import { fieldsFromSchedule } from '@/lib/calendar'
+import { getActiveIndustry } from '@/lib/queries/company'
 import { OrderForm } from '../../order-form'
 
 export const metadata: Metadata = {
@@ -36,6 +38,7 @@ export default async function EditOrderPage({
     notFound()
   }
 
+  const industry = await getActiveIndustry()
   const action = updateOrder.bind(null, order.id)
 
   const modes = await listPaymentModeOptions(order.advancePayment?.channelId)
@@ -49,6 +52,8 @@ export default async function EditOrderPage({
 
       <OrderForm
         modes={modes}
+        term={industry.terms.order}
+        excludeId={order.id}
         action={action}
         submitLabel="Save changes"
         customers={customers}
@@ -63,6 +68,9 @@ export default async function EditOrderPage({
           customerPoNumber: order.customerPoNumber,
           orderDate: dateInput(order.orderDate) ?? '',
           dueDate: dateInput(order.dueDate),
+          ...fieldsFromSchedule(order.startsAt, order.endsAt),
+          venue: order.venue,
+          headcount: order.headcount,
           siteAddress: order.siteAddress,
           siteCity: order.siteCity,
           sitePincode: order.sitePincode,

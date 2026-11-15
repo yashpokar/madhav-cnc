@@ -1,13 +1,16 @@
 'use server'
 
+// Thin web adapter: permission, FormData parsing, then the services in
+// src/lib/services/items.ts and materials.ts, then cache refresh and redirects.
+
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { nextItemCode } from '@/lib/codes'
-import { materialInputSchema, itemInputSchema } from '@/lib/validation/items'
+import { itemInputSchema } from '@/lib/validation/items'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
-import type { SupplyType, UnitOfMeasure } from '@/generated/prisma/enums'
+import * as items from '@/lib/services/items'
+import { findOrCreateMaterial } from '@/lib/services/materials'
+import type { UnitOfMeasure } from '@/generated/prisma/enums'
 
 export type { FormState }
 
@@ -36,15 +39,6 @@ function parse(formData: FormData) {
   })
 }
 
-/** Services are not stocked, whatever the form sent. */
-function stockFields<T extends { supplyType: string; stockTracked: boolean; reorderLevel: number | null }>(
-  data: T,
-): T {
-  return data.supplyType === 'SERVICE'
-    ? { ...data, stockTracked: false, reorderLevel: null }
-    : data
-}
-
 export async function createItem(
   _previous: FormState,
   formData: FormData,
@@ -61,14 +55,14 @@ export async function createItem(
     }
   }
 
-  const code = await nextItemCode()
+  const result = await items.createItem(user, parsed.data)
 
-  const item = await prisma.item.create({
-    data: { ...stockFields(parsed.data), code, createdById: user.id, updatedById: user.id },
-  })
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
+  }
 
   revalidatePath('/items')
-  redirect(`/items?created=${encodeURIComponent(item.code)}`)
+  redirect(`/items?created=${encodeURIComponent(result.code)}`)
 }
 
 export async function updateItem(
@@ -88,21 +82,16 @@ export async function updateItem(
     }
   }
 
-  const existing = await prisma.item.findUnique({ where: { id } })
+  const result = await items.updateItem(user, id, parsed.data)
 
-  if (!existing) {
-    return { status: 'error', message: 'Item not found' }
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
   }
-
-  const item = await prisma.item.update({
-    where: { id },
-    data: { ...stockFields(parsed.data), updatedById: user.id },
-  })
 
   revalidatePath('/items')
   revalidatePath(`/items/${id}`)
 
-  return { status: 'success', message: `${item.name} updated`, id: item.id }
+  return { status: 'success', message: `${result.name} updated`, id: result.id }
 }
 
 export type QuickMaterialResult =
@@ -113,80 +102,37 @@ export async function quickCreateMaterial(
   name: string,
 ): Promise<QuickMaterialResult> {
   const user = await requireCapability('item:create')
-  const parsed = materialInputSchema.safeParse({ name, sortOrder: 0 })
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  const result = await findOrCreateMaterial(user, name)
+
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
 
-  const existing = await prisma.material.findFirst({
-    where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
-    select: { id: true, name: true },
-  })
-
-  if (existing) {
-    return { ok: true, material: existing }
+  // Only a newly created material changes what the items pages show.
+  if (result.created) {
+    revalidatePath('/items')
   }
 
-  const material = await prisma.material.create({
-    data: { ...parsed.data, createdById: user.id },
-    select: { id: true, name: true },
-  })
-
-  revalidatePath('/items')
-
-  return { ok: true, material }
+  return { ok: true, material: result.material }
 }
 
 export async function deleteItem(id: string) {
   await requireCapability('item:delete')
 
-  const item = await prisma.item.findUnique({
-    where: { id },
-    select: { name: true },
-  })
+  const result = await items.deleteItem(id)
 
-  if (!item) {
-    return { ok: false as const, error: 'Item not found' }
+  if (!result.ok) {
+    return { ok: false as const, error: result.error }
   }
-
-  const [quotationLines, orderLines, invoiceLines] = await Promise.all([
-    prisma.quotationLine.count({ where: { itemId: id } }),
-    prisma.orderLine.count({ where: { itemId: id } }),
-    prisma.invoiceLine.count({ where: { itemId: id } }),
-  ])
-
-  if (quotationLines + orderLines + invoiceLines > 0) {
-    return {
-      ok: false as const,
-      error: `${item.name} is used on ${quotationLines + orderLines + invoiceLines} document line(s). Mark it inactive instead so it stops appearing in new documents.`,
-    }
-  }
-
-  await prisma.item.delete({ where: { id } })
 
   revalidatePath('/items')
 
-  return { ok: true as const, message: `${item.name} deleted` }
+  return { ok: true as const, message: result.message }
 }
 
 export type QuickItemResult =
-  | {
-      ok: true
-      item: {
-        id: string
-        code: string
-        name: string
-        unit: UnitOfMeasure
-        rate: number
-        taxRatePercent: number
-        hsnCode: string | null
-        brand: string | null
-        supplyType: SupplyType
-        isFlatRate: boolean
-        material: { name: string } | null
-      }
-    }
+  | { ok: true; item: items.QuickItem }
   | { ok: false; error: string }
 
 /** Creates an item from the essentials, from inside a quotation or order. */
@@ -199,51 +145,13 @@ export async function quickCreateItem(input: {
 }): Promise<QuickItemResult> {
   const user = await requireCapability('item:create')
 
-  const parsed = itemInputSchema.safeParse({
-    name: input.name,
-    unit: input.unit,
-    rate: input.rate || 0,
-    taxRatePercent: input.taxRatePercent || 0,
-    materialId: input.materialId ?? '',
-    isActive: true,
-  })
+  const result = await items.quickCreateItem(user, input)
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  if (!result.ok) {
+    return { ok: false, error: result.error }
   }
-
-  const code = await nextItemCode()
-
-  const item = await prisma.item.create({
-    data: {
-      ...parsed.data,
-      code,
-      createdById: user.id,
-      updatedById: user.id,
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      unit: true,
-      rate: true,
-      taxRatePercent: true,
-      hsnCode: true,
-      brand: true,
-      supplyType: true,
-      isFlatRate: true,
-      material: { select: { name: true } },
-    },
-  })
 
   revalidatePath('/items')
 
-  return {
-    ok: true,
-    item: {
-      ...item,
-      rate: item.rate.toNumber(),
-      taxRatePercent: item.taxRatePercent.toNumber(),
-    },
-  }
+  return { ok: true, item: result.item }
 }

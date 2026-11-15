@@ -161,6 +161,48 @@ export const PAYMENT_STATE_COLORS = {
   WRITTEN_OFF: 'rose',
 } as const
 
+export const BILL_STATUS_LABELS = {
+  DRAFT: 'Draft',
+  POSTED: 'Posted',
+  CANCELLED: 'Cancelled',
+} as const
+
+export const BILL_STATUS_COLORS = {
+  DRAFT: 'zinc',
+  POSTED: 'blue',
+  CANCELLED: 'red',
+} as const
+
+export const BILL_PAYMENT_LABELS = {
+  PAID: 'Paid',
+  PART_PAID: 'Part paid',
+  UNPAID: 'Unpaid',
+  OVERDUE: 'Overdue',
+} as const
+
+export const BILL_PAYMENT_COLORS = {
+  PAID: 'lime',
+  PART_PAID: 'cyan',
+  UNPAID: 'amber',
+  OVERDUE: 'red',
+} as const
+
+export const PO_STATUS_LABELS = {
+  DRAFT: 'Draft',
+  SENT: 'Sent',
+  PARTIAL: 'Part received',
+  RECEIVED: 'Received',
+  CANCELLED: 'Cancelled',
+} as const
+
+export const PO_STATUS_COLORS = {
+  DRAFT: 'zinc',
+  SENT: 'blue',
+  PARTIAL: 'amber',
+  RECEIVED: 'lime',
+  CANCELLED: 'red',
+} as const
+
 export const WRITE_OFF_REASON_LABELS: Record<WriteOffReason, string> = {
   CUSTOMER_UNREACHABLE: 'Customer unreachable',
   DISPUTE: 'Disputed amount',

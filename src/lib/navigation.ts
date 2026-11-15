@@ -2,7 +2,7 @@ import { FEATURES } from '@/lib/features'
 import type { IndustryModules, IndustryTemplate } from '@/lib/industry'
 import type { Action, Resource } from '@/lib/permissions'
 
-export type NavGroup = 'Overview' | 'Sell' | 'Money' | 'People' | 'Catalogue' | 'Administration' | 'Settings'
+export type NavGroup = 'Overview' | 'Sell' | 'Buy' | 'Money' | 'People' | 'Catalogue' | 'Administration' | 'Settings'
 
 export type NavEntry = {
   href: string
@@ -20,6 +20,8 @@ const ALL_NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/orders', label: 'Orders', capability: 'order:read', group: 'Sell' },
   { href: '/production', label: 'Production', capability: 'production:read', group: 'Sell' },
   { href: '/dispatch', label: 'Dispatch', capability: 'dispatch:read', group: 'Sell' },
+  { href: '/purchase-orders', label: 'Purchase orders', capability: 'purchase:read', group: 'Buy' },
+  { href: '/purchase-bills', label: 'Purchase bills', capability: 'purchase:read', group: 'Buy' },
   { href: '/invoices', label: 'Invoices', capability: 'invoice:read', group: 'Money' },
   { href: '/payments', label: 'Payments', capability: 'payment:read', group: 'Money' },
   { href: '/expenses', label: 'Expenses', capability: 'expense:read', group: 'Money' },

@@ -24,7 +24,9 @@ import {
   DocumentChartBarIcon,
   DocumentTextIcon,
   HomeIcon,
+  ReceiptPercentIcon,
   ShoppingBagIcon,
+  ShoppingCartIcon,
   TruckIcon,
   UserGroupIcon,
   UsersIcon,
@@ -65,7 +67,7 @@ import type { CurrentUser } from '@/lib/session'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { TourProvider, useTour } from '@/components/tour/tour-provider'
 
-const GROUP_ORDER = ['Overview', 'Sell', 'Money', 'People', 'Catalogue'] as const
+const GROUP_ORDER = ['Overview', 'Sell', 'Buy', 'Money', 'People', 'Catalogue'] as const
 
 const ICONS: Record<string, typeof HomeIcon> = {
   '/': HomeIcon,
@@ -77,6 +79,8 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/statement': DocumentChartBarIcon,
   '/production': WrenchScrewdriverIcon,
   '/dispatch': TruckIcon,
+  '/purchase-orders': ShoppingCartIcon,
+  '/purchase-bills': ReceiptPercentIcon,
   '/invoices': BanknotesIcon,
   '/payments': CurrencyRupeeIcon,
   '/notes': ArrowsRightLeftIcon,

@@ -37,6 +37,7 @@ export async function listBoardTasks({ search }: { search?: string } = {}) {
       position: true,
       startedAt: true,
       completedAt: true,
+      updatedAt: true,
       notes: true,
       stage: { select: { id: true, name: true, sortOrder: true } },
       assignedTo: { select: { id: true, name: true } },

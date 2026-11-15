@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { QuotationStatus } from '@/generated/prisma/enums'
 
 type DecimalLike = { toNumber: () => number }
@@ -34,14 +35,19 @@ export function countQuotations() {
 export async function listQuotations({
   search,
   status,
+  page,
 }: {
   search?: string
   status?: QuotationStatus
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const quotations = await prisma.quotation.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'createdAt', 'desc', 'date'),
       ...(status ? { status } : {}),
       ...(term
         ? {
@@ -55,7 +61,7 @@ export async function listQuotations({
           }
         : {}),
     },
-    orderBy: [{ createdAt: 'desc' }],
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       number: true,
@@ -65,6 +71,8 @@ export async function listQuotations({
       quotationDate: true,
       validUntil: true,
       total: true,
+      updatedAt: true,
+      createdAt: true,
       customer: { select: { id: true, code: true, name: true } },
       architect: { select: { name: true } },
       carpenter: { select: { name: true } },

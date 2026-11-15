@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { expo } from '@better-auth/expo'
 import { APIError } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
 import { bearer } from 'better-auth/plugins'
@@ -134,9 +135,11 @@ export const auth = betterAuth({
   },
 
   // bearer() lets the mobile apps send `Authorization: Bearer <token>` (the token
-  // is returned in the `set-auth-token` header of sign-in). nextCookies() must
-  // stay last.
-  plugins: [bearer(), nextCookies()],
+  // is returned in the `set-auth-token` header of sign-in). expo() is the server
+  // half of @better-auth/expo (the app sends an `expo-origin` header and gets the
+  // session back through the prodlys:// deep link after social sign-in).
+  // nextCookies() must stay last.
+  plugins: [bearer(), expo(), nextCookies()],
 })
 
 export type Session = typeof auth.$Infer.Session

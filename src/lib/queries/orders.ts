@@ -1,5 +1,6 @@
 import type { OrderImpact } from '@/lib/order-delete'
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { OrderStatus } from '@/generated/prisma/enums'
 import { summariseMaterial } from '@/lib/queries/quotations'
 
@@ -20,14 +21,19 @@ export function countOrders() {
 export async function listOrders({
   search,
   status,
+  page,
 }: {
   search?: string
   status?: OrderStatus
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const orders = await prisma.order.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'createdAt', 'desc', 'date'),
       ...(status ? { status } : {}),
       ...(term
         ? {
@@ -43,7 +49,7 @@ export async function listOrders({
           }
         : {}),
     },
-    orderBy: [{ createdAt: 'desc' }],
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       number: true,
@@ -53,6 +59,10 @@ export async function listOrders({
       dueDate: true,
       total: true,
       advanceAmount: true,
+      updatedAt: true,
+      createdAt: true,
+      startsAt: true,
+      endsAt: true,
       customer: { select: { id: true, code: true, name: true } },
       architect: { select: { name: true } },
       quotation: { select: { id: true, number: true } },

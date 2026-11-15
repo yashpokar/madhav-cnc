@@ -1,17 +1,23 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { CustomerStatus } from '@/generated/prisma/enums'
 
 export async function listCustomers({
   search,
   status,
+  page,
 }: {
   search?: string
   status?: CustomerStatus
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   return prisma.customer.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'createdAt', 'desc', 'date'),
       ...(status ? { status } : {}),
       ...(term
         ? {
@@ -28,7 +34,7 @@ export async function listCustomers({
           }
         : {}),
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       code: true,
@@ -39,6 +45,7 @@ export async function listCustomers({
       email: true,
       city: true,
       createdAt: true,
+      updatedAt: true,
       preferredArchitect: { select: { id: true, name: true } },
       preferredCarpenter: { select: { id: true, name: true } },
     },

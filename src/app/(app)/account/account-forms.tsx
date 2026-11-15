@@ -16,7 +16,7 @@ import { setTheme } from '@/lib/theme'
 const MIN_PASSWORD = 8
 
 const CARD =
-  'grid gap-4 rounded-xl bg-white p-5 shadow-card ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:ring-white/10'
+  'grid gap-4 surface-card p-5'
 
 export function AccountForms({
   name,

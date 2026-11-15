@@ -202,7 +202,7 @@ export function SharePanel({
           ) : null}
 
           {share && share.history.length > 0 ? (
-            <div className="rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+            <div className="surface-inset p-4">
               <div className="text-sm/6 font-medium">Earlier responses</div>
               <ul className="mt-2 grid grid-cols-1 gap-2">
                 {share.history.map((entry) => (
@@ -223,7 +223,7 @@ export function SharePanel({
           ) : null}
 
           {share?.respondedAt ? (
-            <div className="rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+            <div className="surface-inset p-4">
               <div className="text-sm/6 font-medium">
                 {share.decision === 'ACCEPTED'
                   ? 'Approved'

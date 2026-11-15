@@ -324,7 +324,7 @@ export function InvoiceActions({
       </div>
 
       {canShare && otherOpen ? (
-        <div className="grid max-w-xl grid-cols-1 gap-3 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+        <div className="grid max-w-xl grid-cols-1 gap-3 surface-inset p-4">
           <Field>
             <Label>WhatsApp number</Label>
             <Input
@@ -356,7 +356,7 @@ export function InvoiceActions({
       ) : null}
 
       {offOpen ? (
-        <div className="grid max-w-xl grid-cols-1 gap-4 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+        <div className="grid max-w-xl grid-cols-1 gap-4 surface-inset p-4">
           <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
             Use this when money on this invoice will not be collected. It stops
             counting as owed, but stays on record with the reason, so you can
@@ -445,7 +445,7 @@ export function InvoiceActions({
       ) : null}
 
       {payOpen ? (
-        <div className="grid max-w-xl grid-cols-1 gap-4 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+        <div className="grid max-w-xl grid-cols-1 gap-4 surface-inset p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field>
               <Label>Amount</Label>

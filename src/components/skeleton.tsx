@@ -25,7 +25,7 @@ export function SkeletonCard({ className }: { className?: string }) {
     <div
       aria-hidden="true"
       className={clsx(
-        'rounded-xl bg-white p-4 shadow-card dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10',
+        'surface-card p-4',
         className,
       )}
     >
@@ -40,7 +40,7 @@ export function SkeletonTable({ rows = 6, columns = 4 }: { rows?: number; column
   return (
     <div
       aria-hidden="true"
-      className="overflow-hidden rounded-xl bg-white shadow-card dark:bg-zinc-900 dark:shadow-none dark:ring-1 dark:ring-white/10"
+      className="overflow-hidden surface-card"
     >
       <div className="border-b border-zinc-950/5 px-4 py-3 dark:border-white/5">
         <Skeleton className="h-3 w-24" />

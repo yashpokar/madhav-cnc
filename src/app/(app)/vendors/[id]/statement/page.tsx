@@ -74,7 +74,7 @@ export default async function VendorStatementPage({
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">Open bills</div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
             {currency.format(statement.billsDue)}
@@ -85,13 +85,13 @@ export default async function VendorStatementPage({
             </div>
           ) : null}
         </div>
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">Overdue</div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
             {currency.format(statement.overdue)}
           </div>
         </div>
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">Advance held</div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
             {currency.format(statement.advance)}
@@ -102,7 +102,7 @@ export default async function VendorStatementPage({
             owing
               ? 'rounded-lg bg-amber-50 p-4 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:ring-amber-400/20'
               : settled
-                ? 'rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
+                ? 'surface-card p-4'
                 : 'rounded-lg bg-lime-50 p-4 ring-1 ring-lime-950/10 dark:bg-lime-400/10 dark:ring-lime-400/20'
           }
         >

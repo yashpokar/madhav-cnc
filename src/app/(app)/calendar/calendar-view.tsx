@@ -312,7 +312,7 @@ function LayerToggles({
 
 function EmptyState({ when, canCreate, term }: { when: string; canCreate: boolean; term: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl p-8 text-center ring-1 ring-zinc-950/10 dark:ring-white/10">
+    <div className="flex flex-col items-center gap-3 surface-card p-8 text-center">
       <CalendarDaysIcon className="size-6 text-zinc-400" />
       <p className="text-sm/6 text-zinc-600 dark:text-zinc-400">
         Nothing scheduled in {when}. Add a {term.toLowerCase()} or change the layers.
@@ -394,7 +394,7 @@ function MonthGrid({
 
   return (
     <div className="hidden md:block">
-      <div className="overflow-hidden rounded-lg ring-1 ring-zinc-950/10 dark:ring-white/10">
+      <div className="overflow-hidden surface-card">
         <div className="grid grid-cols-7 border-b border-zinc-950/10 bg-zinc-50 text-xs/5 font-medium text-zinc-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-400">
           {WEEKDAYS.map((name) => (
             <div key={name} className="px-2 py-1.5">

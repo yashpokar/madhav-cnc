@@ -54,7 +54,7 @@ export default async function AccountPage() {
         ) : companies.length === 0 ? (
           <Text>You are not a member of any company yet.</Text>
         ) : (
-          <ul className="divide-y divide-zinc-950/5 rounded-xl bg-white shadow-card ring-1 ring-zinc-950/5 dark:divide-white/10 dark:bg-zinc-900 dark:ring-white/10">
+          <ul className="divide-y divide-zinc-950/5 surface-card dark:divide-white/10">
             {companies.map((company) => (
               <li key={company.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm/6">
                 <span className="min-w-0 truncate font-medium text-zinc-950 dark:text-white">

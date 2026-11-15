@@ -187,7 +187,7 @@ function Form({
           {next !== undefined && base !== undefined && valid ? (
             <p
               role="status"
-              className="rounded-lg bg-zinc-50 px-3 py-2 text-sm/6 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10"
+              className="surface-inset px-3 py-2 text-sm/6"
             >
               {target.name} {words.subject} will change from{' '}
               <span className="font-medium tabular-nums">{money(base)}</span> to{' '}

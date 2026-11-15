@@ -231,7 +231,7 @@ export function PaymentForm({
           </div>
         )}
 
-        <div className="mt-6 max-w-sm rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="mt-6 max-w-sm surface-card p-4">
           <dl className="grid grid-cols-2 gap-y-2 text-sm/6">
             <dt className="text-zinc-500 dark:text-zinc-400">Paid</dt>
             <dd className="text-right tabular-nums">{currency.format(total)}</dd>

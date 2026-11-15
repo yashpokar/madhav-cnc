@@ -59,11 +59,11 @@ export default async function VendorPage({
       {query.created === '1' ? <FormBanner tone="success">Vendor saved</FormBanner> : null}
 
       <dl className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <dt className="text-sm/5 text-zinc-500 dark:text-zinc-400">Paid so far</dt>
           <dd className="mt-1 text-2xl/8 font-semibold tabular-nums">{money.format(vendor.spent)}</dd>
         </div>
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <dt className="text-sm/5 text-zinc-500 dark:text-zinc-400">Payments</dt>
           <dd className="mt-1 text-2xl/8 font-semibold tabular-nums">{vendor.bills}</dd>
         </div>
@@ -85,11 +85,11 @@ export default async function VendorPage({
             </div>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-4">
-            <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+            <div className="surface-card p-4">
               <dt className="text-sm/5 text-zinc-500 dark:text-zinc-400">Billed (posted)</dt>
               <dd className="mt-1 text-2xl/8 font-semibold tabular-nums">{money.format(purchases.billed)}</dd>
             </div>
-            <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+            <div className="surface-card p-4">
               <dt className="text-sm/5 text-zinc-500 dark:text-zinc-400">Outstanding</dt>
               <dd className="mt-1 text-2xl/8 font-semibold tabular-nums">{money.format(purchases.outstanding)}</dd>
             </div>

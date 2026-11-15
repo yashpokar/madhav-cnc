@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
 import { getActiveCompanyId, listAccessibleCompanies } from '@/lib/active-company'
 import { ADMIN_ENTRIES, NAV_ENTRIES } from '@/lib/navigation'
@@ -20,6 +21,11 @@ export default async function AppLayout({
     listAccessibleCompanies(user, prisma),
     getActiveCompanyId(),
   ])
+
+  // Not in any company yet: set up their own (platform administrators manage companies themselves).
+  if (!activeCompanyId && !user.isSuperAdmin) {
+    redirect('/onboarding')
+  }
 
   return (
     <AppShell

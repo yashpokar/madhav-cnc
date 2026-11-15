@@ -108,14 +108,17 @@ export const auth = betterAuth({
         before: async (session) => {
           const user = await prisma.user.findUnique({
             where: { id: session.userId },
-            select: { isActive: true },
+            select: { isActive: true, activatedAt: true },
           })
 
-          if (!user?.isActive) {
+          // A brand-new account may sign in: it has no access to anything until
+          // it creates a company or is added to one (see requireUser). Only an
+          // account a platform administrator deactivated (it was activated
+          // once) is turned away.
+          if (!user || (!user.isActive && user.activatedAt)) {
             throw new APIError('FORBIDDEN', {
               code: 'ACCOUNT_NOT_ACTIVATED',
-              message:
-                'Your account is awaiting administrator approval. You will be able to sign in once it is activated.',
+              message: 'Your account has been deactivated. Contact an administrator.',
             })
           }
 

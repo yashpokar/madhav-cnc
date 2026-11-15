@@ -91,7 +91,8 @@ export async function requireUser(): Promise<CurrentUser> {
   }
 
   if (!user.isActive) {
-    redirect('/pending')
+    // New accounts set up a company; deactivated ones are sent on to /pending from there.
+    redirect('/onboarding')
   }
 
   return user

@@ -1,6 +1,5 @@
 'use client'
 
-import { BrandMark, Wordmark } from '@/components/brand-mark'
 import { usePathname } from 'next/navigation'
 import {
   ArchiveBoxArrowDownIcon,
@@ -206,10 +205,6 @@ function AppShellFrame({
       sidebar={
         <Sidebar>
           <SidebarHeader>
-            <div className="mb-3 flex items-center gap-2 px-0.5 max-lg:hidden">
-              <BrandMark className="size-6" />
-              <Wordmark className="text-sm/6" />
-            </div>
             <div data-tour="company-switcher">
               <CompanySwitcher
                 companies={companies}

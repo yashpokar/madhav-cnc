@@ -27,17 +27,13 @@ export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
   if (submitted) {
     return (
       <div className="grid w-full max-w-sm grid-cols-1 gap-6">
-        <Heading>Registration received</Heading>
+        <Heading>Account created</Heading>
         <Text>
-          Your account has been created but is not active yet. An administrator
-          needs to approve it and assign your role before you can sign in.
-        </Text>
-        <Text>
-          We have recorded <Strong>{email}</Strong>. Ask an administrator to
-          activate it, then sign in.
+          Sign in with <Strong>{email}</Strong> to create your company. If you are joining an
+          existing company instead, ask its administrator to add this email under Team.
         </Text>
         <Button href="/sign-in" className="w-full">
-          Back to sign in
+          Sign in
         </Button>
       </div>
     )
@@ -123,7 +119,7 @@ export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
           {pending ? 'Creating account…' : 'Create account'}
         </Button>
         {googleEnabled ? (
-          <GoogleButton label="Register with Google" callbackURL="/pending" />
+          <GoogleButton label="Register with Google" callbackURL="/onboarding" />
         ) : null}
       </div>
 

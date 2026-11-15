@@ -52,6 +52,7 @@ model User {
   attachmentsUploaded      QuotationAttachment[] @relation("AttachmentUploadedBy")
   attachmentsRemoved       QuotationAttachment[] @relation("AttachmentRemovedBy")
   companySettingsUpdated   CompanySetting[]      @relation("CompanySettingUpdatedBy")
+  companiesCreated         CompanySetting[]      @relation("CompanySettingCreatedBy")
   expensesCreated          Expense[]             @relation("ExpenseCreatedBy")
   notesCreated             CreditDebitNote[]     @relation("NoteCreatedBy")
   notesUpdated             CreditDebitNote[]     @relation("NoteUpdatedBy")
@@ -763,6 +764,9 @@ model CompanySetting {
   invoiceTerms String? @map("invoice_terms")
 
   updatedById      String?           @map("updated_by_id")
+  /// Who created the company through self-service onboarding. Null for
+  /// companies a platform super-admin added, so only self-made ones are capped.
+  createdById      String?           @map("created_by_id")
   partners         Partner[]
   customers        Customer[]
   materials        Material[]
@@ -790,10 +794,12 @@ model CompanySetting {
   channelOpeningBalances ChannelOpeningBalance[]
 
   updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdBy User? @relation("CompanySettingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([createdById])
   @@map("company_settings")
 }
 

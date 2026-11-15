@@ -2,13 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
 import { COMPANY_COOKIE, listAccessibleCompanies } from '@/lib/active-company'
-import { requireSuperAdmin, requireUser } from '@/lib/session'
+import { getBaseUser, requireSuperAdmin, requireUser } from '@/lib/session'
+import { createCompanyWithSeed, DEFAULT_SEED, readSeedFromActiveCompany } from '@/lib/company-setup'
+import { canCreateAnotherCompany } from '@/lib/team-rules'
+import { companySettingSchema } from '@/lib/validation/company'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
@@ -62,42 +66,10 @@ export async function createCompany(name: string): Promise<SimpleResult> {
   }
 
   // Read from the company being worked in, before the new one exists.
-  const [stages, categories, channels] = await Promise.all([
-    prisma.productionStage.findMany({ orderBy: { sortOrder: 'asc' } }),
-    prisma.expenseCategory.findMany({ orderBy: { sortOrder: 'asc' } }),
-    prisma.paymentChannel.findMany({ orderBy: { sortOrder: 'asc' } }),
-  ])
-
-  const company = await prisma.companySetting.create({
-    data: { companyName, updatedById: admin.id },
-    select: { id: true },
-  })
-
-  await prisma.productionStage.createMany({
-    data: stages.map((row) => ({
-      companyId: company.id,
-      name: row.name,
-      sortOrder: row.sortOrder,
-      isActive: row.isActive,
-      linkedStatus: row.linkedStatus,
-    })),
-  })
-  await prisma.expenseCategory.createMany({
-    data: categories.map((row) => ({
-      companyId: company.id,
-      name: row.name,
-      sortOrder: row.sortOrder,
-      isActive: row.isActive,
-    })),
-  })
-  await prisma.paymentChannel.createMany({
-    data: channels.map((row) => ({
-      companyId: company.id,
-      name: row.name,
-      mode: row.mode,
-      sortOrder: row.sortOrder,
-      isActive: row.isActive,
-    })),
+  const company = await createCompanyWithSeed({
+    details: { companyName },
+    seed: await readSeedFromActiveCompany(),
+    actorId: admin.id,
   })
 
   revalidatePath('/admin/companies')
@@ -207,4 +179,117 @@ export async function setCompanyRole(
   revalidatePath('/admin/companies')
 
   return { ok: true, message: `Role set to ${label}` }
+}
+
+const ownCompanySchema = companySettingSchema.pick({
+  companyName: true,
+  gstin: true,
+  phone: true,
+  city: true,
+})
+
+/**
+ * Self-service onboarding: a signed-in person who belongs to no company creates
+ * their own. They become its administrator (membership role only; their own
+ * default role is untouched) and, if they were waiting for approval, are
+ * activated. Accounts a platform administrator deactivated cannot use this to
+ * come back. Never reads another company's data, and does not check names
+ * against other companies (that would reveal who else exists).
+ */
+export async function createOwnCompany(input: {
+  companyName: string
+  gstin?: string
+  phone?: string
+  city?: string
+}): Promise<SimpleResult> {
+  const base = await getBaseUser()
+
+  if (!base) redirect('/sign-in')
+
+  const parsed = ownCompanySchema.safeParse({
+    ...input,
+    companyName: (input.companyName ?? '').trim().replace(/\s+/g, ' '),
+  })
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+
+  if (parsed.data.companyName.length < 2) {
+    return { ok: false, error: 'Enter the company name' }
+  }
+
+  const account = await prisma.user.findUnique({
+    where: { id: base.id },
+    select: { isActive: true, activatedAt: true, role: true },
+  })
+
+  if (!account) redirect('/sign-in')
+
+  if (account.role === 'ADMIN') {
+    return { ok: false, error: 'Use Companies under Administration to add a company' }
+  }
+
+  if (!account.isActive && account.activatedAt) {
+    return { ok: false, error: 'Your account has been deactivated. Contact an administrator.' }
+  }
+
+  const [memberships, created] = await Promise.all([
+    prisma.userCompany.count({ where: { userId: base.id } }),
+    prisma.companySetting.count({ where: { createdById: base.id } }),
+  ])
+
+  if (memberships > 0) {
+    return { ok: false, error: 'You already belong to a company' }
+  }
+
+  if (!canCreateAnotherCompany(created)) {
+    return { ok: false, error: 'You have reached the limit of companies you can create' }
+  }
+
+  const company = await createCompanyWithSeed({
+    details: parsed.data,
+    seed: DEFAULT_SEED,
+    actorId: base.id,
+    createdById: base.id,
+  })
+
+  await prisma.userCompany.create({
+    data: { userId: base.id, companyId: company.id, role: 'ADMIN' },
+  })
+
+  if (!account.isActive) {
+    await prisma.user.update({
+      where: { id: base.id },
+      data: { isActive: true, activatedAt: new Date() },
+    })
+  }
+
+  try {
+    // Written with the new company id: the request's active company is not set yet.
+    await prisma.activityLog.create({
+      data: {
+        companyId: company.id,
+        entityType: 'company',
+        entityId: company.id,
+        action: 'created',
+        summary: `created ${parsed.data.companyName}`,
+        userId: base.id,
+        userName: base.name,
+      },
+    })
+  } catch {
+    // The trail is a convenience.
+  }
+
+  ;(await cookies()).set(COMPANY_COOKIE, company.id, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  })
+
+  revalidatePath('/', 'layout')
+  redirect('/')
 }

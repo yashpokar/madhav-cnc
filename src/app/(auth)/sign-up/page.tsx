@@ -19,7 +19,8 @@ export default function SignUpPage() {
         <BrandMark />
         <Heading>Create your account</Heading>
         <Text>
-          New accounts stay inactive until an administrator approves them.
+          Register, then create your own company or wait to be added to an
+          existing one by its administrator.
         </Text>
       </div>
       <SignUpForm googleEnabled={googleEnabled} />

@@ -52,6 +52,45 @@ async function resolveMode(input: ExpenseInput) {
   return { ok: true as const, method, details }
 }
 
+/** The receipt photo must be an unused expense_receipt upload of this company. */
+async function checkReceipt(receiptUploadId: string | null | undefined, expenseId?: string) {
+  if (!receiptUploadId) return { ok: true as const }
+
+  const upload = await prisma.upload.findFirst({
+    where: { id: receiptUploadId, purpose: 'expense_receipt' },
+    select: { id: true },
+  })
+
+  if (!upload) {
+    return {
+      ok: false as const,
+      error: 'Receipt upload not found',
+      fieldErrors: { receiptUploadId: 'Upload the receipt again' } as Record<string, string>,
+    }
+  }
+
+  const taken = await prisma.expense.findFirst({
+    where: { receiptUploadId, ...(expenseId ? { NOT: { id: expenseId } } : {}) },
+    select: { number: true },
+  })
+
+  if (taken) {
+    return {
+      ok: false as const,
+      error: `That receipt is already attached to ${taken.number}`,
+      fieldErrors: { receiptUploadId: 'Already used' } as Record<string, string>,
+    }
+  }
+
+  return { ok: true as const }
+}
+
+async function markReceiptLinked(receiptUploadId: string | null | undefined) {
+  if (receiptUploadId) {
+    await prisma.upload.updateMany({ where: { id: receiptUploadId }, data: { linkedAt: new Date() } })
+  }
+}
+
 function expenseColumns(
   input: ExpenseInput,
   vendor: { id: string; name: string },
@@ -75,6 +114,7 @@ function expenseColumns(
     paymentDetails: detailsColumn(mode.details.details),
     notes: input.notes,
     orderId: input.orderId,
+    ...(input.receiptUploadId !== undefined ? { receiptUploadId: input.receiptUploadId } : {}),
     ...expenseAmounts(input),
   }
 }
@@ -87,6 +127,10 @@ export async function createExpense(
 
   if (!mode.ok) return mode
 
+  const receipt = await checkReceipt(input.receiptUploadId)
+
+  if (!receipt.ok) return receipt
+
   const number = await nextExpenseNumber()
   const vendor = await resolveVendor(input.payeeName)
 
@@ -98,6 +142,8 @@ export async function createExpense(
     },
   })
 
+  await markReceiptLinked(input.receiptUploadId)
+
   return { ok: true, message: `${expense.number} recorded`, id: expense.id, number: expense.number }
 }
 
@@ -106,17 +152,23 @@ export async function updateExpense(
   id: string,
   input: ExpenseInput,
 ): Promise<ServiceResult<{ id: string }>> {
-  const mode = await resolveMode(input)
-
-  if (!mode.ok) return mode
-
+  // The record first: a stranger's id is "not found" whatever else is wrong with the request.
   const existing = await prisma.expense.findUnique({ where: { id }, select: { id: true } })
 
   if (!existing) return { ok: false, error: 'Expense not found' }
 
+  const mode = await resolveMode(input)
+
+  if (!mode.ok) return mode
+
+  const receipt = await checkReceipt(input.receiptUploadId, id)
+
+  if (!receipt.ok) return receipt
+
   const vendor = await resolveVendor(input.payeeName)
 
   await prisma.expense.update({ where: { id }, data: expenseColumns(input, vendor, mode) })
+  await markReceiptLinked(input.receiptUploadId)
 
   return { ok: true, message: 'Expense saved', id }
 }

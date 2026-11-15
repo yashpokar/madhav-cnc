@@ -85,3 +85,44 @@ export function trackingShareParts(input: {
     whatsappLink: whatsappLink(input.customerPhone, whatsappText),
   }
 }
+
+export function invoiceShareUrl(baseUrl: string | null | undefined, token: string) {
+  return `${trimBase(baseUrl)}/i/${token}`
+}
+
+/** `amountLine` is the sentence about money, e.g. "The amount due is ₹1,000". */
+export function invoiceWhatsappText(input: {
+  customerName: string
+  invoiceNumber: string
+  companyName?: string | null
+  amountLine: string
+  url: string
+}) {
+  return `Hello ${input.customerName}, thank you for your business! Here is your invoice ${input.invoiceNumber} from ${input.companyName || 'us'}. ${input.amountLine}. You can view it, see how to pay and download a PDF here:\n\n${input.url}`
+}
+
+export function invoiceShareParts(input: {
+  baseUrl: string | null | undefined
+  token: string
+  customerName: string
+  customerPhone: string | null
+  invoiceNumber: string
+  companyName?: string | null
+  amountLine: string
+}): ShareLinkParts {
+  const url = invoiceShareUrl(input.baseUrl, input.token)
+  const whatsappText = invoiceWhatsappText({
+    customerName: input.customerName,
+    invoiceNumber: input.invoiceNumber,
+    companyName: input.companyName,
+    amountLine: input.amountLine,
+    url,
+  })
+
+  return {
+    token: input.token,
+    url,
+    whatsappText,
+    whatsappLink: whatsappLink(input.customerPhone, whatsappText),
+  }
+}

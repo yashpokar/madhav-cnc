@@ -557,13 +557,19 @@ export function expenseDetailOut(row: NonNullable<ExpenseDetail>): Out<typeof ex
     vendorGstin: row.vendorGstin,
     notes: row.notes,
     paymentDetails: jsonObject(row.paymentDetails),
+    receiptUploadId: row.receiptUploadId,
     createdAt: stamp(row.createdAt),
   }
 }
 
 // ---------------------------------------------------------------- production
 
-export function productionTaskOut(row: BoardTask): Out<typeof productionTask> {
+/** The part of a board row the wire shape needs (so one task can be read without the board's extras). */
+export type TaskRow = Omit<BoardTask, 'order'> & {
+  order: Omit<BoardTask['order'], 'lines' | 'productionTasks'>
+}
+
+export function productionTaskOut(row: TaskRow): Out<typeof productionTask> {
   return {
     id: row.id,
     status: row.status,

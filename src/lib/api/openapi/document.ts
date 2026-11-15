@@ -119,7 +119,7 @@ function operation(route: RouteSpec): Json {
       ? {
           requestBody: {
             required: true,
-            content: { 'application/json': { schema: jsonSchema(route.body, 'input') } },
+            content: { [route.multipart ? 'multipart/form-data' : 'application/json']: { schema: jsonSchema(route.body, 'input') } },
           },
         }
       : {}),

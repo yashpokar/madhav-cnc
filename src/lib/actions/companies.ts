@@ -2,9 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
+import { ROLE_LABELS } from '@/lib/permissions'
+import { UserRole } from '@/generated/prisma/enums'
 import { COMPANY_COOKIE, listAccessibleCompanies } from '@/lib/active-company'
-import { requireAdmin, requireUser } from '@/lib/session'
+import { requireSuperAdmin, requireUser } from '@/lib/session'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
@@ -37,7 +41,7 @@ export async function switchCompany(companyId: string): Promise<SimpleResult> {
  * used straight away; customers, items and everything else start empty.
  */
 export async function createCompany(name: string): Promise<SimpleResult> {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
   const companyName = name.trim().replace(/\s+/g, ' ')
 
   if (companyName.length < 2) {
@@ -107,9 +111,19 @@ export async function setCompanyAccess(
   companyId: string,
   allowed: boolean,
 ): Promise<SimpleResult> {
-  await requireAdmin()
+  const admin = await requireSuperAdmin()
+
+  const [person, company] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+    prisma.companySetting.findUnique({ where: { id: companyId }, select: { companyName: true } }),
+  ])
+
+  if (!person || !company) {
+    return { ok: false, error: 'Person or company not found' }
+  }
 
   if (allowed) {
+    // A new grant inherits the person's default role until one is chosen.
     await prisma.userCompany.upsert({
       where: { userId_companyId: { userId, companyId } },
       update: {},
@@ -119,7 +133,78 @@ export async function setCompanyAccess(
     await prisma.userCompany.deleteMany({ where: { userId, companyId } })
   }
 
+  await logActivity({
+    entity: 'user',
+    id: userId,
+    action: allowed ? 'company-access-granted' : 'company-access-removed',
+    summary: allowed
+      ? `gave ${person.email} access to ${company.companyName}`
+      : `removed ${person.email}'s access to ${company.companyName}`,
+    actor: admin,
+  })
+
   revalidatePath('/admin/companies')
 
   return { ok: true, message: allowed ? 'Access granted' : 'Access removed' }
+}
+
+/**
+ * Sets the role a person has inside one company they can open. Null makes them
+ * use their default role there. Platform super-admins only: a company
+ * administrator cannot change roles, including their own.
+ */
+export async function setCompanyRole(
+  userId: string,
+  companyId: string,
+  role: UserRole | null,
+): Promise<SimpleResult> {
+  const admin = await requireSuperAdmin()
+
+  const parsed = z.enum(UserRole).nullable().safeParse(role)
+
+  if (!parsed.success) {
+    return { ok: false, error: 'Unknown role' }
+  }
+
+  const membership = await prisma.userCompany.findUnique({
+    where: { userId_companyId: { userId, companyId } },
+    select: {
+      role: true,
+      user: { select: { email: true, role: true } },
+      company: { select: { companyName: true } },
+    },
+  })
+
+  if (!membership) {
+    return { ok: false, error: 'Give this person access to the company first' }
+  }
+
+  if (membership.user.role === 'ADMIN') {
+    return { ok: false, error: 'Administrators have full access to every company' }
+  }
+
+  if (membership.role === parsed.data) {
+    return { ok: true, message: 'Role unchanged' }
+  }
+
+  await prisma.userCompany.update({
+    where: { userId_companyId: { userId, companyId } },
+    data: { role: parsed.data },
+  })
+
+  const label = parsed.data
+    ? ROLE_LABELS[parsed.data]
+    : `the default role (${ROLE_LABELS[membership.user.role]})`
+
+  await logActivity({
+    entity: 'user',
+    id: userId,
+    action: 'company-role-changed',
+    summary: `set ${membership.user.email} to ${label} in ${membership.company.companyName}`,
+    actor: admin,
+  })
+
+  revalidatePath('/admin/companies')
+
+  return { ok: true, message: `Role set to ${label}` }
 }

@@ -19,7 +19,7 @@ import { SearchField } from '@/components/search-field'
 import { SortHeader } from '@/components/sort-header'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, type Paged } from '@/lib/pagination'
 import { prisma } from '@/lib/prisma'
-import { requireCapability } from '@/lib/session'
+import { requireSuperAdmin } from '@/lib/session'
 import { readSort } from '@/lib/table-sort'
 
 export const metadata: Metadata = {
@@ -64,7 +64,7 @@ const one = (value: string | string[] | undefined) =>
 export default async function ActivityLogPage({
   searchParams,
 }: PageProps<'/admin/activity'>) {
-  await requireCapability('user:update')
+  await requireSuperAdmin()
   const params = await searchParams
 
   const entity = one(params.entity)

@@ -19,8 +19,8 @@ export const getActiveCompanyId = cache(async (): Promise<string | null> => {
   if (process.env.SEED_COMPANY_ID) return process.env.SEED_COMPANY_ID
 
   try {
-    const { getCurrentUser } = await import('@/lib/session')
-    const user = await getCurrentUser()
+    const { getBaseUser } = await import('@/lib/session')
+    const user = await getBaseUser()
 
     if (!user || !user.isActive) return null
 
@@ -37,19 +37,19 @@ export const getActiveCompanyId = cache(async (): Promise<string | null> => {
   }
 })
 
-type Who = { id: string; role: string }
+type Who = { id: string; isSuperAdmin: boolean }
 type Db = {
   companySetting: {
     findMany: (args: unknown) => Promise<{ id: string; companyName: string }[]>
   }
 }
 
-/** Every company the person may open: all of them for an administrator. */
+/** Every company the person may open: all of them for a platform super-admin. */
 export async function listAccessibleCompanies(user: Who, db: unknown) {
   const client = db as Db
 
   return client.companySetting.findMany({
-    where: user.role === 'ADMIN' ? {} : { access: { some: { userId: user.id } } },
+    where: user.isSuperAdmin ? {} : { access: { some: { userId: user.id } } },
     select: { id: true, companyName: true },
     orderBy: { createdAt: 'asc' },
   })

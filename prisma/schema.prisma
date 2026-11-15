@@ -1455,8 +1455,10 @@ model Vendor {
 }
 
 /// Which companies a person may open. Administrators can open every company
-/// without a row here.
+/// without a row here. `role` overrides the person's default role inside this
+/// company; null means inherit the default.
 model UserCompany {
+  role      UserRole?
   userId    String         @map("user_id")
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyId String         @map("company_id")

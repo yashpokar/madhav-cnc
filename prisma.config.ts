@@ -11,5 +11,7 @@ export default defineConfig({
   },
   datasource: {
     url: migrationUrl,
+    // Only used by `prisma migrate diff --from-migrations` (CI drift check).
+    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL || undefined,
   },
 })

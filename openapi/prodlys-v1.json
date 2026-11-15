@@ -9700,13 +9700,35 @@
                         },
                         "maintenance": {
                           "type": "boolean"
+                        },
+                        "release": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "string"
+                            },
+                            "commit": {
+                              "type": "string"
+                            },
+                            "builtAt": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "version",
+                            "commit",
+                            "builtAt"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "apiVersion",
                         "minAppVersion",
                         "latestAppVersion",
-                        "maintenance"
+                        "maintenance",
+                        "release"
                       ],
                       "additionalProperties": false
                     },

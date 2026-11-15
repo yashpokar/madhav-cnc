@@ -1,0 +1,21 @@
+name: Release
+
+# Keeps one open "release PR" that bumps package.json and CHANGELOG.md from the
+# merged PR titles. Merging that PR tags vX.Y.Z and publishes a GitHub Release.
+# It does not deploy: Railway has already deployed each merge to main.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

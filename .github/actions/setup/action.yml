@@ -1,0 +1,17 @@
+name: Setup
+description: Install Node, pnpm and dependencies (with the pnpm store cached)
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4 # version comes from "packageManager" in package.json
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    - name: Install dependencies
+      shell: bash
+      env:
+        # `postinstall` runs `prisma generate`, which wants a URL but never connects.
+        DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      run: pnpm install --frozen-lockfile

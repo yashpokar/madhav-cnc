@@ -8,6 +8,9 @@ const extraOrigins = (process.env.ALLOWED_ORIGINS ?? '')
 const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS !== 'false'
 
 const nextConfig: NextConfig = {
+  // Stamped into the bundle at build time; shown by /api/v1/meta and in Settings.
+  env: { PRODLYS_BUILT_AT: new Date().toISOString() },
+
   // Tags every build with its commit. A browser tab left open across a deploy
   // notices the mismatch and reloads itself, instead of failing with "Failed to
   // find Server Action". Unset locally, where there is nothing to protect.

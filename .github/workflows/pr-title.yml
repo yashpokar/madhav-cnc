@@ -1,0 +1,36 @@
+name: PR title
+
+# PRs are squash-merged and the PR title becomes the commit message on main, which
+# release-please reads to pick the next version and write the changelog.
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  # Required check: "Conventional PR title"
+  title:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    # Bots (dependabot, release-please) write their own conventional titles.
+    if: github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            refactor
+            docs
+            perf
+            test
+            ci
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            Start the description after the prefix in lower case, for example "fix: purchase pages no longer crash".

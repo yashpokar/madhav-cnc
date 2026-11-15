@@ -59,15 +59,6 @@ const STATUS_LABELS: Record<CustomerStatus, string> = {
   ON_HOLD: 'On hold',
 }
 
-function partnerLabel(partner: PartnerOption) {
-  const parts = [partner.name]
-
-  if (partner.firmName) parts.push(partner.firmName)
-  if (partner.city) parts.push(partner.city)
-
-  return parts.join(' · ')
-}
-
 export function CustomerForm({
   action,
   values,

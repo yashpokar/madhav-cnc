@@ -7,7 +7,6 @@ import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
 import {
   Description,
-  ErrorMessage,
   Field,
   FieldGroup,
   Fieldset,
@@ -204,7 +203,7 @@ export function InvoiceForm({
                 name="placeOfSupply"
                 defaultValue={keep('placeOfSupply', values.placeOfSupply)}
               />
-              <Description>The customer's state.</Description>
+              <Description>The customer&apos;s state.</Description>
             </Field>
           </div>
 

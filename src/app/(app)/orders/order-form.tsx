@@ -29,8 +29,7 @@ import type { FormState } from '@/lib/actions/orders'
 import { CustomerCombobox } from '@/components/customer-combobox'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
-import { DiscountType, PaymentMode } from '@/generated/prisma/enums'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { DiscountType } from '@/generated/prisma/enums'
 import { currency, emptyLine, LineEditor, type EditorLine } from '@/components/line-editor'
 
 export type OrderFormValues = {

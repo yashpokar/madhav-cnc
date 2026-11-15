@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { PaymentMode } from '@/generated/prisma/enums'
 
 const optionalText = (max: number) =>
   z

@@ -65,7 +65,7 @@ export function Table({
 }
 
 export function TableHead({ className, ...props }: React.ComponentPropsWithoutRef<'thead'>) {
-  let { card } = useContext(TableContext)
+  const { card } = useContext(TableContext)
 
   return (
     <thead
@@ -92,7 +92,7 @@ export function TableRow({
   className,
   ...props
 }: { href?: string; target?: string; title?: string } & React.ComponentPropsWithoutRef<'tr'>) {
-  let { striped } = useContext(TableContext)
+  const { striped } = useContext(TableContext)
 
   return (
     <TableRowContext.Provider value={{ href, target, title } as React.ContextType<typeof TableRowContext>}>
@@ -112,7 +112,7 @@ export function TableRow({
 }
 
 export function TableHeader({ className, ...props }: React.ComponentPropsWithoutRef<'th'>) {
-  let { bleed, grid } = useContext(TableContext)
+  const { bleed, grid } = useContext(TableContext)
 
   return (
     <th
@@ -128,9 +128,9 @@ export function TableHeader({ className, ...props }: React.ComponentPropsWithout
 }
 
 export function TableCell({ className, children, ...props }: React.ComponentPropsWithoutRef<'td'>) {
-  let { bleed, dense, grid, striped } = useContext(TableContext)
-  let { href, target, title } = useContext(TableRowContext)
-  let [cellRef, setCellRef] = useState<HTMLElement | null>(null)
+  const { bleed, dense, grid, striped } = useContext(TableContext)
+  const { href, target, title } = useContext(TableRowContext)
+  const [cellRef, setCellRef] = useState<HTMLElement | null>(null)
 
   return (
     <td

@@ -184,7 +184,7 @@ export function DispatchForm({
                 name="lrNumber"
                 defaultValue={keep('lrNumber', values.lrNumber)}
               />
-              <Description>Transporter's consignment note.</Description>
+              <Description>Transporter&apos;s consignment note.</Description>
             </Field>
           </div>
 
@@ -227,7 +227,7 @@ export function DispatchForm({
               rows={2}
               defaultValue={keep('deliveryAddress', values.deliveryAddress)}
             />
-            <Description>Prefilled from the order's site address.</Description>
+            <Description>Prefilled from the order&apos;s site address.</Description>
           </Field>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>

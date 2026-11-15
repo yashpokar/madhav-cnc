@@ -2,20 +2,19 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
-import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
-import { parsePaymentDetails } from '@/lib/payment-methods'
 import { requireCapability } from '@/lib/session'
-import { nextExpenseNumber } from '@/lib/codes'
-import { round2 } from '@/lib/pricing'
-import {
-  expenseCategorySchema,
-  expenseInputSchema,
-} from '@/lib/validation/accounting'
-import type { ExpenseData } from '@/lib/validation/accounting'
+import { expenseCategorySchema, expenseInputSchema } from '@/lib/validation/accounting'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
-import { resolveVendor } from '@/lib/vendors'
+import {
+  createExpense as createExpenseService,
+  createExpenseCategory as createCategoryService,
+  deleteExpense as deleteExpenseService,
+  deleteExpenseCategory as deleteCategoryService,
+  quickCreateExpenseCategory as quickCreateCategoryService,
+  updateExpense as updateExpenseService,
+  updateExpenseCategory as updateCategoryService,
+} from '@/lib/services/expenses'
 
 export type { FormState, SimpleResult }
 
@@ -36,10 +35,12 @@ function parse(formData: FormData) {
   })
 }
 
-function amounts(data: ExpenseData) {
-  const taxAmount = round2(data.amount * (data.taxRatePercent / 100))
-
-  return { taxAmount, total: round2(data.amount + taxAmount) }
+function parseCategory(formData: FormData) {
+  return expenseCategorySchema.safeParse({
+    name: formData.get('name'),
+    sortOrder: formData.get('sortOrder') || 0,
+    isActive: formData.get('isActive') === 'true',
+  })
 }
 
 export async function createExpense(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -55,58 +56,22 @@ export async function createExpense(_previous: FormState, formData: FormData): P
     }
   }
 
-  const method = await resolvePaymentMode(parsed.data.channelId)
+  const result = await createExpenseService(
+    { userId: user.id, name: user.name },
+    { ...parsed.data, paymentDetails: formData.get('paymentDetails') },
+  )
 
-  if (!method) {
+  if (!result.ok) {
     return {
       status: 'error',
-      message: 'Choose a payment mode',
-      fieldErrors: { channelId: 'Choose a payment mode' },
+      message: result.error,
+      fieldErrors: result.fieldErrors,
       values: rawValues(formData),
     }
   }
-
-  const details = parsePaymentDetails(method.mode, formData.get('paymentDetails'), 'out')
-
-  if (!details.ok) {
-    return {
-      status: 'error',
-      message: details.error,
-      fieldErrors: details.fieldErrors,
-      values: rawValues(formData),
-    }
-  }
-
-  const number = await nextExpenseNumber()
-  const vendor = await resolveVendor(parsed.data.payeeName)
-
-  const expense = await prisma.expense.create({
-    data: {
-      number,
-      categoryId: parsed.data.categoryId,
-      expenseDate: parsed.data.expenseDate,
-      payeeName: vendor.name,
-      vendorId: vendor.id,
-      description: parsed.data.description,
-      amount: parsed.data.amount,
-      taxRatePercent: parsed.data.taxRatePercent,
-      isInputCredit: parsed.data.isInputCredit,
-      vendorGstin: parsed.data.vendorGstin,
-      billNumber: parsed.data.billNumber,
-      paymentMode: method.mode,
-      channelId: method.channelId,
-      modeName: method.modeName,
-      reference: details.reference,
-      paymentDetails: detailsColumn(details.details),
-      notes: parsed.data.notes,
-      orderId: parsed.data.orderId,
-      ...amounts(parsed.data),
-      createdById: user.id,
-    },
-  })
 
   revalidatePath('/expenses')
-  redirect(`/expenses?created=${expense.number}`)
+  redirect(`/expenses?created=${result.number}`)
 }
 
 export async function updateExpense(
@@ -114,7 +79,7 @@ export async function updateExpense(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireCapability('expense:update')
+  const user = await requireCapability('expense:update')
   const parsed = parse(formData)
 
   if (!parsed.success) {
@@ -126,98 +91,43 @@ export async function updateExpense(
     }
   }
 
-  const method = await resolvePaymentMode(parsed.data.channelId)
+  const result = await updateExpenseService(
+    { userId: user.id, name: user.name },
+    id,
+    { ...parsed.data, paymentDetails: formData.get('paymentDetails') },
+  )
 
-  if (!method) {
+  if (!result.ok) {
     return {
       status: 'error',
-      message: 'Choose a payment mode',
-      fieldErrors: { channelId: 'Choose a payment mode' },
+      message: result.error,
+      fieldErrors: result.fieldErrors,
       values: rawValues(formData),
     }
   }
-
-  const details = parsePaymentDetails(method.mode, formData.get('paymentDetails'), 'out')
-
-  if (!details.ok) {
-    return {
-      status: 'error',
-      message: details.error,
-      fieldErrors: details.fieldErrors,
-      values: rawValues(formData),
-    }
-  }
-
-  const existing = await prisma.expense.findUnique({
-    where: { id },
-    select: { id: true },
-  })
-
-  if (!existing) {
-    return { status: 'error', message: 'Expense not found' }
-  }
-
-  const vendor = await resolveVendor(parsed.data.payeeName)
-
-  await prisma.expense.update({
-    where: { id },
-    data: {
-      categoryId: parsed.data.categoryId,
-      expenseDate: parsed.data.expenseDate,
-      payeeName: vendor.name,
-      vendorId: vendor.id,
-      description: parsed.data.description,
-      amount: parsed.data.amount,
-      taxRatePercent: parsed.data.taxRatePercent,
-      isInputCredit: parsed.data.isInputCredit,
-      vendorGstin: parsed.data.vendorGstin,
-      billNumber: parsed.data.billNumber,
-      paymentMode: method.mode,
-      channelId: method.channelId,
-      modeName: method.modeName,
-      reference: details.reference,
-      paymentDetails: detailsColumn(details.details),
-      notes: parsed.data.notes,
-      orderId: parsed.data.orderId,
-      ...amounts(parsed.data),
-    },
-  })
 
   revalidatePath('/expenses')
 
-  return { status: 'success', message: 'Expense saved', id }
+  return { status: 'success', message: result.message, id }
 }
 
 export async function deleteExpense(id: string): Promise<SimpleResult> {
-  await requireCapability('expense:delete')
+  const user = await requireCapability('expense:delete')
+  const result = await deleteExpenseService({ userId: user.id, name: user.name }, id)
 
-  const expense = await prisma.expense.findUnique({
-    where: { id },
-    select: { number: true },
-  })
-
-  if (!expense) {
-    return { ok: false, error: 'Expense not found' }
-  }
-
-  await prisma.expense.delete({ where: { id } })
+  if (!result.ok) return { ok: false, error: result.error }
 
   revalidatePath('/expenses')
 
-  return { ok: true, message: `${expense.number} removed` }
+  return { ok: true, message: result.message }
 }
 
 export async function createExpenseCategory(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireCapability('expense:create')
-
-  const parsed = expenseCategorySchema.safeParse({
-    name: formData.get('name'),
-    sortOrder: formData.get('sortOrder') || 0,
-    isActive: formData.get('isActive') === 'true',
-  })
+  const user = await requireCapability('expense:create')
+  const parsed = parseCategory(formData)
 
   if (!parsed.success) {
     return {
@@ -228,30 +138,21 @@ export async function createExpenseCategory(
     }
   }
 
-  const duplicate = await prisma.expenseCategory.findFirst({
-    where: { name: parsed.data.name },
-    select: { id: true },
-  })
+  const result = await createCategoryService({ userId: user.id, name: user.name }, parsed.data)
 
-  if (duplicate) {
+  if (!result.ok) {
     return {
       status: 'error',
-      message: 'That category already exists',
-      fieldErrors: { name: 'Already in use' },
+      message: result.error,
+      fieldErrors: result.fieldErrors,
       values: rawValues(formData),
     }
   }
 
-  const category = await prisma.expenseCategory.create({ data: parsed.data })
-
   revalidatePath('/expenses/categories')
   revalidatePath('/expenses')
 
-  return {
-    status: 'success',
-    message: `${category.name} added`,
-    id: category.id,
-  }
+  return { status: 'success', message: result.message, id: result.id }
 }
 
 export async function updateExpenseCategory(
@@ -259,13 +160,8 @@ export async function updateExpenseCategory(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireCapability('expense:update')
-
-  const parsed = expenseCategorySchema.safeParse({
-    name: formData.get('name'),
-    sortOrder: formData.get('sortOrder') || 0,
-    isActive: formData.get('isActive') === 'true',
-  })
+  const user = await requireCapability('expense:update')
+  const parsed = parseCategory(formData)
 
   if (!parsed.success) {
     return {
@@ -276,52 +172,32 @@ export async function updateExpenseCategory(
     }
   }
 
-  const duplicate = await prisma.expenseCategory.findFirst({
-    where: { name: parsed.data.name, NOT: { id } },
-    select: { id: true },
-  })
+  const result = await updateCategoryService({ userId: user.id, name: user.name }, id, parsed.data)
 
-  if (duplicate) {
+  if (!result.ok) {
     return {
       status: 'error',
-      message: 'That category already exists',
-      fieldErrors: { name: 'Already in use' },
+      message: result.error,
+      fieldErrors: result.fieldErrors,
       values: rawValues(formData),
     }
   }
 
-  await prisma.expenseCategory.update({ where: { id }, data: parsed.data })
-
   revalidatePath('/expenses/categories')
   revalidatePath('/expenses')
 
-  return { status: 'success', message: 'Category saved', id }
+  return { status: 'success', message: result.message, id }
 }
 
 export async function deleteExpenseCategory(id: string): Promise<SimpleResult> {
-  await requireCapability('expense:delete')
+  const user = await requireCapability('expense:delete')
+  const result = await deleteCategoryService({ userId: user.id, name: user.name }, id)
 
-  const category = await prisma.expenseCategory.findUnique({
-    where: { id },
-    select: { name: true, _count: { select: { expenses: true } } },
-  })
-
-  if (!category) {
-    return { ok: false, error: 'Category not found' }
-  }
-
-  if (category._count.expenses > 0) {
-    return {
-      ok: false,
-      error: `${category.name} is used by ${category._count.expenses} expense(s). Mark it inactive instead.`,
-    }
-  }
-
-  await prisma.expenseCategory.delete({ where: { id } })
+  if (!result.ok) return { ok: false, error: result.error }
 
   revalidatePath('/expenses/categories')
 
-  return { ok: true, message: `${category.name} removed` }
+  return { ok: true, message: result.message }
 }
 
 export type QuickCategoryResult =
@@ -329,33 +205,13 @@ export type QuickCategoryResult =
 
 /** Adds an expense category from inside the expense form. */
 export async function quickCreateExpenseCategory(name: string): Promise<QuickCategoryResult> {
-  await requireCapability('expense:create')
+  const user = await requireCapability('expense:create')
+  const result = await quickCreateCategoryService({ userId: user.id, name: user.name }, name)
 
-  const parsed = expenseCategorySchema.safeParse({
-    name,
-    sortOrder: 0,
-    isActive: true,
-  })
+  if (!result.ok) return { ok: false, error: result.error }
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
-  }
+  // Only a genuinely new category changes the categories page.
+  if (result.created) revalidatePath('/expenses/categories')
 
-  const existing = await prisma.expenseCategory.findFirst({
-    where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
-    select: { id: true, name: true },
-  })
-
-  if (existing) {
-    return { ok: true, category: existing }
-  }
-
-  const category = await prisma.expenseCategory.create({
-    data: parsed.data,
-    select: { id: true, name: true },
-  })
-
-  revalidatePath('/expenses/categories')
-
-  return { ok: true, category }
+  return { ok: true, category: result.category }
 }

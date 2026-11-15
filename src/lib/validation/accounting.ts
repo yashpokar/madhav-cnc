@@ -87,3 +87,15 @@ export const noteInputSchema = z
 export type ExpenseCategoryData = z.output<typeof expenseCategorySchema>
 export type ExpenseData = z.output<typeof expenseInputSchema>
 export type NoteData = z.output<typeof noteInputSchema>
+
+/**
+ * The same expense as JSON (mobile API / services): the payment mode's fixed
+ * fields travel as an object (or the JSON text the web form posts), and are
+ * checked against the chosen mode by the service. The FormData adapter keeps
+ * using expenseInputSchema unchanged.
+ */
+export const expenseJsonSchema = expenseInputSchema.extend({
+  paymentDetails: z.unknown().optional(),
+})
+
+export type ExpenseInput = ExpenseData & { paymentDetails?: unknown }

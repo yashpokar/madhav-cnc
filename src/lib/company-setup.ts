@@ -68,6 +68,8 @@ export async function createCompanyWithSeed({
       productionStages: { create: seed.stages },
       expenseCategorys: { create: seed.categories },
       paymentChannels: { create: seed.channels },
+      // New companies start on the free plan (older ones were grandfathered by the billing migration).
+      subscription: { create: { plan: 'FREE', status: 'ACTIVE', source: 'SELF_SERVE' } },
       ...(seed.items?.length ? { items: { create: seed.items } } : {}),
     },
     select: { id: true },

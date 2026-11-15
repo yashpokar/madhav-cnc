@@ -2,6 +2,7 @@ import { registerRoute } from '@/lib/api/openapi/registry'
 import {
   acceptInvitationBody,
   acceptInvitationResponse,
+  billingResponse,
   createCompanyBody,
   createCompanyResponse,
   deleteMeResponse,
@@ -82,4 +83,13 @@ registerRoute({
   summary: 'This specification',
   auth: 'none',
   rawResponse: { description: 'The OpenAPI 3.0 document' },
+})
+
+registerRoute({
+  method: 'get',
+  path: '/billing',
+  tag: 'Billing',
+  summary: 'The company plan, entitlements and invoice usage (read-only: manage the plan on the web)',
+  auth: 'company',
+  response: billingResponse,
 })

@@ -47,10 +47,12 @@ export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/users', label: 'Users', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   { href: '/admin/companies', label: 'Companies', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   { href: '/admin/activity', label: 'Activity log', capability: 'user:update', group: 'Administration', superAdminOnly: true },
+  { href: '/admin/billing', label: 'Plans', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   // Not superAdminOnly: any administrator of the active company manages its team.
   { href: '/settings/team', label: 'Team & roles', capability: 'user:update', group: 'Settings' },
   { href: '/settings/company', label: 'Business profile', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/payment-modes', label: 'Payment methods', capability: 'settings:update', group: 'Settings' },
+  { href: '/settings/billing', label: 'Plan & billing', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/opening-balances', label: 'Opening balances', capability: 'settings:update', group: 'Settings' },
 ]
 

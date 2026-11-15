@@ -105,6 +105,8 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/admin/activity': ClockIcon,
   '/settings/company': BuildingStorefrontIcon,
   '/settings/payment-modes': WalletIcon,
+  '/settings/billing': CreditCardIcon,
+  '/admin/billing': CreditCardIcon,
   '/settings/opening-balances': ScaleIcon,
 }
 

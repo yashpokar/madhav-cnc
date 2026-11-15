@@ -4,6 +4,8 @@ import { BrandMark, Wordmark } from '@/components/brand-mark'
 import { usePathname } from 'next/navigation'
 import {
   ArrowRightStartOnRectangleIcon,
+  ArrowTrendingDownIcon,
+  ArrowUpRightIcon,
   ArrowsRightLeftIcon,
   BanknotesIcon,
   CalendarDaysIcon,
@@ -84,6 +86,8 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/dispatch': TruckIcon,
   '/purchase-orders': ShoppingCartIcon,
   '/purchase-bills': ReceiptPercentIcon,
+  '/vendor-payments': ArrowUpRightIcon,
+  '/payables': ArrowTrendingDownIcon,
   '/invoices': BanknotesIcon,
   '/payments': CurrencyRupeeIcon,
   '/notes': ArrowsRightLeftIcon,

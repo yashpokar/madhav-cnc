@@ -23,6 +23,8 @@ const ALL_NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/dispatch', label: 'Dispatch', capability: 'dispatch:read', group: 'Sell' },
   { href: '/purchase-orders', label: 'Purchase orders', capability: 'purchase:read', group: 'Buy' },
   { href: '/purchase-bills', label: 'Purchase bills', capability: 'purchase:read', group: 'Buy' },
+  { href: '/vendor-payments', label: 'Vendor payments', capability: 'purchase:read', group: 'Buy' },
+  { href: '/payables', label: 'Payables', capability: 'purchase:read', group: 'Buy' },
   { href: '/invoices', label: 'Invoices', capability: 'invoice:read', group: 'Money' },
   { href: '/payments', label: 'Payments', capability: 'payment:read', group: 'Money' },
   { href: '/expenses', label: 'Expenses', capability: 'expense:read', group: 'Money' },

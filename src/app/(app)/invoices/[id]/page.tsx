@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { getPublicBaseUrl } from '@/lib/public-url'
 import { modeText } from '@/lib/payment-modes'
 import { listDocumentPaymentModes, listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
@@ -148,7 +149,7 @@ export default async function InvoiceDetailPage({
           canWriteOff={canWriteOff}
           canCreate={can(user.role, 'invoice:create')}
           shareToken={invoice.shareToken}
-          baseUrl={process.env.PUBLIC_BASE_URL ?? null}
+          baseUrl={(await getPublicBaseUrl()) || null}
         />
       </div>
 

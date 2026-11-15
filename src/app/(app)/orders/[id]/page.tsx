@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { getPublicBaseUrl } from '@/lib/public-url'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -226,7 +227,7 @@ export default async function QuotationDetailPage({
             token={order.trackingToken}
             customerName={order.customer.name}
             customerPhone={order.customer.phone}
-            baseUrl={process.env.PUBLIC_BASE_URL ?? null}
+            baseUrl={(await getPublicBaseUrl()) || null}
           />
         </div>
       ) : null}

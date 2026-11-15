@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { getPublicBaseUrl } from '@/lib/public-url'
 import { listDocumentPaymentModes } from '@/lib/queries/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
@@ -224,7 +225,7 @@ export default async function QuotationDetailPage({
         }}
         share={quotation.shares[0] ?? null}
         canManage={canUpdate}
-        baseUrl={process.env.PUBLIC_BASE_URL ?? null}
+        baseUrl={(await getPublicBaseUrl()) || null}
       />
       </div>
 

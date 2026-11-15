@@ -1,5 +1,6 @@
 'use server'
 
+import { getPublicBaseUrl } from '@/lib/public-url'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
@@ -18,7 +19,7 @@ export async function createShareLink(
   const result = await quotations.createShareLink(
     { userId: user.id, name: user.name },
     quotationId,
-    process.env.PUBLIC_BASE_URL ?? null,
+    (await getPublicBaseUrl()) || null,
   )
 
   if (!result.ok) return result

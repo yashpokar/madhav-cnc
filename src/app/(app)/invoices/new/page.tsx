@@ -22,6 +22,7 @@ import { getCompanySetting } from '@/lib/queries/company'
 import { requireCapability } from '@/lib/session'
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
+import { dueDateFromTerms, todayIso } from '@/lib/form-defaults'
 import { InvoiceForm } from '../invoice-form'
 
 export const metadata: Metadata = {
@@ -108,7 +109,7 @@ export default async function NewInvoicePage({
   }
 
   const interState = await suggestInterState(order.customer.state)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -138,7 +139,7 @@ export default async function NewInvoicePage({
           customerName: order.customer.name,
           orderId: order.id,
           invoiceDate: today,
-          dueDate: null,
+          dueDate: dueDateFromTerms(today, order.customer.paymentTermsDays),
           placeOfSupply: order.customer.state,
           isInterState: interState,
           billingAddress: [

@@ -8,6 +8,7 @@ import {
   listOrdersForPicker,
 } from '@/lib/queries/accounting'
 import { listVendorOptions } from '@/lib/queries/vendors'
+import { todayIso } from '@/lib/form-defaults'
 import { requireCapability } from '@/lib/session'
 import { ExpenseForm } from '../expense-form'
 
@@ -42,7 +43,7 @@ export default async function NewExpensePage() {
         vendors={vendors}
         values={{
           categoryId: null,
-          expenseDate: new Date().toISOString().slice(0, 10),
+          expenseDate: todayIso(),
           payeeName: '',
           description: null,
           amount: 0,

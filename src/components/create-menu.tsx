@@ -33,6 +33,17 @@ export const CREATE_ACTIONS = {
 
 export type CreateAction = keyof typeof CREATE_ACTIONS
 
+/** The capability each Create action needs; mirrors what the dashboard checks. */
+export const CREATE_CAPABILITIES = {
+  quotation: 'quotation:create',
+  order: 'order:create',
+  challan: 'dispatch:create',
+  invoice: 'invoice:create',
+  receipt: 'payment:create',
+  expense: 'expense:create',
+  customer: 'customer:create',
+} as const satisfies Record<CreateAction, `${string}:create`>
+
 /** One "Create" button that opens every new-record shortcut the user may use. */
 export function CreateMenu({ allowed }: { allowed: CreateAction[] }) {
   if (allowed.length === 0) return null
@@ -46,6 +57,7 @@ export function CreateMenu({ allowed }: { allowed: CreateAction[] }) {
       <DropdownButton data-tour="create-menu">
         <PlusIcon />
         Create
+        <kbd className="hidden rounded px-1 font-sans text-xs/5 ring-1 ring-current/30 sm:inline">C</kbd>
         <ChevronDownIcon />
       </DropdownButton>
       <DropdownMenu anchor="bottom end" className="min-w-72">
@@ -66,6 +78,11 @@ export function CreateMenu({ allowed }: { allowed: CreateAction[] }) {
             })}
           </div>
         ))}
+        <DropdownDivider />
+        <p className="px-3.5 py-1.5 text-xs/5 text-zinc-500 sm:px-3 dark:text-zinc-400">
+          Press <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">C</kbd> anywhere, or{' '}
+          <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">?</kbd> for all shortcuts
+        </p>
       </DropdownMenu>
     </Dropdown>
   )

@@ -3,7 +3,8 @@
 import { PaymentModeSelect } from '@/components/payment-mode-select'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useState, useRef } from 'react'
+import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -21,6 +22,8 @@ import { Select } from '@/components/catalyst/select'
 import { Switch, SwitchField } from '@/components/catalyst/switch'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
+import { loadDefaults, rememberDefaults } from '@/lib/form-defaults'
+import { useQuickContext } from '@/lib/quick-context'
 import { QuickNameDialog } from '@/components/quick-name-dialog'
 import { VendorPicker, type VendorOption } from '@/components/vendor-picker'
 import { quickCreateExpenseCategory, type FormState } from '@/lib/actions/expenses'
@@ -59,6 +62,9 @@ export function ExpenseForm({
   submitLabel: string
 }) {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useDirtyGuard(formRef)
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     { status: 'idle' },
@@ -80,16 +86,29 @@ export function ExpenseForm({
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
   const [payee, setPayee] = useState(keep('payeeName', values.payeeName))
   const [amount, setAmount] = useState(keep('amount', values.amount))
+  const quick = useQuickContext()
   const [taxRate, setTaxRate] = useState(
     keep('taxRatePercent', values.taxRatePercent),
   )
+
+  const isNew = values.amount === 0
+
+  useEffect(() => {
+    if (!isNew || !quick.userId) return
+
+    const last = loadDefaults(quick.userId, quick.companyId).gstRate
+
+    // Syncing from browser storage, which only exists after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (last !== undefined) setTaxRate(String(last))
+  }, [isNew, quick.userId, quick.companyId])
 
   const base = Number(amount) || 0
   const tax = Math.round(base * ((Number(taxRate) || 0) / 100) * 100) / 100
   const total = Math.round((base + tax) * 100) / 100
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}
@@ -206,7 +225,14 @@ export function ExpenseForm({
                 min={0}
                 max={100}
                 value={taxRate}
-                onChange={(event) => setTaxRate(event.target.value)}
+                onChange={(event) => {
+                  setTaxRate(event.target.value)
+                  const rate = Number(event.target.value)
+
+                  if (isNew && quick.userId && rate > 0) {
+                    rememberDefaults(quick.userId, quick.companyId, { gstRate: rate })
+                  }
+                }}
               />
             </Field>
             <Field>
@@ -264,6 +290,7 @@ export function ExpenseForm({
                 name="channelId"
                 modes={modes}
                 defaultValue={keep('channelId', values.channelId)}
+                remember={!values.channelId}
               />
             </Field>
             <Field>

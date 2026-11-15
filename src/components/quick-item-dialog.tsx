@@ -17,6 +17,8 @@ import {
 } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import { Select } from '@/components/catalyst/select'
+import { loadDefaults } from '@/lib/form-defaults'
+import { useQuickContext } from '@/lib/quick-context'
 import { quickCreateItem } from '@/lib/actions/items'
 import { UNIT_LABELS } from '@/lib/labels'
 import { UnitOfMeasure } from '@/generated/prisma/enums'
@@ -62,7 +64,13 @@ function QuickItemForm({
   const [name, setName] = useState(initialName)
   const [unit, setUnit] = useState<UnitOfMeasure>('NOS')
   const [rate, setRate] = useState('')
-  const [tax, setTax] = useState('0')
+  const quick = useQuickContext()
+  const [tax, setTax] = useState(() => {
+    // Start from the GST rate this person used last, when the browser has one.
+    const last = quick.userId ? loadDefaults(quick.userId, quick.companyId).gstRate : undefined
+
+    return String(last ?? 0)
+  })
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 

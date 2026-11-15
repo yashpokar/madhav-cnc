@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/catalyst/table'
 import { Text } from '@/components/catalyst/text'
-import { EmptyState } from '@/components/form-banner'
+import { EmptyState, FormBanner } from '@/components/form-banner'
 import { SearchField } from '@/components/search-field'
 import {
   expenseSummary,
@@ -46,6 +46,7 @@ export default async function ExpensesPage({
   const params = await searchParams
 
   const search = typeof params.q === 'string' ? params.q : undefined
+  const created = typeof params.created === 'string' ? params.created : undefined
   const categoryId =
     typeof params.category === 'string' && params.category !== 'all'
       ? params.category
@@ -128,6 +129,15 @@ export default async function ExpensesPage({
           {canCreate ? <Button href="/expenses/new">New expense</Button> : null}
         </div>
       </div>
+
+      {created ? (
+        <FormBanner
+          tone="success"
+          steps={canCreate ? [{ label: 'Add another expense', href: '/expenses/new' }] : undefined}
+        >
+          Expense {created} saved
+        </FormBanner>
+      ) : null}
 
       {summary.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

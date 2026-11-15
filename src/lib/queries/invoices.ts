@@ -216,6 +216,7 @@ export async function getOrderForInvoice(orderId: string) {
           state: true,
           pincode: true,
           gstin: true,
+          paymentTermsDays: true,
         },
       },
       lines: {

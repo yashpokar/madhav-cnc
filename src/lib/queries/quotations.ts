@@ -195,6 +195,7 @@ export async function listCustomerOptions() {
       pincode: true,
       preferredArchitectId: true,
       preferredCarpenterId: true,
+      paymentTermsDays: true,
     },
   })
 }

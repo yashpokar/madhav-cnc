@@ -5,6 +5,7 @@ import { createQuotation } from '@/lib/actions/quotations'
 import { listCustomerOptions, listItemOptions } from '@/lib/queries/quotations'
 import { listPartnerOptions } from '@/lib/queries/partners'
 import { getDefaultAdvancePercent } from '@/lib/queries/company'
+import { todayIso } from '@/lib/form-defaults'
 import { requireCapability } from '@/lib/session'
 import { QuotationForm } from '../quotation-form'
 
@@ -33,7 +34,7 @@ export default async function NewQuotationPage({
       ? params.customer
       : null
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
 
   return (
     <div className="grid grid-cols-1 gap-8">

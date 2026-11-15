@@ -5,6 +5,7 @@ import { Text } from '@/components/catalyst/text'
 import { createOrder } from '@/lib/actions/orders'
 import { listCustomerOptions, listItemOptions } from '@/lib/queries/quotations'
 import { listPartnerOptions } from '@/lib/queries/partners'
+import { todayIso } from '@/lib/form-defaults'
 import { requireCapability } from '@/lib/session'
 import { isDayKey } from '@/lib/calendar'
 import { getActiveIndustry } from '@/lib/queries/company'
@@ -30,7 +31,7 @@ export default async function NewOrderPage({ searchParams }: PageProps<'/orders/
     listPartnerOptions('CARPENTER'),
   ])
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIso()
 
   const modes = await listPaymentModeOptions()
 
@@ -51,7 +52,10 @@ export default async function NewOrderPage({ searchParams }: PageProps<'/orders/
         architects={architects}
         carpenters={carpenters}
         values={{
-          customerId: null,
+          customerId:
+            typeof query.customer === 'string' && customers.some((c) => c.id === query.customer)
+              ? query.customer
+              : null,
           architectId: null,
           carpenterId: null,
           subject: null,

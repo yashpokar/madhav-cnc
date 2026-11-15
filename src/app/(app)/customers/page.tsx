@@ -26,6 +26,7 @@ import { SearchField } from '@/components/search-field'
 import { StatusFilter } from '@/components/status-filter'
 import { listCustomers } from '@/lib/queries/customers'
 import { can } from '@/lib/permissions'
+import { getActiveIndustry } from '@/lib/queries/company'
 import { requireCapability } from '@/lib/session'
 import type { CustomerStatus, CustomerType } from '@/generated/prisma/enums'
 
@@ -57,6 +58,8 @@ export default async function CustomersPage({
   const params = await searchParams
   const search = typeof params.q === 'string' ? params.q : undefined
   const created = typeof params.created === 'string' ? params.created : undefined
+  const createdId = typeof params.customer === 'string' ? params.customer : undefined
+  const industry = await getActiveIndustry()
 
   const status =
     typeof params.status === 'string' &&
@@ -118,7 +121,28 @@ export default async function CustomersPage({
       </div>
 
       {created ? (
-        <FormBanner tone="success">Customer {created} saved</FormBanner>
+        <FormBanner
+          tone="success"
+          steps={
+            createdId
+              ? [
+                  ...(can(user.role, 'quotation:create')
+                    ? [{ label: 'Create quotation', href: `/quotations/new?customer=${createdId}` }]
+                    : []),
+                  ...(can(user.role, 'order:create')
+                    ? [
+                        {
+                          label: `Create ${industry.terms.order.toLowerCase()}`,
+                          href: `/orders/new?customer=${createdId}`,
+                        },
+                      ]
+                    : []),
+                ]
+              : undefined
+          }
+        >
+          Customer {created} saved
+        </FormBanner>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">

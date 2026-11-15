@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useRef } from 'react'
+import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -75,6 +76,9 @@ export function CustomerForm({
   carpenters: PartnerOption[]
 }) {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useDirtyGuard(formRef)
   const [type, setType] = useState<CustomerType>(values.type)
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
@@ -87,7 +91,7 @@ export function CustomerForm({
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}

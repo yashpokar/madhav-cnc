@@ -46,6 +46,7 @@ export function CustomerCombobox({
     pincode: null,
     preferredArchitectId: null,
     preferredCarpenterId: null,
+    paymentTermsDays: null,
   }
 
   const choices = [...available, ...(exact ? [] : [createOption])]

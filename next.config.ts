@@ -22,6 +22,15 @@ const nextConfig: NextConfig = {
       { source: '/daybook/credit/new', destination: '/daybook', permanent: true },
     ]
   },
+  // The iOS app-link file has no extension, so say what it is.
+  async headers() {
+    return [
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+    ]
+  },
   experimental: {
     authInterrupts: true,
     serverActions: {

@@ -77,6 +77,9 @@ model User {
   userCompanies       UserCompany[]
   invitationsSent     Invitation[]  @relation("InvitationInvitedBy")
   invitationsAccepted Invitation[]  @relation("InvitationAcceptedBy")
+  idempotencyKeys     IdempotencyKey[]
+  deviceTokens        DeviceToken[]
+  uploads             Upload[]
 
   @@index([role])
   @@index([isActive])
@@ -816,6 +819,8 @@ model CompanySetting {
   channelOpeningBalances ChannelOpeningBalance[]
   balanceAdjustments     BalanceAdjustment[]
   invitations            Invitation[]
+  uploads                Upload[]
+  deviceTokens           DeviceToken[]
 
   updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdBy User? @relation("CompanySettingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1960,4 +1965,75 @@ model Invitation {
   @@index([companyId, status])
   @@index([invitedById, createdAt])
   @@map("invitations")
+}
+
+/// Remembers the outcome of a mobile API write so a retry with the same
+/// Idempotency-Key replays it instead of running twice. companyId is "" for
+/// account-level calls that have no company yet (so it carries no foreign key).
+model IdempotencyKey {
+  id String @id @default(cuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String @default("") @map("company_id")
+
+  key         String
+  method      String
+  path        String
+  requestHash String @map("request_hash")
+
+  /// 0 while the first request is still running.
+  responseStatus Int   @default(0) @map("response_status")
+  responseBody   Json? @map("response_body")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, companyId, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
+/// A phone registered for push notifications. Belongs to the person, not a company.
+model DeviceToken {
+  id String @id @default(cuid())
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String?         @map("company_id")
+  company   CompanySetting? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  expoPushToken String    @unique @map("expo_push_token")
+  platform      String
+  appVersion    String?   @map("app_version")
+  locale        String?
+  lastSeenAt    DateTime  @default(now()) @map("last_seen_at")
+  revokedAt     DateTime? @map("revoked_at")
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+/// A file a phone uploaded, waiting to be attached to a record.
+model Upload {
+  id String @id @default(cuid())
+
+  companyId String         @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storedName String    @map("stored_name")
+  mime       String
+  size       Int
+  purpose    String
+  linkedAt   DateTime? @map("linked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, createdAt])
+  @@index([userId])
+  @@map("uploads")
 }

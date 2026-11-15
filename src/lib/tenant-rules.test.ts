@@ -23,6 +23,7 @@ const GLOBAL = new Set([
   'CompanySetting',
   'UserCompany',
   'DocumentCounter',
+  'DeviceToken',
 ])
 
 const schema = readFileSync('prisma/schema.prisma', 'utf8')

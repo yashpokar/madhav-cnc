@@ -10,10 +10,9 @@ import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
 import { COMPANY_COOKIE, listAccessibleCompanies } from '@/lib/active-company'
 import { getBaseUser, requireSuperAdmin, requireUser } from '@/lib/session'
-import { createCompanyWithSeed, readSeedFromActiveCompany, seedForIndustry } from '@/lib/company-setup'
+import { createCompanyWithSeed, readSeedFromActiveCompany } from '@/lib/company-setup'
+import { createOwnCompanyFor } from '@/lib/services/companies'
 import { DEFAULT_INDUSTRY, isIndustryKey } from '@/lib/industry'
-import { canCreateAnotherCompany } from '@/lib/team-rules'
-import { companySettingSchema } from '@/lib/validation/company'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
@@ -186,13 +185,6 @@ export async function setCompanyRole(
   return { ok: true, message: `Role set to ${label}` }
 }
 
-const ownCompanySchema = companySettingSchema.pick({
-  companyName: true,
-  gstin: true,
-  phone: true,
-  city: true,
-})
-
 /**
  * Self-service onboarding: a signed-in person who belongs to no company creates
  * their own. They become its administrator (membership role only; their own
@@ -212,87 +204,15 @@ export async function createOwnCompany(input: {
 
   if (!base) redirect('/sign-in')
 
-  const parsed = ownCompanySchema.safeParse({
-    ...input,
-    companyName: (input.companyName ?? '').trim().replace(/\s+/g, ' '),
-  })
+  const result = await createOwnCompanyFor({ id: base.id, name: base.name }, input)
 
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  if (!result.ok) {
+    if (result.kind === 'account-missing') redirect('/sign-in')
+
+    return { ok: false, error: result.error }
   }
 
-  if (parsed.data.companyName.length < 2) {
-    return { ok: false, error: 'Enter the company name' }
-  }
-
-  if (!isIndustryKey(input.industry)) {
-    return { ok: false, error: 'Choose the industry your company is in' }
-  }
-
-  const industry = input.industry
-
-  const account = await prisma.user.findUnique({
-    where: { id: base.id },
-    select: { isActive: true, activatedAt: true, role: true },
-  })
-
-  if (!account) redirect('/sign-in')
-
-  if (account.role === 'ADMIN') {
-    return { ok: false, error: 'Use Companies under Administration to add a company' }
-  }
-
-  if (!account.isActive && account.activatedAt) {
-    return { ok: false, error: 'Your account has been deactivated. Contact an administrator.' }
-  }
-
-  const [memberships, created] = await Promise.all([
-    prisma.userCompany.count({ where: { userId: base.id } }),
-    prisma.companySetting.count({ where: { createdById: base.id } }),
-  ])
-
-  if (memberships > 0) {
-    return { ok: false, error: 'You already belong to a company' }
-  }
-
-  if (!canCreateAnotherCompany(created)) {
-    return { ok: false, error: 'You have reached the limit of companies you can create' }
-  }
-
-  const company = await createCompanyWithSeed({
-    details: { ...parsed.data, industry },
-    seed: seedForIndustry(industry),
-    actorId: base.id,
-    createdById: base.id,
-  })
-
-  await prisma.userCompany.create({
-    data: { userId: base.id, companyId: company.id, role: 'ADMIN' },
-  })
-
-  if (!account.isActive) {
-    await prisma.user.update({
-      where: { id: base.id },
-      data: { isActive: true, activatedAt: new Date() },
-    })
-  }
-
-  try {
-    // Written with the new company id: the request's active company is not set yet.
-    await prisma.activityLog.create({
-      data: {
-        companyId: company.id,
-        entityType: 'company',
-        entityId: company.id,
-        action: 'created',
-        summary: `created ${parsed.data.companyName}`,
-        userId: base.id,
-        userName: base.name,
-      },
-    })
-  } catch {
-    // The trail is a convenience.
-  }
+  const company = { id: result.id }
 
   ;(await cookies()).set(COMPANY_COOKIE, company.id, {
     path: '/',

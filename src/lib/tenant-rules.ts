@@ -7,7 +7,7 @@
  *  - CHILD: no companyId; belongs to a scoped table through a chain of
  *    relations (CHILD_PARENT). Filtered through that chain.
  *  - everything else (User, Session, Account, Verification, CompanySetting,
- *    UserCompany, DocumentCounter): global, never touched here.
+ *    UserCompany, DocumentCounter, DeviceToken): global, never touched here.
  */
 
 /** Tables whose rows belong to one company. */
@@ -36,6 +36,8 @@ export const SCOPED = new Set([
   'BalanceAdjustment',
   'Invitation',
   'ActivityLog',
+  'IdempotencyKey',
+  'Upload',
 ])
 
 /** Child tables: the relation path from the child up to a scoped table. */

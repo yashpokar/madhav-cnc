@@ -20366,6 +20366,438 @@
         }
       }
     },
+    "/reports/compare": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Week, month or year over year: this period so far against the previous period and a year ago, with a 12-period trend",
+        "description": "Requires the `invoice:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "week",
+                "month",
+                "year"
+              ],
+              "description": "Weeks are ISO (Monday first); a year is the calendar year, India time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "period": {
+                          "type": "string",
+                          "enum": [
+                            "week",
+                            "month",
+                            "year"
+                          ]
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "INR"
+                          ]
+                        },
+                        "asOf": {
+                          "type": "string",
+                          "description": "Today, India time"
+                        },
+                        "current": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "to": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "elapsedDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "totalDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "label",
+                            "elapsedDays",
+                            "totalDays"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "previous": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "to": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "label"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The slice compared against (same days into the previous period)"
+                        },
+                        "lastYear": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "to": {
+                              "type": "string",
+                              "description": "ISO date, e.g. \"2026-11-15\""
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "label"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The slice compared against (same days into the period a year ago)"
+                        },
+                        "metrics": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "enum": [
+                                  "sales",
+                                  "collections",
+                                  "expenses",
+                                  "purchases",
+                                  "profit",
+                                  "newCustomers",
+                                  "orders",
+                                  "invoices",
+                                  "receivables"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "hint": {
+                                "type": "string"
+                              },
+                              "unit": {
+                                "type": "string",
+                                "enum": [
+                                  "money",
+                                  "count"
+                                ]
+                              },
+                              "good": {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down",
+                                  "neutral"
+                                ],
+                                "description": "Which direction is good news"
+                              },
+                              "basis": {
+                                "type": "string",
+                                "enum": [
+                                  "flow",
+                                  "stock"
+                                ],
+                                "description": "A flow adds up inside the period; a stock is a balance at its end"
+                              },
+                              "current": {
+                                "type": "string",
+                                "description": "The period so far"
+                              },
+                              "previous": {
+                                "type": "string",
+                                "description": "The same number of days into the period before"
+                              },
+                              "lastYear": {
+                                "type": "string",
+                                "description": "The same number of days into the same period a year earlier"
+                              },
+                              "vsPrevious": {
+                                "type": "object",
+                                "properties": {
+                                  "abs": {
+                                    "type": "string",
+                                    "description": "Current minus the comparison figure (money for money metrics, a whole number for counts)"
+                                  },
+                                  "pct": {
+                                    "nullable": true,
+                                    "description": "Percent of the comparison figure, one decimal; null when it was 0 (see kind)",
+                                    "type": "number"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "up",
+                                      "down",
+                                      "flat",
+                                      "new"
+                                    ],
+                                    "description": "\"new\": there was nothing to compare with, show the word instead of a percent"
+                                  },
+                                  "tone": {
+                                    "type": "string",
+                                    "enum": [
+                                      "good",
+                                      "bad",
+                                      "neutral"
+                                    ],
+                                    "description": "Whether this move is good news for this metric (more expenses is bad)"
+                                  }
+                                },
+                                "required": [
+                                  "abs",
+                                  "pct",
+                                  "kind",
+                                  "tone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "vsLastYear": {
+                                "type": "object",
+                                "properties": {
+                                  "abs": {
+                                    "type": "string",
+                                    "description": "Current minus the comparison figure (money for money metrics, a whole number for counts)"
+                                  },
+                                  "pct": {
+                                    "nullable": true,
+                                    "description": "Percent of the comparison figure, one decimal; null when it was 0 (see kind)",
+                                    "type": "number"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "up",
+                                      "down",
+                                      "flat",
+                                      "new"
+                                    ],
+                                    "description": "\"new\": there was nothing to compare with, show the word instead of a percent"
+                                  },
+                                  "tone": {
+                                    "type": "string",
+                                    "enum": [
+                                      "good",
+                                      "bad",
+                                      "neutral"
+                                    ],
+                                    "description": "Whether this move is good news for this metric (more expenses is bad)"
+                                  }
+                                },
+                                "required": [
+                                  "abs",
+                                  "pct",
+                                  "kind",
+                                  "tone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "series": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "start": {
+                                      "type": "string",
+                                      "description": "First day of the period"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "type": "string"
+                                    },
+                                    "lastYear": {
+                                      "type": "string",
+                                      "description": "The same period one year earlier"
+                                    },
+                                    "partial": {
+                                      "type": "boolean",
+                                      "description": "True for the period still in progress"
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "label",
+                                    "value",
+                                    "lastYear",
+                                    "partial"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The last 12 periods, oldest first; each carries its year-earlier value for the overlay"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "hint",
+                              "unit",
+                              "good",
+                              "basis",
+                              "current",
+                              "previous",
+                              "lastYear",
+                              "vsPrevious",
+                              "vsLastYear",
+                              "series"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Only the metrics the role may read: sales, invoices and receivables need invoice:read (receivables also payment:read); collections payment:read; expenses expense:read; purchases purchase:read; orders order:read; newCustomers customer:read; profit payment:read and expense:read"
+                        }
+                      },
+                      "required": [
+                        "period",
+                        "currency",
+                        "asOf",
+                        "current",
+                        "previous",
+                        "lastYear",
+                        "metrics"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/states": {
       "get": {
         "tags": [

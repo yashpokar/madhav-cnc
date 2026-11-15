@@ -38,6 +38,7 @@ capability is `403 FORBIDDEN`.
 | Path | Capability |
 | --- | --- |
 | `GET /dashboard/summary` | none (each block null without its own: invoice:read, expense:read, order:read, stock:read, purchase:read) |
+| `GET /reports/compare?period=week\|month\|year` | invoice:read (each metric inside is left out without its own capability, see the schema) |
 | `GET /customers`, `/customers/{id}` | customer:read (`account` balance needs invoice:read) |
 | `GET /items`, `/items/{id}` | item:read (`purchaseRate` needs purchase:read) |
 | `GET /quotations`, `/quotations/{id}` | quotation:read |
@@ -50,6 +51,15 @@ capability is `403 FORBIDDEN`.
 | `GET /payment-methods` | payment:read |
 | `GET /expense-categories` | expense:read |
 | `GET /states` | public, `Cache-Control: public, max-age=86400`, ETag |
+
+`GET /reports/compare` compares this week, month or year (`period=`; ISO weeks, Monday first; a year is the calendar
+year, India time) to date against the same number of days of the previous period and of a year ago. Each metric has
+`current`, `previous`, `lastYear`, a change against each (`abs`, `pct`, `kind` of `up|down|flat|new`, `tone` of
+`good|bad|neutral`) and a 12-period `series` whose points carry their year-earlier value for the overlay. `pct` is
+`null` and `kind` is `new` when the earlier figure was 0 (show the word, never a percent). `tone` already knows that
+more expenses is bad. Money is a decimal string, counts are integer strings. Net cash is collections minus expenses;
+receivables is billed to date minus received to date at the end of the slice. Metrics the role may not read are left
+out of `metrics`.
 
 Lists are ordered newest first (`createdAt`; payments by `paidOn`; expenses by `expenseDate`; items by name;
 production tasks by order due date) with the id as tie-break, so a cursor never repeats or skips a row.

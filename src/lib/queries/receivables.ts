@@ -1,4 +1,14 @@
 import { prisma } from '@/lib/prisma'
+import {
+  AGING_BUCKETS,
+  bucketFor,
+  daysOverdue,
+  invoiceDue,
+  round2,
+  startOfDay,
+  uninvoicedDue,
+  type AgingKey,
+} from '@/lib/receivables-math'
 
 type DecimalLike = { toNumber: () => number }
 
@@ -6,39 +16,8 @@ function num(value: DecimalLike): number {
   return value.toNumber()
 }
 
-function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
-
-export const AGING_BUCKETS = [
-  { key: 'notDue', label: 'Not due', from: -Infinity, to: 0 },
-  { key: 'b30', label: '1 – 30 days', from: 1, to: 30 },
-  { key: 'b60', label: '31 – 60 days', from: 31, to: 60 },
-  { key: 'b90', label: '61 – 90 days', from: 61, to: 90 },
-  { key: 'b90plus', label: 'Over 90 days', from: 91, to: Infinity },
-] as const
-
-export type AgingKey = (typeof AGING_BUCKETS)[number]['key']
-
-function startOfDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  )
-}
-
-export function daysOverdue(reference: Date, today: Date): number {
-  const ms = startOfDay(today).getTime() - startOfDay(reference).getTime()
-
-  return Math.floor(ms / 86_400_000)
-}
-
-export function bucketFor(days: number): AgingKey {
-  const match = AGING_BUCKETS.find(
-    (bucket) => days >= bucket.from && days <= bucket.to,
-  )
-
-  return (match ?? AGING_BUCKETS[0]).key
-}
+export { AGING_BUCKETS, bucketFor, daysOverdue }
+export type { AgingKey }
 
 export async function getReceivables(
   today = new Date(),
@@ -136,9 +115,12 @@ export async function getReceivables(
         (sum, row) => sum + num(row.amount),
         0,
       )
-      const due = round2(
-        num(invoice.total) - num(invoice.advanceAdjusted) - paid - writtenOff,
-      )
+      const due = invoiceDue({
+        total: num(invoice.total),
+        advanceAdjusted: num(invoice.advanceAdjusted),
+        allocated: paid,
+        writtenOff,
+      })
       const reference = invoice.dueDate ?? invoice.invoiceDate
       const overdueBy = daysOverdue(reference, today)
 
@@ -320,7 +302,7 @@ export async function getReceivables(
   const toBillDue = round2(
     toBill.reduce(
       (sum, order) =>
-        sum + Math.max(0, order.total - (advanceByOrder.get(order.id) ?? 0)),
+        sum + uninvoicedDue(order.total, advanceByOrder.get(order.id) ?? 0),
       0,
     ),
   )
@@ -341,6 +323,8 @@ export async function getReceivables(
     netReceivable: round2(outstanding - creditOutstanding - onAccountTotal),
     toBillTotal: round2(toBill.reduce((sum, order) => sum + order.total, 0)),
     toBillDue,
+    // The one definition of "what is owed": billed-and-open plus delivered-not-yet-billed.
+    totalDue: round2(outstanding + toBillDue),
     collected30: collected._sum.amount ? num(collected._sum.amount) : 0,
     collected30Count: collected._count._all,
     aging,
@@ -434,9 +418,12 @@ export async function getCustomerLedger(today = new Date()) {
       (sum, w) => sum + num(w.amount),
       0,
     )
-    const due = round2(
-      num(invoice.total) - num(invoice.advanceAdjusted) - paid - writtenOff,
-    )
+    const due = invoiceDue({
+      total: num(invoice.total),
+      advanceAdjusted: num(invoice.advanceAdjusted),
+      allocated: paid,
+      writtenOff,
+    })
 
     row.billed = round2(row.billed + num(invoice.total))
     row.defaulted = round2(row.defaulted + writtenOff)

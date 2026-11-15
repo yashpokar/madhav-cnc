@@ -1,6 +1,6 @@
-# Madhav CNC
+# Prodlys
 
-Back-office app for a CNC job-work shop: from the first quotation to the final payment, in one place.
+Run your whole business in one place: quotations, orders, production, billing and payments for workshops, studios, salons, caterers, hotels and more. Each company on the platform keeps its own name, branding details and industry setup.
 
 ## What it covers
 

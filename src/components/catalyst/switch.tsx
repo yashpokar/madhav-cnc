@@ -45,8 +45,8 @@ export function SwitchField({
 
 const colors = {
   'dark/zinc': [
-    '[--switch-bg-ring:var(--color-zinc-950)]/90 [--switch-bg:var(--color-zinc-900)] dark:[--switch-bg-ring:transparent] dark:[--switch-bg:var(--color-white)]/25',
-    '[--switch-ring:var(--color-zinc-950)]/90 [--switch-shadow:var(--color-black)]/10 [--switch:white] dark:[--switch-ring:var(--color-zinc-700)]/90',
+    '[--switch-bg-ring:var(--color-accent-700)]/90 [--switch-bg:var(--color-accent-600)] dark:[--switch-bg-ring:transparent] dark:[--switch-bg:var(--color-accent-600)]',
+    '[--switch-ring:var(--color-accent-700)]/90 [--switch-shadow:var(--color-black)]/10 [--switch:white] dark:[--switch-ring:var(--color-accent-700)]/90',
   ],
   'dark/white': [
     '[--switch-bg-ring:var(--color-zinc-950)]/90 [--switch-bg:var(--color-zinc-900)] dark:[--switch-bg-ring:transparent] dark:[--switch-bg:var(--color-white)]',

@@ -44,7 +44,7 @@ export function CompanySwitcher({
     <span className="flex min-w-0 items-center gap-3">
       <span
         aria-hidden="true"
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-500 text-xs/4 font-semibold text-white"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-600 text-xs/4 font-semibold text-white"
       >
         {initials(active?.companyName ?? '?')}
       </span>
@@ -53,7 +53,7 @@ export function CompanySwitcher({
           {active?.companyName ?? 'No company'}
         </span>
         <span className="block truncate text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Order management
+          Workspace
         </span>
       </span>
     </span>

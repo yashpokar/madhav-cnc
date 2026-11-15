@@ -21,9 +21,9 @@ export default async function SignInPage({ searchParams }: PageProps<'/sign-in'>
   return (
     <div className="grid w-full max-w-sm grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
-        <BrandMark />
-        <Heading>Sign in to Madhav CNC</Heading>
-        <Text>Order management for the shop floor and the office.</Text>
+        <BrandMark className="lg:hidden" />
+        <Heading>Sign in to Prodlys</Heading>
+        <Text>Pick up where you left off.</Text>
       </div>
       <SignInForm next={next} googleEnabled={googleEnabled} />
     </div>

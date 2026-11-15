@@ -25,16 +25,13 @@ function MobileSidebar({ open, close, children }: React.PropsWithChildren<{ open
     <Headless.Dialog open={open} onClose={close} className="lg:hidden">
       <Headless.DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/30 transition data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+        className="fixed inset-0 bg-zinc-950/30 backdrop-blur-sm transition data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
       />
       <Headless.DialogPanel
         transition
         className="fixed inset-y-0 w-full max-w-80 p-2 transition duration-300 ease-in-out data-closed:-translate-x-full"
       >
-        <div
-          data-theme="dark"
-          className="flex h-full flex-col rounded-xl bg-frame text-white shadow-xl ring-1 ring-white/10"
-        >
+        <div className="flex h-full flex-col rounded-2xl bg-white text-zinc-950 shadow-pop dark:bg-zinc-900 dark:text-white dark:shadow-none dark:ring-1 dark:ring-white/10">
           <div className="-mb-3 px-4 pt-3">
             <Headless.CloseButton as={NavbarItem} aria-label="Close navigation">
               <CloseMenuIcon />
@@ -55,9 +52,9 @@ export function SidebarLayout({
   const [showSidebar, setShowSidebar] = useState(false)
 
   return (
-    <div className="relative isolate flex min-h-svh w-full bg-paper max-lg:flex-col lg:bg-frame print:block print:min-h-0 print:bg-white dark:bg-zinc-950 dark:lg:bg-frame-deep">
+    <div className="relative isolate flex min-h-svh w-full bg-paper max-lg:flex-col print:block print:min-h-0 print:bg-white dark:bg-zinc-950">
       {/* Sidebar on desktop */}
-      <div data-theme="dark" className="fixed inset-y-0 left-0 w-64 max-lg:hidden print:hidden">
+      <div className="fixed inset-y-0 left-0 w-64 border-r border-zinc-950/5 bg-white max-lg:hidden print:hidden dark:border-white/5 dark:bg-zinc-900">
         {sidebar}
       </div>
 
@@ -77,8 +74,8 @@ export function SidebarLayout({
       </header>
 
       {/* Content */}
-      <main className="flex flex-1 flex-col pb-2 lg:min-w-0 lg:pt-2 lg:pr-2 lg:pl-64 print:block print:p-0">
-        <div className="grow p-3 sm:p-5 lg:rounded-2xl lg:bg-paper lg:p-8 lg:ring-1 lg:ring-black/5 print:rounded-none print:bg-white print:p-0 print:shadow-none print:ring-0 dark:lg:bg-zinc-950 dark:lg:ring-white/10">
+      <main className="flex flex-1 flex-col lg:min-w-0 lg:pl-64 print:block print:p-0">
+        <div className="grow p-4 sm:p-6 lg:p-10 print:rounded-none print:bg-white print:p-0 print:shadow-none print:ring-0">
           <div className="mx-auto max-w-7xl print:max-w-none">{children}</div>
         </div>
       </main>

@@ -1,5 +1,5 @@
 {
-  "name": "madhav-cnc",
+  "name": "prodlys",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -31,6 +31,7 @@
     "react": "19.2.8",
     "react-day-picker": "^10.0.2",
     "react-dom": "19.2.8",
+    "sonner": "2.0.8",
     "zod": "^4.5.4"
   },
   "devDependencies": {

@@ -1,5 +1,10 @@
 import clsx from 'clsx'
 
+/**
+ * The Prodlys mark: a rounded tile holding a "p" whose bowl rises like a
+ * progress arc. The tile follows the accent colour, so a company accent swap
+ * re-colours it. The static copy for favicons lives in src/app/icon.svg.
+ */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg
@@ -8,22 +13,29 @@ export function BrandMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={clsx('size-8 shrink-0', className)}
     >
-      <rect width="32" height="32" rx="7" className="fill-zinc-900 dark:fill-accent-400" />
+      <rect width="32" height="32" rx="9" className="fill-accent-600" />
       <path
-        d="M8.5 22V10.5l4.2 6.2 4.2-6.2V22"
-        className="stroke-accent-400 dark:stroke-zinc-950"
-        strokeWidth="2.1"
+        d="M12 24.5V8.5h4.6a5.2 5.2 0 0 1 0 10.4H12"
+        stroke="#fff"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle
-        cx="22.5"
-        cy="19.5"
-        r="2.6"
-        className="stroke-accent-400 dark:stroke-zinc-950"
-        strokeWidth="2.1"
-      />
     </svg>
+  )
+}
+
+/** Lowercase wordmark; kept neutral so it suits any industry. */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span
+      className={clsx(
+        'font-semibold tracking-tight text-zinc-950 dark:text-white',
+        className,
+      )}
+    >
+      prodlys
+    </span>
   )
 }
 
@@ -32,9 +44,7 @@ export function BrandLockup({ subtitle }: { subtitle?: string }) {
     <div className="flex items-center gap-3">
       <BrandMark />
       <div className="min-w-0">
-        <div className="truncate text-sm/5 font-semibold text-zinc-950 dark:text-white">
-          Madhav CNC
-        </div>
+        <Wordmark className="block truncate text-base/5" />
         {subtitle ? (
           <div className="truncate text-xs/5 text-zinc-500 dark:text-zinc-400">
             {subtitle}

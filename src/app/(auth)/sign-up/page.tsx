@@ -16,7 +16,7 @@ export default function SignUpPage() {
   return (
     <div className="grid w-full max-w-sm grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
-        <BrandMark />
+        <BrandMark className="lg:hidden" />
         <Heading>Create your account</Heading>
         <Text>
           Register, then create your own company or wait to be added to an

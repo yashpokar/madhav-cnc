@@ -67,7 +67,7 @@ export function SidebarSpacer({ className, ...props }: React.ComponentPropsWitho
 
 export function SidebarHeading({ className, ...props }: React.ComponentPropsWithoutRef<'h3'>) {
   return (
-    <h3 {...props} className={clsx(className, 'mb-1 px-2 text-xs/6 font-medium text-zinc-500 dark:text-zinc-400')} />
+    <h3 {...props} className={clsx(className, 'mb-1 px-2.5 text-xs/6 font-semibold tracking-wide text-zinc-500 dark:text-zinc-400')} />
   )
 }
 
@@ -85,7 +85,7 @@ export const SidebarItem = forwardRef(function SidebarItem(
 ) {
   const classes = clsx(
     // Base
-    'flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5',
+    'flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left text-base/6 font-medium text-zinc-700 transition-colors duration-150 sm:py-2 sm:text-sm/5',
     // Leading icon/icon-only
     '*:data-[slot=icon]:size-6 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:fill-zinc-500 sm:*:data-[slot=icon]:size-5',
     // Trailing icon (down chevron or similar)
@@ -97,12 +97,12 @@ export const SidebarItem = forwardRef(function SidebarItem(
     // Active
     'data-active:bg-zinc-950/5 data-active:*:data-[slot=icon]:fill-zinc-950',
     // Current
-    'data-current:*:data-[slot=icon]:fill-zinc-950',
+    'data-current:bg-accent-50 data-current:text-accent-700 data-current:*:data-[slot=icon]:fill-accent-600',
     // Dark mode
-    'dark:text-white dark:*:data-[slot=icon]:fill-zinc-400',
+    'dark:text-zinc-200 dark:*:data-[slot=icon]:fill-zinc-400',
     'dark:data-hover:bg-white/5 dark:data-hover:*:data-[slot=icon]:fill-white',
     'dark:data-active:bg-white/5 dark:data-active:*:data-[slot=icon]:fill-white',
-    'dark:data-current:*:data-[slot=icon]:fill-white'
+    'dark:data-current:bg-accent-500/15 dark:data-current:text-accent-200 dark:data-current:*:data-[slot=icon]:fill-accent-300'
   )
 
   return (
@@ -110,7 +110,7 @@ export const SidebarItem = forwardRef(function SidebarItem(
       {current && (
         <motion.span
           layoutId="current-indicator"
-          className="absolute inset-y-2 -left-4 w-0.5 rounded-full bg-accent-500"
+          className="absolute inset-y-2 -left-4 w-1 rounded-full bg-accent-600 max-lg:hidden dark:bg-accent-400"
         />
       )}
       {typeof props.href === 'string' ? (

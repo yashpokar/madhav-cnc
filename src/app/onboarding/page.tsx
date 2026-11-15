@@ -36,7 +36,7 @@ export default async function OnboardingPage() {
   return (
     <AuthLayout>
       <div className="grid w-full max-w-xl grid-cols-1 gap-6">
-        <BrandMark />
+        <BrandMark className="lg:hidden" />
         <Heading>Create your company</Heading>
         <Text>
           Welcome, <Strong>{user.name}</Strong>. Set up your own company to start. You will be its

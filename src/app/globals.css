@@ -11,11 +11,48 @@ html[data-theme='dark'] {
 }
 
 /*
- * Palette: cool slate neutrals and one cobalt accent. The neutral (zinc) scale
- * is re-tinted slate so every surface, border and text colour follows it
- * without touching each component; money stays green and red so a figure is
- * never confused with a link or a button.
+ * Design tokens - "clean and modern light".
+ *
+ * 1. ACCENT. One confident indigo. Every accent (and stock "blue", which the
+ *    app uses for links, focus rings and highlights) reads from the --accent-*
+ *    variables below, so a company can later swap its colour by overriding
+ *    --accent-50 ... --accent-950 on a wrapper element (or on :root) without
+ *    touching a component. Keep 600 at 4.5:1 or better against white (it is
+ *    the fill behind white button text) and 400 at 4.5:1 or better against the
+ *    dark surfaces (it is the text/focus colour in dark mode).
+ *
+ *      600  #4f46e5   6.3:1 on white       (button fill, links, focus ring)
+ *      700  #4338ca   7.9:1 on white       (hover, pressed, text on tints)
+ *      400  #818cf8   6.5:1 on #0d121b     (dark-mode text and rings)
+ *
+ * 2. NEUTRALS. The zinc scale is re-tinted to a cool, quiet slate so every
+ *    surface, border and text colour follows it. Surfaces are white on a very
+ *    light canvas; dark mode lifts surfaces one step off a deep ink canvas.
+ *
+ * 3. SEMANTIC. Money and status keep green / red / amber so a figure is never
+ *    confused with a link or a button.
  */
+:root {
+  --accent-50: #eef2ff;
+  --accent-100: #e0e7ff;
+  --accent-200: #c7d2fe;
+  --accent-300: #a5b4fc;
+  --accent-400: #818cf8;
+  --accent-500: #6366f1;
+  --accent-600: #4f46e5;
+  --accent-700: #4338ca;
+  --accent-800: #3730a3;
+  --accent-900: #312e81;
+  --accent-950: #1e1b4b;
+
+  /* Surfaces */
+  --canvas: #f6f7f9;
+  --canvas-dark: #0b0f17;
+  --surface: #ffffff;
+  --surface-dark: #141a26;
+
+}
+
 @theme {
   --color-zinc-50: #f8f9fb;
   --color-zinc-100: #f1f3f6;
@@ -27,63 +64,95 @@ html[data-theme='dark'] {
   --color-zinc-600: #475266;
   --color-zinc-700: #374154;
   --color-zinc-800: #232a38;
-  --color-zinc-900: #161c28;
-  --color-zinc-950: #0d121b;
+  --color-zinc-900: #141a26;
+  --color-zinc-950: #0b0f17;
 
-  --color-accent-50: #eef3ff;
-  --color-accent-100: #dbe5ff;
-  --color-accent-200: #bacbff;
-  --color-accent-300: #8fa9ff;
-  --color-accent-400: #6482f5;
-  --color-accent-500: #4263eb;
-  --color-accent-600: #3451d1;
-  --color-accent-700: #2b43aa;
-  --color-accent-800: #263a87;
-  --color-accent-900: #223369;
+  /* Softer radii: controls 10px, cards 14px, dialogs 18px. */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
 
-  /*
-   * Stock blue is the accent too: every link, focus ring, selection and
-   * highlight that uses blue speaks the same cobalt.
-   */
-  --color-blue-50: #eef3ff;
-  --color-blue-100: #dbe5ff;
-  --color-blue-200: #bacbff;
-  --color-blue-300: #8fa9ff;
-  --color-blue-400: #6482f5;
-  --color-blue-500: #4263eb;
-  --color-blue-600: #3451d1;
-  --color-blue-700: #2b43aa;
-  --color-blue-800: #263a87;
-  --color-blue-900: #223369;
-  --color-blue-950: #16213f;
+  /* Elevation: layered, low-contrast shadows (hairline + soft ambient). */
+  --shadow-card: 0 0 0 1px rgb(16 24 40 / 0.06), 0 1px 2px 0 rgb(16 24 40 / 0.04),
+    0 4px 12px -2px rgb(16 24 40 / 0.05);
+  --shadow-pop: 0 0 0 1px rgb(16 24 40 / 0.06), 0 4px 6px -2px rgb(16 24 40 / 0.05),
+    0 16px 32px -8px rgb(16 24 40 / 0.14);
+}
+
+/* Utilities read the live variables, so overriding --accent-* re-themes the app. */
+@theme inline {
+  --color-accent-50: var(--accent-50);
+  --color-accent-100: var(--accent-100);
+  --color-accent-200: var(--accent-200);
+  --color-accent-300: var(--accent-300);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+  --color-accent-700: var(--accent-700);
+  --color-accent-800: var(--accent-800);
+  --color-accent-900: var(--accent-900);
+  --color-accent-950: var(--accent-950);
+
+  /* Stock blue and indigo are the accent too. */
+  --color-blue-50: var(--accent-50);
+  --color-blue-100: var(--accent-100);
+  --color-blue-200: var(--accent-200);
+  --color-blue-300: var(--accent-300);
+  --color-blue-400: var(--accent-400);
+  --color-blue-500: var(--accent-500);
+  --color-blue-600: var(--accent-600);
+  --color-blue-700: var(--accent-700);
+  --color-blue-800: var(--accent-800);
+  --color-blue-900: var(--accent-900);
+  --color-blue-950: var(--accent-950);
+  --color-indigo-50: var(--accent-50);
+  --color-indigo-100: var(--accent-100);
+  --color-indigo-200: var(--accent-200);
+  --color-indigo-300: var(--accent-300);
+  --color-indigo-400: var(--accent-400);
+  --color-indigo-500: var(--accent-500);
+  --color-indigo-600: var(--accent-600);
+  --color-indigo-700: var(--accent-700);
+  --color-indigo-800: var(--accent-800);
+  --color-indigo-900: var(--accent-900);
+  --color-indigo-950: var(--accent-950);
+
+  --color-paper: var(--canvas);
+  --color-frame: var(--canvas);
+  --color-frame-deep: var(--canvas-dark);
+  --font-sans: var(--font-inter);
 }
 
 ::selection {
-  background: var(--color-accent-200);
+  background: var(--accent-200);
   color: var(--color-zinc-950);
 }
 
-@theme inline {
-  --font-sans: var(--font-plex);
+html {
+  font-feature-settings: 'cv11', 'ss03';
+  text-rendering: optimizeLegibility;
 }
 
-/*
- * The app frame: an ink surround holding one paper-coloured sheet of work.
- * Cards inside the sheet are white; in dark mode the sheet is the deepest ink
- * and cards lift one step lighter.
- */
-@theme {
-  --color-paper: #f5f7fa;
-  --color-frame: #0d121b;
-  --color-frame-deep: #080c13;
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Money and counts line up in columns. */
+table td,
+table th,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--canvas);
 }
 
 [data-theme='dark'] body {
-  background: var(--color-zinc-950);
+  background: var(--canvas-dark);
 }
 
 @media print {
@@ -121,12 +190,14 @@ body {
     gap: 0.25rem 0.75rem;
     margin-bottom: 0.75rem;
     padding: 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid rgb(9 9 11 / 0.1);
+    border-radius: 0.75rem;
+    border: 1px solid rgb(16 24 40 / 0.08);
+    background: var(--surface);
   }
 
   [data-theme='dark'] .stack-table tbody tr {
-    border-color: rgb(255 255 255 / 0.12);
+    border-color: rgb(255 255 255 / 0.1);
+    background: var(--surface-dark);
   }
 
   .stack-table td {
@@ -163,8 +234,8 @@ body {
 
 /* Theme the calendar popover (react-day-picker) to match the app. */
 .date-picker {
-  --rdp-accent-color: var(--color-zinc-950);
-  --rdp-accent-background-color: var(--color-zinc-100);
+  --rdp-accent-color: var(--accent-600);
+  --rdp-accent-background-color: var(--accent-50);
   --rdp-day-height: 2.5rem;
   --rdp-day-width: 2.5rem;
   --rdp-day_button-height: 2.25rem;
@@ -174,8 +245,8 @@ body {
 }
 
 [data-theme='dark'] .date-picker {
-  --rdp-accent-color: #fff;
-  --rdp-accent-background-color: rgb(255 255 255 / 0.1);
+  --rdp-accent-color: var(--accent-500);
+  --rdp-accent-background-color: rgb(129 140 248 / 0.16);
   color: #fff;
 }
 
@@ -196,7 +267,7 @@ body {
 }
 
 .date-picker .rdp-today:not(.rdp-selected) .rdp-day_button {
-  color: var(--color-blue-600);
+  color: var(--accent-600);
   font-weight: 600;
 }
 
@@ -208,7 +279,7 @@ body {
 }
 
 [data-theme='dark'] .date-picker .rdp-selected .rdp-day_button {
-  color: var(--color-zinc-950);
+  color: #fff;
 }
 
 .date-picker .rdp-range_middle {
@@ -274,7 +345,7 @@ button:disabled,
 
 /* Keyboard users always get a visible focus ring, mouse users do not. */
 :focus-visible {
-  outline-color: var(--color-blue-500);
+  outline-color: var(--accent-500);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -284,4 +355,56 @@ button:disabled,
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Skeleton shimmer (see src/components/skeleton.tsx). */
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background-color: rgb(16 24 40 / 0.06);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.65) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+[data-theme='dark'] .skeleton {
+  background-color: rgb(255 255 255 / 0.06);
+  background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.07) 50%, transparent 100%);
+}
+
+/* Scale-in for dialogs and popovers. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Toast colours (see src/components/toaster.tsx). */
+:root {
+  --toast-bg: #ffffff;
+  --toast-fg: #0b0f17;
+  --toast-border: rgb(16 24 40 / 0.08);
+}
+
+[data-theme='dark'] {
+  --toast-bg: #1b2231;
+  --toast-fg: #ffffff;
+  --toast-border: rgb(255 255 255 / 0.1);
 }

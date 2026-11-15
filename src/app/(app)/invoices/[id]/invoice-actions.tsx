@@ -49,7 +49,7 @@ export function InvoiceActions({
   baseUrl,
 }: {
   id: string
-  contact: { name: string; phone: string | null; number: string }
+  contact: { name: string; phone: string | null; number: string; company?: string }
   status: InvoiceStatus
   due: number
   /** The full invoice amount, so the balance can be read against it. */
@@ -93,7 +93,7 @@ export function InvoiceActions({
         ? `The amount due is ${currency.format(due)}`
         : `The total is ${currency.format(total)} (paid in full)`
 
-    return `Hello ${contact.name}, thank you for your business! Here is your invoice ${contact.number} from Madhav CNC. ${amount}. You can view it, see how to pay and download a PDF here:\n\n${url}`
+    return `Hello ${contact.name}, thank you for your business! Here is your invoice ${contact.number} from ${contact.company || 'us'}. ${amount}. You can view it, see how to pay and download a PDF here:\n\n${url}`
   }
 
   /** The customer link, made on first use. */
@@ -284,7 +284,7 @@ export function InvoiceActions({
             outline
             href={whatsappLink(
               contact.phone,
-              `Hello ${contact.name}, a gentle reminder from Madhav CNC: invoice ${contact.number} has ${currency.format(due)} outstanding. Kindly arrange the payment. Thank you!`,
+              `Hello ${contact.name}, a gentle reminder from ${contact.company || 'us'}: invoice ${contact.number} has ${currency.format(due)} outstanding. Kindly arrange the payment. Thank you!`,
             )}
             target="_blank"
             rel="noopener noreferrer"

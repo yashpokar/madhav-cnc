@@ -131,6 +131,7 @@ export default async function InvoiceDetailPage({
             name: invoice.customer.name,
             phone: invoice.customer.phone,
             number: invoice.number,
+            company: company.companyName,
           }}
           canUpdate={canUpdate}
           canTakePayment={canTakePayment}

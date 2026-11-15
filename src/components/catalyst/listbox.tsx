@@ -90,7 +90,7 @@ export function Listbox<T>({
           // Popover background
           'bg-white/75 backdrop-blur-xl dark:bg-zinc-800/75',
           // Shadows
-          'shadow-lg ring-1 ring-zinc-950/10 dark:ring-white/10 dark:ring-inset',
+          'shadow-pop ring-1 ring-zinc-950/5 dark:ring-white/10 dark:ring-inset',
           // Transitions
           'transition-opacity duration-100 ease-in data-closed:data-leave:opacity-0 data-transition:pointer-events-none'
         )}
@@ -135,7 +135,7 @@ export function ListboxOption<T>({
               // Typography
               'text-base/6 text-zinc-950 sm:text-sm/6 dark:text-white forced-colors:text-[CanvasText]',
               // Focus
-              'outline-hidden data-focus:bg-blue-500 data-focus:text-white',
+              'outline-hidden data-focus:bg-accent-600 data-focus:text-white',
               // Forced colors mode
               'forced-color-adjust-none forced-colors:data-focus:bg-[Highlight] forced-colors:data-focus:text-[HighlightText]',
               // Disabled

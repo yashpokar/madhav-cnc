@@ -1,23 +1,24 @@
 import type { Metadata, Viewport } from 'next'
-import { IBM_Plex_Sans } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { THEME_SCRIPT } from '@/lib/theme'
+import { AppToaster } from '@/components/toaster'
 
-// Engineered, workshop-like letterforms with tabular figures for money columns.
-const plex = IBM_Plex_Sans({
-  variable: '--font-plex',
+// A neutral, highly legible UI face with tabular figures for money columns.
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
   title: {
-    default: 'Madhav CNC',
-    template: '%s · Madhav CNC',
+    default: 'Prodlys',
+    template: '%s · Prodlys',
   },
-  description: 'Order management for Madhav CNC',
-  applicationName: 'Madhav CNC',
-  appleWebApp: { capable: true, title: 'Madhav CNC', statusBarStyle: 'default' },
+  description: 'Run your whole business in one place: quotes, orders, production and billing.',
+  applicationName: 'Prodlys',
+  appleWebApp: { capable: true, title: 'Prodlys', statusBarStyle: 'default' },
 }
 
 export const viewport: Viewport = {
@@ -25,8 +26,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#0d121b' },
-    { media: '(prefers-color-scheme: dark)', color: '#0d121b' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f7f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0f17' },
   ],
 }
 
@@ -34,14 +35,15 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${plex.variable} font-sans antialiased`}
+      className={`${inter.variable} font-sans antialiased`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="bg-white text-zinc-950 lg:bg-zinc-100 dark:bg-zinc-900 dark:text-white dark:lg:bg-zinc-950">
+      <body className="bg-paper text-zinc-950 dark:bg-zinc-950 dark:text-white">
         {children}
+        <AppToaster />
       </body>
     </html>
   )

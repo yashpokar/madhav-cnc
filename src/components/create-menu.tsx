@@ -79,7 +79,7 @@ export function CreateMenu({ allowed }: { allowed: CreateAction[] }) {
           </div>
         ))}
         <DropdownDivider />
-        <p className="px-3.5 py-1.5 text-xs/5 text-zinc-500 sm:px-3 dark:text-zinc-400">
+        <p className="col-span-full px-3.5 py-1.5 text-xs/5 text-zinc-500 sm:px-3 dark:text-zinc-400">
           Press <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">C</kbd> anywhere, or{' '}
           <kbd className="rounded bg-zinc-100 px-1 font-sans dark:bg-white/10">?</kbd> for all shortcuts
         </p>

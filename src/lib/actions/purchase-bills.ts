@@ -6,6 +6,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -131,10 +132,10 @@ export async function duplicateBill(id: string): Promise<SimpleResult> {
   return { ok: true, message: result.message, id: result.id }
 }
 
-export async function deleteBill(id: string): Promise<SimpleResult> {
+export async function deleteBill(id: string, reason?: string): Promise<SimpleResult> {
   await requireCapability('purchase:delete')
 
-  const result = await bills.deletePurchaseBill(id)
+  const result = await withAuditNote({ reason }, () => bills.deletePurchaseBill(id))
 
   if (!result.ok) return { ok: false, error: result.error }
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { expenseCategorySchema, expenseInputSchema } from '@/lib/validation/accounting'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -111,9 +112,11 @@ export async function updateExpense(
   return { status: 'success', message: result.message, id }
 }
 
-export async function deleteExpense(id: string): Promise<SimpleResult> {
+export async function deleteExpense(id: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('expense:delete')
-  const result = await deleteExpenseService({ userId: user.id, name: user.name }, id)
+  const result = await withAuditNote({ reason }, () =>
+    deleteExpenseService({ userId: user.id, name: user.name }, id),
+  )
 
   if (!result.ok) return { ok: false, error: result.error }
 

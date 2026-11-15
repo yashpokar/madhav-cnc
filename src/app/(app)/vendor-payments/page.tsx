@@ -189,6 +189,7 @@ export default async function VendorPaymentsPage({
                     <RowActions
                       name={payment.number}
                       viewHref={`/vendor-payments/${payment.id}`}
+                      askReason
                       deleteAction={
                         canDelete ? deleteVendorPayment.bind(null, payment.id) : undefined
                       }

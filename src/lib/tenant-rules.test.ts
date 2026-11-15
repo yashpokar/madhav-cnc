@@ -307,6 +307,8 @@ describe('balance adjustments', () => {
     expect(foreignKeys('BalanceAdjustment')).toEqual({
       channelId: 'PaymentChannel',
       customerId: 'Customer',
+      // A reversal points back at the adjustment it reverses (same company).
+      reversesId: 'BalanceAdjustment',
     })
     expect(
       groupRefs(collectRefs('BalanceAdjustment', { channelId: 'ch1', customerId: null })).get(

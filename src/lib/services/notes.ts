@@ -9,6 +9,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { nextNoteNumber } from '@/lib/codes'
 import { documentTotals, lineTotals, splitGst } from '@/lib/pricing'
 import type { NoteData } from '@/lib/validation/accounting'
@@ -79,6 +80,10 @@ export async function createNote(
   actor: NoteActor,
   data: NoteData,
 ): Promise<{ ok: true; id: string; number: string } | Failure> {
+  const locked = await guardMoneyChange([data.noteDate])
+
+  if (!locked.ok) return fail(locked.error, locked.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: locked.fieldErrors })
+
   const { totals, lines } = buildPersistable(data)
   const number = await nextNoteNumber(data.kind)
 
@@ -119,12 +124,16 @@ export async function updateNote(
 ): Promise<{ ok: true; id: string } | Failure> {
   const existing = await prisma.creditDebitNote.findUnique({
     where: { id },
-    select: { status: true },
+    select: { status: true, noteDate: true },
   })
 
   if (!existing) {
     return fail('Note not found', 'NOT_FOUND')
   }
+
+  const locked = await guardMoneyChange([existing.noteDate, data.noteDate])
+
+  if (!locked.ok) return fail(locked.error, locked.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: locked.fieldErrors })
 
   if (existing.status !== 'DRAFT') {
     return fail('An issued note cannot be edited. Cancel it and raise a new one instead.')
@@ -203,7 +212,7 @@ export async function setNoteStatus(
 export async function deleteNote(id: string): Promise<{ ok: true; message: string } | Failure> {
   const note = await prisma.creditDebitNote.findUnique({
     where: { id },
-    select: { number: true, status: true },
+    select: { number: true, status: true, noteDate: true },
   })
 
   if (!note) {
@@ -213,6 +222,10 @@ export async function deleteNote(id: string): Promise<{ ok: true; message: strin
   if (note.status === 'ISSUED') {
     return fail('Cancel the note before deleting it')
   }
+
+  const allowed = await guardMoneyChange([note.noteDate], { destructive: true, what: 'note' })
+
+  if (!allowed.ok) return fail(allowed.error, allowed.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: allowed.fieldErrors })
 
   await prisma.creditDebitNote.delete({ where: { id } })
 

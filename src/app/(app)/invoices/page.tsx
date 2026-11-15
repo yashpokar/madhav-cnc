@@ -193,6 +193,7 @@ export default async function InvoicesPage({
                     name={invoice.number}
                     viewHref={`/invoices/${invoice.id}`}
                     editHref={canEdit && (invoice.status === 'DRAFT') ? `/invoices/${invoice.id}/edit` : undefined}
+                    askReason
                     deleteAction={
                       canDelete
                         ? deleteInvoice.bind(null, invoice.id)

@@ -233,7 +233,8 @@ export function ApplyPanel({
             description="Any amounts already applied to invoices will be released and those invoices will show as unpaid again. This cannot be undone."
             redirectTo="/payments"
             disabled={pending}
-            action={() => deleteReceipt(paymentId)}
+            askReason
+            action={(reason) => deleteReceipt(paymentId, reason)}
           />
         </div>
       ) : null}

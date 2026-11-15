@@ -155,6 +155,16 @@ export default async function AdjustmentsPage({ searchParams }: PageProps<'/adju
                     </TableCell>
                     <TableCell className="max-w-72 whitespace-normal text-zinc-500 dark:text-zinc-400">
                       {row.note}
+                      {row.reverses ? (
+                        <div className="mt-1">
+                          <Badge color="amber">Reversal of {row.reverses.number}</Badge>
+                        </div>
+                      ) : null}
+                      {row.reversedBy ? (
+                        <div className="mt-1">
+                          <Badge color="zinc">Reversed by {row.reversedBy.number}</Badge>
+                        </div>
+                      ) : null}
                       {row.createdBy ? (
                         <div className="text-xs/5">by {row.createdBy.name}</div>
                       ) : null}
@@ -183,6 +193,7 @@ export default async function AdjustmentsPage({ searchParams }: PageProps<'/adju
                             id: (row.channel?.id ?? row.customer?.id) as string,
                             name,
                           }}
+                          reversal={row.reverses ? 'of' : row.reversedBy ? 'by' : null}
                           existing={{
                             id: row.id,
                             amount: row.amount,

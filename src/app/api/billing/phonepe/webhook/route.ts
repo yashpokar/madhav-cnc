@@ -1,3 +1,4 @@
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { handleWebhook } from '@/lib/services/billing'
 
 // PhonePe calls this when an order completes or fails. The raw body is read as
@@ -6,10 +7,13 @@ import { handleWebhook } from '@/lib/services/billing'
 export async function POST(request: Request) {
   const rawBody = await request.text()
 
-  const { status } = await handleWebhook({
-    rawBody,
-    authorization: request.headers.get('authorization'),
-  })
+  // Nobody is signed in: the audit trail records these changes as the payment provider's webhook.
+  const { status } = await withAuditNote({ source: 'webhook', actorName: 'PhonePe webhook' }, () =>
+    handleWebhook({
+      rawBody,
+      authorization: request.headers.get('authorization'),
+    }),
+  )
 
   return new Response(null, { status })
 }

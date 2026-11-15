@@ -82,7 +82,8 @@ export function NoteActions({
             description="This permanently removes the note. This cannot be undone."
             confirmLabel="Delete note"
             redirectTo="/notes"
-            action={() => deleteNote(id)}
+            askReason
+            action={(reason) => deleteNote(id, reason)}
           />
         ) : null}
       </div>

@@ -14,6 +14,9 @@ const select = {
   channel: { select: { id: true, name: true } },
   customer: { select: { id: true, name: true } },
   createdBy: { select: { name: true } },
+  reversesId: true,
+  reverses: { select: { number: true } },
+  reversedBy: { select: { number: true } },
 } as const
 
 export type AdjustmentRow = {
@@ -29,6 +32,11 @@ export type AdjustmentRow = {
   channel: { id: string; name: string } | null
   customer: { id: string; name: string } | null
   createdBy: { name: string } | null
+  /** Set on the counter entry of a reversal, with the number it reverses. */
+  reversesId: string | null
+  reverses: { number: string } | null
+  /** Set on an adjustment that has been reversed, with the reversing entry's number. */
+  reversedBy: { number: string } | null
 }
 
 type Raw = Omit<AdjustmentRow, 'amount'> & { amount: { toNumber: () => number } }

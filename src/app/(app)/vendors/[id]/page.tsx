@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
+import { HistoryDrawer } from '@/components/audit/history-drawer'
 import { Heading } from '@/components/catalyst/heading'
 import { Subheading } from '@/components/catalyst/heading'
 import {
@@ -52,6 +53,7 @@ export default async function VendorPage({
         <div className="flex flex-wrap items-center gap-3">
           <Heading>{vendor.name}</Heading>
           {vendor.isActive ? null : <Badge color="zinc">Inactive</Badge>}
+          <HistoryDrawer model="Vendor" id={vendor.id} plain title={`History of ${vendor.name}`} />
         </div>
         {vendor.description ? <Text>{vendor.description}</Text> : null}
       </div>

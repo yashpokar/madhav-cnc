@@ -11,6 +11,7 @@ import {
   metaResponse,
   permissionsResponse,
 } from '@/lib/api/schemas'
+import * as a from '@/lib/api/schemas/audit'
 import * as c from '@/lib/api/schemas/compare'
 import * as r from '@/lib/api/schemas/reads'
 import * as w from '@/lib/api/schemas/writes'
@@ -234,7 +235,7 @@ type Write = {
   response: z.ZodType
   status?: number
   idempotent?: boolean
-  errors?: ('NOT_FOUND' | 'CONFLICT' | 'PLAN_LIMIT_REACHED')[]
+  errors?: ('NOT_FOUND' | 'CONFLICT' | 'PLAN_LIMIT_REACHED' | 'VALIDATION_FAILED')[]
 }
 
 const writes: Write[] = [
@@ -258,11 +259,11 @@ const writes: Write[] = [
   { method: 'post', path: '/invoices/{id}/share', tag: 'Invoices', summary: 'The customer link of an issued invoice (created on first use) with the WhatsApp message and link; a draft is 409', capability: 'invoice:update', response: w.shareLinkResponse, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
 
   { method: 'post', path: '/payments', tag: 'Payments', summary: 'Record a receipt; allocations and openingApplied say what it settles, with the web form auto-apply rules when neither is sent', capability: 'payment:create', body: w.paymentCreateBody, response: r.paymentDetail, status: 201, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
-  { method: 'delete', path: '/payments/{id}', tag: 'Payments', summary: 'Delete a receipt (its allocations go with it); an order advance is 409', capability: 'payment:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT'] },
+  { method: 'delete', path: '/payments/{id}', tag: 'Payments', summary: 'Delete a receipt (its allocations go with it); an order advance is 409. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the receipt in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date', capability: 'payment:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
 
   { method: 'post', path: '/expenses', tag: 'Expenses', summary: 'Record an expense, optionally with a receipt photo (receiptUploadId from POST /uploads)', capability: 'expense:create', body: w.expenseWriteBody, response: r.expenseDetail, status: 201, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
   { method: 'patch', path: '/expenses/{id}', tag: 'Expenses', summary: 'Replace an expense (send the whole record); receiptUploadId left out keeps the receipt, null removes it', capability: 'expense:update', body: w.expenseWriteBody, response: r.expenseDetail, errors: ['NOT_FOUND', 'CONFLICT'] },
-  { method: 'delete', path: '/expenses/{id}', tag: 'Expenses', summary: 'Delete an expense', capability: 'expense:delete', response: w.deletedResponse, errors: ['NOT_FOUND'] },
+  { method: 'delete', path: '/expenses/{id}', tag: 'Expenses', summary: 'Delete an expense. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the expense in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date', capability: 'expense:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
 
   { method: 'post', path: '/production/tasks/{id}/start', tag: 'Production', summary: 'Start or resume a stage (next in line, unless an administrator sends force)', capability: 'production:update', body: w.startTaskBody, response: r.productionTask, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
   { method: 'post', path: '/production/tasks/{id}/complete', tag: 'Production', summary: 'Finish an in-progress stage; starts the next one unless startNext is false', capability: 'production:update', body: w.completeTaskBody, response: r.productionTask, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
@@ -331,3 +332,42 @@ registerRoute({
   response: w.deletedResponse,
   errors: ['NOT_FOUND'],
 })
+
+// ---------------------------------------------------------------------------
+// Audit trail (administrators for the log; the right to read a record for its history).
+
+registerRoute({
+  method: 'get',
+  path: '/audit',
+  tag: 'Audit',
+  summary: "The company's audit log, newest first (cursor pagination). Filters: entity, entityId, actor, action, source, from, to, q",
+  auth: 'company',
+  capability: 'settings:update',
+  query: a.auditQuery,
+  response: z.array(a.auditEvent),
+})
+
+const historyEntities = [
+  { path: '/customers/{id}/history', tag: 'Customers', noun: 'customer', capability: 'customer:read' },
+  { path: '/quotations/{id}/history', tag: 'Quotations', noun: 'quotation', capability: 'quotation:read' },
+  { path: '/orders/{id}/history', tag: 'Orders', noun: 'order', capability: 'order:read' },
+  { path: '/invoices/{id}/history', tag: 'Invoices', noun: 'invoice', capability: 'invoice:read' },
+  { path: '/payments/{id}/history', tag: 'Payments', noun: 'payment', capability: 'payment:read' },
+  { path: '/expenses/{id}/history', tag: 'Expenses', noun: 'expense', capability: 'expense:read' },
+  { path: '/vendors/{id}/history', tag: 'Vendors', noun: 'vendor', capability: 'expense:read' },
+  { path: '/purchase-bills/{id}/history', tag: 'Purchase bills', noun: 'purchase bill', capability: 'purchase:read' },
+]
+
+for (const entity of historyEntities) {
+  registerRoute({
+    method: 'get',
+    path: entity.path,
+    tag: entity.tag,
+    summary: `Every change to one ${entity.noun} and its line items, newest first, with who, when, from where and before/after values (cursor pagination)`,
+    auth: 'company',
+    capability: entity.capability,
+    query: a.historyQuery,
+    response: z.array(a.auditEvent),
+    errors: ['NOT_FOUND'],
+  })
+}

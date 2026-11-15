@@ -251,6 +251,7 @@ export default async function NotesPage({ searchParams }: PageProps<'/notes'>) {
                     name={note.number}
                     viewHref={`/notes/${note.id}`}
                     editHref={canEdit && (note.status === 'DRAFT') ? `/notes/${note.id}/edit` : undefined}
+                    askReason
                     deleteAction={
                       canDelete && (note.status !== 'ISSUED')
                         ? deleteNote.bind(null, note.id)

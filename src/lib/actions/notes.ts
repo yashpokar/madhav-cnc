@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { noteInputSchema } from '@/lib/validation/accounting'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -109,10 +110,10 @@ export async function setNoteStatus(
   return { ok: true, message: result.message }
 }
 
-export async function deleteNote(id: string): Promise<SimpleResult> {
+export async function deleteNote(id: string, reason?: string): Promise<SimpleResult> {
   await requireCapability('note:delete')
 
-  const result = await notes.deleteNote(id)
+  const result = await withAuditNote({ reason }, () => notes.deleteNote(id))
 
   if (!result.ok) {
     return { ok: false, error: result.error }

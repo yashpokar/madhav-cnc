@@ -88,6 +88,7 @@ const specs: Spec[] = [
   { method: 'get', path: '/adjustments/{id}', tag: 'Adjustments', summary: 'One adjustment; ETag', capability: 'payment:read', response: m.adjustmentItem, errors: nf },
   { method: 'post', path: '/adjustments', tag: 'Adjustments', summary: "Move a payment mode's balance or what a customer owes without a source document (reason and note required)", capability: 'settings:update', body: m.adjustmentWriteBody, response: m.adjustmentItem, status: 201, idempotent: true, errors: ['NOT_FOUND', 'VALIDATION_FAILED'] },
   { method: 'patch', path: '/adjustments/{id}', tag: 'Adjustments', summary: 'Correct the amount, date, reason or note (send the whole body); what was adjusted stays fixed', capability: 'settings:update', body: m.adjustmentWriteBody, response: m.adjustmentItem, errors: ['NOT_FOUND', 'VALIDATION_FAILED'] },
+  { method: 'post', path: '/adjustments/{id}/reverse', tag: 'Adjustments', summary: 'Reverse an adjustment with a linked opposite entry dated today (the original stays); send X-Audit-Reason. 409 when already reversed or itself a reversal', capability: 'settings:update', response: m.adjustmentItem, status: 201, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
   { method: 'delete', path: '/adjustments/{id}', tag: 'Adjustments', summary: 'Delete (reverse) an adjustment: the balance is back as it was', capability: 'settings:update', response: deletedResponse, errors: nf },
 
   // opening balances

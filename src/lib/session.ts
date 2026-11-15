@@ -4,6 +4,7 @@ import { redirect, forbidden } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { getActiveCompanyId } from '@/lib/active-company'
 import { effectiveRole } from '@/lib/company-roles'
+import { rememberWebActor } from '@/lib/audit-trail/context'
 import { can, type Action, type Resource } from '@/lib/permissions'
 import type { UserRole } from '@/generated/prisma/enums'
 
@@ -42,6 +43,9 @@ export const getBaseUser = cache(async (): Promise<CurrentUser | null> => {
     isActive: boolean
   }
 
+  // From here on the audit trail knows who made this request's changes.
+  await rememberWebActor({ id: user.id, name: user.name, role: user.role })
+
   return {
     id: user.id,
     name: user.name,
@@ -74,13 +78,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     select: { role: true },
   })
 
-  return {
-    ...base,
-    role: effectiveRole({
-      globalRole: base.globalRole,
-      membershipRole: membership?.role,
-    }),
-  }
+  const role = effectiveRole({
+    globalRole: base.globalRole,
+    membershipRole: membership?.role,
+  })
+
+  await rememberWebActor({ id: base.id, name: base.name, role })
+
+  return { ...base, role }
 })
 
 export async function requireUser(): Promise<CurrentUser> {

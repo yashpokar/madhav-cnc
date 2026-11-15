@@ -1,12 +1,14 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import type { AdjustmentInput } from '@/lib/validation/adjustments'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import {
   createAdjustment as createAdjustmentService,
   deleteAdjustment as deleteAdjustmentService,
+  reverseAdjustment as reverseAdjustmentService,
   updateAdjustment as updateAdjustmentService,
 } from '@/lib/services/adjustments'
 
@@ -53,13 +55,29 @@ export async function updateAdjustment(
 }
 
 /** Removing an adjustment puts the balance back exactly as it was before it. */
-export async function deleteAdjustment(id: string): Promise<SimpleResult> {
+export async function deleteAdjustment(id: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('settings:update')
-  const result = await deleteAdjustmentService({ userId: user.id, name: user.name }, id)
+  const result = await withAuditNote({ reason }, () =>
+    deleteAdjustmentService({ userId: user.id, name: user.name }, id),
+  )
 
   if (!result.ok) return { ok: false, error: result.error }
 
   refresh()
 
   return { ok: true, message: result.message }
+}
+
+/** Reverses an adjustment with an explicit, linked counter entry; the original stays. */
+export async function reverseAdjustment(id: string, reason?: string): Promise<SimpleResult> {
+  const user = await requireCapability('settings:update')
+  const result = await withAuditNote({ reason }, () =>
+    reverseAdjustmentService({ userId: user.id, name: user.name }, id),
+  )
+
+  if (!result.ok) return { ok: false, error: result.error }
+
+  refresh()
+
+  return { ok: true, message: result.message, id: result.id }
 }

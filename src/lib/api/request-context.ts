@@ -9,7 +9,11 @@ import { AsyncLocalStorage } from 'node:async_hooks'
  * AsyncLocalStorage keeps concurrent requests apart, so two phones working in
  * two different companies at once can not see each other's data.
  */
-export type RequestContext = { companyId?: string }
+export type RequestContext = {
+  companyId?: string
+  /** Who is acting and how, for the audit trail (src/lib/audit-trail/context.ts). */
+  audit?: import('@/lib/audit-trail/context').AuditContext
+}
 
 // Kept on globalThis: the bundler can load this file more than once (a route's
 // own copy beside the one the Prisma client was built with, which survives hot
@@ -19,6 +23,8 @@ const shared = globalThis as { __prodlysRequestContext?: AsyncLocalStorage<Reque
 
 export const requestContext = (shared.__prodlysRequestContext ??= new AsyncLocalStorage<RequestContext>())
 
-export function runInRequestContext<T>(context: RequestContext, fn: () => Promise<T>): Promise<T> {
-  return requestContext.run(context, fn)
+export function runInRequestContext<T>(context: RequestContext, fn: () => PromiseLike<T>): Promise<T> {
+  // Awaited inside the scope: a Prisma call is lazy and runs when awaited, so
+  // returning one unawaited would run it outside the context.
+  return requestContext.run(context, async () => await fn())
 }

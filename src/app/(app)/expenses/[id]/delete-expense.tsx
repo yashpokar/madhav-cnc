@@ -10,7 +10,8 @@ export function DeleteExpense({ id }: { id: string }) {
       title="Delete this expense?"
       description="This permanently removes the expense and changes your expense totals. This cannot be undone."
       redirectTo="/expenses"
-      action={() => deleteExpense(id)}
+      askReason
+      action={(reason) => deleteExpense(id, reason)}
     />
   )
 }

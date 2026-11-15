@@ -1189,6 +1189,610 @@
         }
       }
     },
+    "/adjustments/{id}/reverse": {
+      "post": {
+        "tags": [
+          "Adjustments"
+        ],
+        "summary": "Reverse an adjustment with a linked opposite entry dated today (the original stays); send X-Audit-Reason. 409 when already reversed or itself a reversal",
+        "description": "Requires the `settings:update` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "cuid"
+                        },
+                        "number": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "CHANNEL",
+                            "CUSTOMER"
+                          ]
+                        },
+                        "amount": {
+                          "type": "string",
+                          "description": "Signed: negative takes money out (mode) or lowers what the customer owes"
+                        },
+                        "adjustedOn": {
+                          "type": "string",
+                          "description": "ISO date, e.g. \"2026-11-15\""
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "FORGOTTEN_ENTRY",
+                            "BANK_CHARGES",
+                            "INTEREST",
+                            "CASH_SHORT_EXCESS",
+                            "WRITE_OFF",
+                            "CORRECTION",
+                            "OTHER"
+                          ]
+                        },
+                        "note": {
+                          "type": "string"
+                        },
+                        "channel": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "cuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "customer": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "cuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "number",
+                        "kind",
+                        "amount",
+                        "adjustedOn",
+                        "reason",
+                        "note",
+                        "channel",
+                        "customer",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "The company's audit log, newest first (cursor pagination). Filters: entity, entityId, actor, action, source, from, to, q",
+        "description": "Requires the `settings:update` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          {
+            "name": "entity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Record type, e.g. \"Invoice\" or \"PurchaseBill\"",
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "entityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "One record",
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "User id of the person",
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "create",
+                "update",
+                "delete",
+                "status",
+                "restore",
+                "baseline"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Where the change came from",
+              "type": "string",
+              "enum": [
+                "web",
+                "api",
+                "mobile",
+                "system",
+                "webhook",
+                "seed",
+                "public"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "A record number or id, a person, or words from the summary",
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/billing": {
       "get": {
         "tags": [
@@ -3952,6 +4556,298 @@
                         "account"
                       ],
                       "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}/history": {
+      "get": {
+        "tags": [
+          "Customers"
+        ],
+        "summary": "Every change to one customer and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `customer:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "meta": {
                       "type": "object",
@@ -8847,7 +9743,7 @@
         "tags": [
           "Expenses"
         ],
-        "summary": "Delete an expense",
+        "summary": "Delete an expense. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the expense in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date",
         "description": "Requires the `expense:delete` capability.",
         "security": [
           {
@@ -8930,6 +9826,26 @@
           },
           "404": {
             "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
             "content": {
               "application/json": {
                 "schema": {
@@ -9626,6 +10542,298 @@
           },
           "409": {
             "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/expenses/{id}/history": {
+      "get": {
+        "tags": [
+          "Expenses"
+        ],
+        "summary": "Every change to one expense and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `expense:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
             "content": {
               "application/json": {
                 "schema": {
@@ -16194,6 +17402,298 @@
           },
           "404": {
             "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}/history": {
+      "get": {
+        "tags": [
+          "Invoices"
+        ],
+        "summary": "Every change to one invoice and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `invoice:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
             "content": {
               "application/json": {
                 "schema": {
@@ -27652,6 +29152,298 @@
         }
       }
     },
+    "/orders/{id}/history": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Every change to one order and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `order:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/orders/{id}/status": {
       "post": {
         "tags": [
@@ -31126,7 +32918,7 @@
         "tags": [
           "Payments"
         ],
-        "summary": "Delete a receipt (its allocations go with it); an order advance is 409",
+        "summary": "Delete a receipt (its allocations go with it); an order advance is 409. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the receipt in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date",
         "description": "Requires the `payment:delete` capability.",
         "security": [
           {
@@ -31219,6 +33011,16 @@
           },
           "409": {
             "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
             "content": {
               "application/json": {
                 "schema": {
@@ -31819,6 +33621,298 @@
           },
           "409": {
             "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/{id}/history": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Every change to one payment and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `payment:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
             "content": {
               "application/json": {
                 "schema": {
@@ -36848,6 +38942,298 @@
           },
           "404": {
             "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchase-bills/{id}/history": {
+      "get": {
+        "tags": [
+          "Purchase bills"
+        ],
+        "summary": "Every change to one purchase bill and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `purchase:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
             "content": {
               "application/json": {
                 "schema": {
@@ -43672,6 +46058,298 @@
           },
           "409": {
             "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quotations/{id}/history": {
+      "get": {
+        "tags": [
+          "Quotations"
+        ],
+        "summary": "Every change to one quotation and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `quotation:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
             "content": {
               "application/json": {
                 "schema": {
@@ -54458,6 +57136,298 @@
           },
           "409": {
             "description": "CONFLICT: The request conflicts with the current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_FAILED: The request is invalid; see error.fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vendors/{id}/history": {
+      "get": {
+        "tags": [
+          "Vendors"
+        ],
+        "summary": "Every change to one vendor and its line items, newest first, with who, when, from where and before/after values (cursor pagination)",
+        "description": "Requires the `expense:read` capability.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "cuid"
+                          },
+                          "seq": {
+                            "type": "string",
+                            "description": "Position in the company chain; strictly increasing"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "description": "ISO 8601 timestamp, e.g. \"2026-11-15T09:30:00.000Z\""
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name at the time (kept even if the person is later renamed or removed)"
+                              },
+                              "role": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "web",
+                              "api",
+                              "mobile",
+                              "system",
+                              "webhook",
+                              "seed",
+                              "public"
+                            ],
+                            "description": "web | api | mobile | system | webhook | seed | public"
+                          },
+                          "requestId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityLabel": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": "string"
+                          },
+                          "parentType": {
+                            "nullable": true,
+                            "description": "For a line item: the document it belongs to",
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "create",
+                              "update",
+                              "delete",
+                              "status",
+                              "restore",
+                              "baseline"
+                            ]
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "description": "Why, when the person gave a reason (always set on deleting money records)",
+                            "type": "string"
+                          },
+                          "correlationId": {
+                            "type": "string",
+                            "description": "Events changed together share this"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "field": {
+                                  "type": "string",
+                                  "description": "The column, e.g. \"total_amount\""
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "A readable name, e.g. \"Total amount\""
+                                },
+                                "before": {
+                                  "nullable": true,
+                                  "description": "Absent on a create"
+                                },
+                                "after": {
+                                  "nullable": true,
+                                  "description": "Absent on a delete"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "label",
+                                "before",
+                                "after"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "seq",
+                          "occurredAt",
+                          "actor",
+                          "source",
+                          "requestId",
+                          "entityType",
+                          "entityLabel",
+                          "entityId",
+                          "parentType",
+                          "parentId",
+                          "action",
+                          "summary",
+                          "reason",
+                          "correlationId",
+                          "changes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it; FORBIDDEN: The role in this company does not allow it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND: No such record in this company",
             "content": {
               "application/json": {
                 "schema": {

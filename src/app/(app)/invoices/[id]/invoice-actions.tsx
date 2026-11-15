@@ -543,7 +543,8 @@ export function RemovePaymentButton({
       title="Unapply this payment?"
       description="The amount goes back to the customer's unapplied balance and this invoice's due amount increases."
       confirmLabel="Unapply"
-      action={() => removeAllocation(allocationId)}
+      askReason
+      action={(reason) => removeAllocation(allocationId, reason)}
     >
       <TrashIcon className="size-4" aria-hidden="true" />
       <span className="sr-only">Unapply payment</span>
@@ -569,7 +570,8 @@ export function RemoveWriteOffButton({
       title="Reverse this write-off?"
       description="The amount will count as outstanding on this invoice and the customer's balance again."
       confirmLabel="Reverse"
-      action={() => removeWriteOff(writeOffId)}
+      askReason
+      action={(reason) => removeWriteOff(writeOffId, reason)}
     >
       <TrashIcon className="size-4" aria-hidden="true" />
       <span className="sr-only">Reverse write-off</span>

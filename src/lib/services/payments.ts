@@ -13,6 +13,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { nextPaymentNumber } from '@/lib/codes'
 import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
 import { parsePaymentDetails } from '@/lib/payment-methods'
@@ -112,6 +113,10 @@ export async function createReceipt(
   })
 
   if (!customer) return { ok: false, error: 'Customer not found' }
+
+  const locked = await guardMoneyChange([input.paidOn])
+
+  if (!locked.ok) return locked
 
   const checked = await validateAllocations(input.customerId, input.amount, input.allocations)
 
@@ -216,10 +221,14 @@ export async function updateReceiptAllocations(
 ): Promise<ServiceResult<{ customerId: string; invoiceIds: string[] }>> {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    select: { id: true, number: true, customerId: true, amount: true, orderId: true },
+    select: { id: true, number: true, customerId: true, amount: true, orderId: true, paidOn: true },
   })
 
   if (!payment) return { ok: false, error: 'Receipt not found' }
+
+  const locked = await guardMoneyChange([payment.paidOn])
+
+  if (!locked.ok) return locked
 
   if (payment.orderId) {
     return {
@@ -294,10 +303,14 @@ export async function deleteReceipt(
 ): Promise<ServiceResult> {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    select: { number: true, orderId: true },
+    select: { number: true, orderId: true, paidOn: true },
   })
 
   if (!payment) return { ok: false, error: 'Receipt not found' }
+
+  const allowed = await guardMoneyChange([payment.paidOn], { destructive: true, what: 'receipt' })
+
+  if (!allowed.ok) return allowed
 
   if (payment.orderId) {
     return {

@@ -26,6 +26,7 @@ import { requireCompanyId } from '@/lib/active-company'
 import { nextInvoiceNumber, nextPaymentNumber } from '@/lib/codes'
 import { resolvePaymentMode } from '@/lib/payment-modes'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { assertCanIssueInvoice } from '@/lib/billing/guard'
 import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
@@ -134,6 +135,10 @@ export async function createInvoice(
 
   if (!customer) return notFound('Customer not found')
 
+  const locked = await guardMoneyChange([data.invoiceDate])
+
+  if (!locked.ok) return conflict(locked.error)
+
   // An invoice created directly as ISSUED takes a slot of the plan's quota.
   if (data.status === 'ISSUED') await assertCanIssueInvoice(await requireCompanyId())
 
@@ -163,7 +168,7 @@ export async function updateInvoice(
 ): Promise<ServiceResult<{ id: string }>> {
   const existing = await prisma.invoice.findUnique({
     where: { id },
-    select: { status: true },
+    select: { status: true, invoiceDate: true },
   })
 
   if (!existing) return notFound('Invoice not found')
@@ -171,6 +176,10 @@ export async function updateInvoice(
   const blocked = editBlock(existing.status)
 
   if (blocked) return conflict(blocked)
+
+  const locked = await guardMoneyChange([existing.invoiceDate, data.invoiceDate])
+
+  if (!locked.ok) return conflict(locked.error)
 
   const { totals, lines } = buildPersistable(data)
 
@@ -224,11 +233,16 @@ export async function changeInvoiceStatus(
       status: true,
       number: true,
       issuedAt: true,
+      invoiceDate: true,
       _count: { select: { paymentAllocations: true } },
     },
   })
 
   if (!existing) return notFound('Invoice not found')
+
+  const locked = await guardMoneyChange([existing.invoiceDate])
+
+  if (!locked.ok) return conflict(locked.error)
 
   const blocked = statusChangeBlock(
     existing.status,
@@ -290,6 +304,9 @@ export async function recordInvoicePayment(
   if (!parsed.success) return invalid(parsed.error.issues[0].message)
 
   const data = parsed.data
+  const locked = await guardMoneyChange([data.paidOn])
+
+  if (!locked.ok) return conflict(locked.error)
 
   const outcome = await prisma.$transaction(async (tx) => {
     await lockInvoice(tx, invoiceId)
@@ -384,12 +401,16 @@ export async function removePaymentAllocation(
       invoiceId: true,
       amount: true,
       payment: {
-        select: { id: true, number: true, _count: { select: { allocations: true } } },
+        select: { id: true, number: true, paidOn: true, _count: { select: { allocations: true } } },
       },
     },
   })
 
   if (!allocation) return notFound('Payment not found')
+
+  const allowed = await guardMoneyChange([allocation.payment.paidOn], { destructive: true, what: 'payment' })
+
+  if (!allowed.ok) return conflict(allowed.error)
 
   const lastOne = allocation.payment._count.allocations === 1
 
@@ -436,6 +457,9 @@ export async function writeOffInvoice(
   if (!parsed.success) return invalid(parsed.error.issues[0].message)
 
   const data = parsed.data
+  const locked = await guardMoneyChange([data.writtenOffOn])
+
+  if (!locked.ok) return conflict(locked.error)
 
   const outcome = await prisma.$transaction(async (tx) => {
     await lockInvoice(tx, invoiceId)
@@ -503,10 +527,14 @@ export async function removeWriteOff(
 ): Promise<ServiceResult<{ invoiceId: string }>> {
   const row = await prisma.invoiceWriteOff.findUnique({
     where: { id: writeOffId },
-    select: { invoiceId: true, amount: true },
+    select: { invoiceId: true, amount: true, writtenOffOn: true },
   })
 
   if (!row) return notFound('Write-off not found')
+
+  const allowed = await guardMoneyChange([row.writtenOffOn], { destructive: true, what: 'write-off' })
+
+  if (!allowed.ok) return conflict(allowed.error)
 
   await prisma.invoiceWriteOff.delete({ where: { id: writeOffId } })
 
@@ -620,6 +648,7 @@ export async function deleteInvoice(actor: Actor, id: string): Promise<ServiceRe
       number: true,
       orderId: true,
       status: true,
+      invoiceDate: true,
       _count: { select: { paymentAllocations: true, creditDebitNotes: true } },
     },
   })
@@ -629,6 +658,10 @@ export async function deleteInvoice(actor: Actor, id: string): Promise<ServiceRe
   const blocked = deleteBlock(invoice._count)
 
   if (blocked) return conflict(blocked)
+
+  const allowed = await guardMoneyChange([invoice.invoiceDate], { destructive: true, what: 'invoice' })
+
+  if (!allowed.ok) return conflict(allowed.error)
 
   await prisma.invoice.delete({ where: { id } })
 

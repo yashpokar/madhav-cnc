@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/catalyst/dialog'
+import { ReasonField, reasonOk } from '@/components/audit/reason-field'
 import { FormBanner } from '@/components/form-banner'
 
 /** Red trigger styling; `!` beats the zinc text set by Catalyst's outline/plain. */
@@ -29,6 +30,7 @@ export function ConfirmButton({
   description,
   confirmLabel,
   action,
+  askReason = false,
   redirectTo,
   tone = 'danger',
   outline = true,
@@ -40,7 +42,10 @@ export function ConfirmButton({
   title: string
   description: React.ReactNode
   confirmLabel?: string
-  action: () => Promise<Result>
+  /** Receives the reason when `askReason` is set. */
+  action: (reason?: string) => Promise<Result>
+  /** Ask why first (deleting money and document records): kept in the audit trail. */
+  askReason?: boolean
   /** Where to go after success; omit to refresh the current page. */
   redirectTo?: string
   tone?: 'danger' | 'neutral'
@@ -54,17 +59,19 @@ export function ConfirmButton({
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
 
   function close() {
     if (!pending) {
       setOpen(false)
       setError(null)
+      setReason('')
     }
   }
 
   function confirm() {
     startTransition(async () => {
-      const result = await action()
+      const result = await action(askReason ? reason.trim() : undefined)
 
       if (!result.ok) {
         setError(result.error)
@@ -104,6 +111,7 @@ export function ConfirmButton({
         ) : (
           <DialogDescription>{description}</DialogDescription>
         )}
+        {askReason && !blocked ? <ReasonField value={reason} onChange={setReason} disabled={pending} /> : null}
         {error ? (
           <DialogBody>
             <div role="alert">
@@ -120,8 +128,8 @@ export function ConfirmButton({
               type="button"
               color={tone === 'danger' ? 'red' : 'dark/zinc'}
               onClick={confirm}
-              disabled={pending}
-              autoFocus
+              disabled={pending || (askReason && !reasonOk(reason))}
+              autoFocus={!askReason}
             >
               {pending ? 'Working…' : (confirmLabel ?? label)}
             </Button>

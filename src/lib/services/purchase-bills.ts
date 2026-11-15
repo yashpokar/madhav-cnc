@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/prisma'
 import { nextPurchaseBillNumber } from '@/lib/codes'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import type { BillData } from '@/lib/validation/purchases'
 import { buildBill, canMoveBill } from '@/lib/purchase-rules'
 import { onBillCancelled, onBillPosted, PurchaseHookError, type HookBill } from '@/lib/purchase-hooks'
@@ -71,6 +72,10 @@ export async function createPurchaseBill(
   actor: Actor,
   data: BillData,
 ): Promise<{ ok: true; id: string } | Failure> {
+  const locked = await guardMoneyChange([data.billDate])
+
+  if (!locked.ok) return fail(locked.error, locked.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: locked.fieldErrors })
+
   const problem = await checkReferences(data)
 
   if (problem) return problem
@@ -112,11 +117,15 @@ export async function updatePurchaseBill(
   id: string,
   data: BillData,
 ): Promise<{ ok: true; id: string } | Failure> {
-  const existing = await prisma.purchaseBill.findUnique({ where: { id }, select: { status: true } })
+  const existing = await prisma.purchaseBill.findUnique({ where: { id }, select: { status: true, billDate: true } })
 
   if (!existing) return fail('Bill not found', 'NOT_FOUND')
 
   if (existing.status !== 'DRAFT') return fail(LOCKED)
+
+  const locked = await guardMoneyChange([existing.billDate, data.billDate])
+
+  if (!locked.ok) return fail(locked.error, locked.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: locked.fieldErrors })
 
   const problem = await checkReferences(data)
 
@@ -387,6 +396,7 @@ export async function deletePurchaseBill(id: string): Promise<{ ok: true; messag
     select: {
       number: true,
       status: true,
+      billDate: true,
       _count: { select: { allocations: true, receipts: true } },
     },
   })
@@ -398,6 +408,10 @@ export async function deletePurchaseBill(id: string): Promise<{ ok: true; messag
   if (bill._count.allocations > 0) return fail('Payments are applied to this bill. Remove them first.')
 
   if (bill._count.receipts > 0) return fail('Goods have been received against this bill.')
+
+  const allowed = await guardMoneyChange([bill.billDate], { destructive: true, what: 'bill' })
+
+  if (!allowed.ok) return fail(allowed.error, allowed.fieldErrors ? 'VALIDATION_FAILED' : 'CONFLICT', { fieldErrors: allowed.fieldErrors })
 
   await prisma.purchaseBill.delete({ where: { id } })
 

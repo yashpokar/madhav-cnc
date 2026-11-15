@@ -397,6 +397,7 @@ export default async function CustomerStatementPage({
                       <RowActions
                         name={receipt.number}
                         viewHref={`/payments/${receipt.id}`}
+                        askReason
                         deleteAction={
                           can(user.role, 'payment:delete') && !receipt.orderId
                             ? deleteReceipt.bind(null, receipt.id)

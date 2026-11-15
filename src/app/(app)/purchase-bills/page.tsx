@@ -223,6 +223,7 @@ export default async function PurchaseBillsPage({
                           ? `/purchase-bills/${bill.id}/edit`
                           : undefined
                       }
+                      askReason
                       deleteAction={
                         canDelete && bill.status !== 'POSTED'
                           ? deleteBill.bind(null, bill.id)

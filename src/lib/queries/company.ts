@@ -1,5 +1,7 @@
+import { cache } from 'react'
 import { prisma } from '@/lib/prisma'
-import { requireCompanyId } from '@/lib/active-company'
+import { getActiveCompanyId, requireCompanyId } from '@/lib/active-company'
+import { getIndustry, type IndustryTemplate } from '@/lib/industry'
 
 export async function getCompanySetting() {
   const existing = await prisma.companySetting.findUnique({
@@ -27,3 +29,17 @@ export async function getDefaultAdvancePercent() {
 }
 
 export type CompanySetting = Awaited<ReturnType<typeof getCompanySetting>>
+
+/** The active company's industry template; companies without one behave as manufacturing. */
+export const getActiveIndustry = cache(async (): Promise<IndustryTemplate> => {
+  const companyId = await getActiveCompanyId()
+
+  if (!companyId) return getIndustry(null)
+
+  const row = await prisma.companySetting.findUnique({
+    where: { id: companyId },
+    select: { industry: true },
+  })
+
+  return getIndustry(row?.industry)
+})

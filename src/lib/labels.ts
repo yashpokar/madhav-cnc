@@ -46,6 +46,13 @@ export const UNIT_LABELS: Record<UnitOfMeasure, string> = {
   KG: 'Kilograms (kg)',
   LTR: 'Litres',
   HOUR: 'Hours',
+  PLATE: 'Plates',
+  GUEST: 'Guests',
+  NIGHT: 'Nights',
+  SESSION: 'Sessions',
+  DAY: 'Days',
+  EVENT: 'Events',
+  PACKAGE: 'Packages',
 }
 
 export const UNIT_SHORT: Record<UnitOfMeasure, string> = {
@@ -59,6 +66,13 @@ export const UNIT_SHORT: Record<UnitOfMeasure, string> = {
   KG: 'kg',
   LTR: 'ltr',
   HOUR: 'hr',
+  PLATE: 'plate',
+  GUEST: 'guest',
+  NIGHT: 'night',
+  SESSION: 'session',
+  DAY: 'day',
+  EVENT: 'event',
+  PACKAGE: 'pkg',
 }
 
 export const DIMENSION_UNIT_LABELS: Record<DimensionUnit, string> = {

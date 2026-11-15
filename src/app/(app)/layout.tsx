@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
 import { getActiveCompanyId, listAccessibleCompanies } from '@/lib/active-company'
-import { ADMIN_ENTRIES, NAV_ENTRIES } from '@/lib/navigation'
+import { ADMIN_ENTRIES, NAV_ENTRIES, applyIndustry } from '@/lib/navigation'
+import { getActiveIndustry } from '@/lib/queries/company'
 import { can } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/session'
@@ -13,7 +14,11 @@ export default async function AppLayout({
 }) {
   const user = await requireUser()
 
-  const nav = NAV_ENTRIES.filter((entry) => can(user.role, entry.capability))
+  const industry = await getActiveIndustry()
+  const nav = applyIndustry(
+    NAV_ENTRIES.filter((entry) => can(user.role, entry.capability)),
+    industry,
+  )
   const adminNav = ADMIN_ENTRIES.filter((entry) =>
     can(user.role, entry.capability) && (!entry.superAdminOnly || user.isSuperAdmin),
   )

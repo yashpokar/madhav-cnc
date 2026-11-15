@@ -131,6 +131,7 @@ export async function getBill(id: string) {
     })),
     payments: bill.allocations.map((row) => ({
       id: row.id,
+      paymentId: row.vendorPaymentId,
       number: row.vendorPayment.number,
       paidOn: row.vendorPayment.paidOn,
       modeName: row.vendorPayment.modeName ?? row.vendorPayment.mode,

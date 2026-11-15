@@ -73,11 +73,16 @@ export default async function VendorPage({
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Subheading level={2}>Purchases</Subheading>
-            {can(user.role, 'purchase:create') ? (
-              <Button outline href={`/purchase-bills/new?vendor=${vendor.id}`}>
-                New bill
+            <div className="flex flex-wrap gap-2">
+              <Button outline href={`/vendors/${vendor.id}/statement`}>
+                Statement
               </Button>
-            ) : null}
+              {can(user.role, 'purchase:create') ? (
+                <Button outline href={`/purchase-bills/new?vendor=${vendor.id}`}>
+                  New bill
+                </Button>
+              ) : null}
+            </div>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-4">
             <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">

@@ -7,6 +7,7 @@ import { listQuotations } from '@/lib/queries/quotations'
 import { listOrders } from '@/lib/queries/orders'
 import { listInvoices } from '@/lib/queries/invoices'
 import { listBills, listPurchaseOrders } from '@/lib/queries/purchases'
+import { listVendorPayments } from '@/lib/queries/vendor-payments'
 import { listExpenses } from '@/lib/queries/accounting'
 import { listPaymentsForExport } from '@/lib/queries/reports'
 import {
@@ -27,6 +28,7 @@ const RESOURCE: Record<string, Resource> = {
   expenses: 'expense',
   'purchase-bills': 'purchase',
   'purchase-orders': 'purchase',
+  'vendor-payments': 'purchase',
 }
 
 function pick<T extends string>(
@@ -146,6 +148,17 @@ async function build(
         headers: ['Number', 'Status', 'Vendor', 'Order date', 'Expected', 'Lines', 'Total (INR)'],
         rows: rows.map((o) => [
           o.number, o.status, o.vendor.name, o.orderDate, o.expectedDate, o.lineCount, o.total,
+        ]),
+      }
+    }
+    case 'vendor-payments': {
+      const rows = await listVendorPayments({ search })
+
+      return {
+        headers: ['Number', 'Date', 'Vendor', 'Mode', 'Reference', 'Applied to', 'Amount (INR)', 'Applied to bills (INR)', 'Applied to opening (INR)', 'Advance (INR)'],
+        rows: rows.map((p) => [
+          p.number, p.paidOn, p.vendor.name, p.modeName ?? p.mode, p.reference,
+          p.billNumbers.join(', '), p.amount, p.allocated, p.openingApplied, p.advance,
         ]),
       }
     }

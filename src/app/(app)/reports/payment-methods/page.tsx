@@ -37,7 +37,7 @@ export default async function PaymentMethodsPage({
   const to = range.to ?? iso(now)
 
   const [{ groups, totals }, balances] = await Promise.all([
-    paymentsByMethod({ from, to }, canExpenses),
+    paymentsByMethod({ from, to }, canExpenses, canExpenses && can(user.role, 'purchase:read')),
     canExpenses ? getChannelBalances() : Promise.resolve([]),
   ])
   const withOpening = balances.filter((b) => b.closing !== null)
@@ -194,7 +194,7 @@ export default async function PaymentMethodsPage({
                   {g.entries.map((e) => (
                     <li key={`${e.kind}-${e.id}`}>
                       <Link
-                        href={e.kind === 'in' ? `/payments/${e.id}` : `/expenses/${e.id}`}
+                        href={e.href ?? (e.kind === 'in' ? `/payments/${e.id}` : `/expenses/${e.id}`)}
                         className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-4 py-2.5 text-sm/6 hover:bg-zinc-950/2.5 dark:hover:bg-white/5"
                       >
                         <span className="min-w-0">

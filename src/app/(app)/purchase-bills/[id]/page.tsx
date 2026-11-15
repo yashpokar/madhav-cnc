@@ -101,6 +101,8 @@ export default async function BillDetailPage({
         id={bill.id}
         status={bill.status}
         hasPayments={bill.payments.length > 0}
+        vendorId={bill.vendorId}
+        balance={bill.due}
         canUpdate={canUpdate}
         canCreate={canCreate}
       />
@@ -268,7 +270,7 @@ export default async function BillDetailPage({
                 </TableHead>
                 <TableBody>
                   {bill.payments.map((payment) => (
-                    <TableRow key={payment.id}>
+                    <TableRow key={payment.id} href={`/vendor-payments/${payment.paymentId}`}>
                       <TableCell className="font-mono text-xs">{payment.number}</TableCell>
                       <TableCell className="text-zinc-500 dark:text-zinc-400">
                         {dateFormat.format(payment.paidOn)}

@@ -16,12 +16,17 @@ export function BillActions({
   id,
   status,
   hasPayments,
+  vendorId,
+  balance,
   canUpdate,
   canCreate,
 }: {
   id: string
   status: PurchaseBillStatus
   hasPayments: boolean
+  vendorId: string
+  /** What is still owed on this bill. */
+  balance: number
   canUpdate: boolean
   canCreate: boolean
 }) {
@@ -106,11 +111,13 @@ export function BillActions({
           </Button>
         ) : null}
 
-        {/* Vendor payments arrive in a later release. Recording a payment against this
-            bill (and the allocation behind "Payments applied") will be added here. */}
-        {status === 'POSTED' ? (
-          <Button type="button" outline disabled title="Recording vendor payments is coming soon">
-            Record payment (coming soon)
+        {canUpdate && status === 'POSTED' && balance > 0 ? (
+          <Button
+            type="button"
+            outline
+            href={`/vendor-payments/new?vendor=${vendorId}&bill=${id}&amount=${balance}`}
+          >
+            Record payment
           </Button>
         ) : null}
       </div>

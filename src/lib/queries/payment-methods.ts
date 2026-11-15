@@ -8,6 +8,8 @@ export type MethodEntry = {
   number: string
   party: string
   amount: number
+  /** Where the entry opens, when it is not a receipt or an expense. */
+  href?: string
 }
 
 export type MethodGroup = {
@@ -37,10 +39,11 @@ function bounds(from: string, to: string) {
 export async function paymentsByMethod(
   range: { from: string; to: string },
   includeExpenses: boolean,
+  includeVendorPayments = false,
 ) {
   const dates = bounds(range.from, range.to)
 
-  const [payments, expenses] = await Promise.all([
+  const [payments, expenses, vendorPayments] = await Promise.all([
     prisma.payment.findMany({
       where: { paidOn: dates },
       select: {
@@ -67,6 +70,21 @@ export async function paymentsByMethod(
             payeeName: true,
           },
           orderBy: [{ expenseDate: 'desc' }, { number: 'desc' }],
+        })
+      : Promise.resolve([]),
+    includeVendorPayments
+      ? prisma.vendorPayment.findMany({
+          where: { paidOn: dates },
+          select: {
+            id: true,
+            number: true,
+            paidOn: true,
+            amount: true,
+            mode: true,
+            modeName: true,
+            vendor: { select: { name: true } },
+          },
+          orderBy: [{ paidOn: 'desc' }, { number: 'desc' }],
         })
       : Promise.resolve([]),
   ])
@@ -99,6 +117,24 @@ export async function paymentsByMethod(
     g.spent = round2(g.spent + amount)
     g.spentCount += 1
     g.entries.push({ id: e.id, kind: 'out', date: e.expenseDate, number: e.number, party: e.payeeName, amount })
+  }
+
+  // Money paid to vendors leaves through the same modes as expenses.
+  for (const v of vendorPayments) {
+    const g = group(modeText(v) || 'Unspecified')
+    const amount = v.amount.toNumber()
+
+    g.spent = round2(g.spent + amount)
+    g.spentCount += 1
+    g.entries.push({
+      id: v.id,
+      kind: 'out',
+      date: v.paidOn,
+      number: v.number,
+      party: `${v.vendor.name} (vendor payment)`,
+      amount,
+      href: `/vendor-payments/${v.id}`,
+    })
   }
 
   const list = [...groups.values()].map((g) => ({

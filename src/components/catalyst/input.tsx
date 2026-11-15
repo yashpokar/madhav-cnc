@@ -2,6 +2,8 @@ import * as Headless from '@headlessui/react'
 import clsx from 'clsx'
 import React, { forwardRef } from 'react'
 import { DatePicker } from './date-picker'
+import { MonthPicker } from './month-picker'
+import { TimePicker } from './time-picker'
 import { NumericField } from '../numeric-input'
 
 export function InputGroup({ children, className }: React.ComponentPropsWithoutRef<'span'>) {
@@ -54,6 +56,28 @@ export const Input = forwardRef(function Input(
         invalid={props.invalid}
         min={props.min as string | undefined}
         max={props.max as string | undefined}
+        placeholder={props.placeholder}
+        aria-label={props['aria-label']}
+      />
+    )
+  }
+
+  if (props.type === 'time' || props.type === 'month') {
+    const Picker = props.type === 'time' ? TimePicker : MonthPicker
+
+    return (
+      <Picker
+        className={className}
+        name={props.name}
+        value={props.value as string | undefined}
+        defaultValue={props.defaultValue as string | undefined}
+        onChange={props.onChange as never}
+        required={props.required}
+        disabled={props.disabled}
+        invalid={props.invalid}
+        {...(props.type === 'month'
+          ? { min: props.min as string | undefined, max: props.max as string | undefined }
+          : {})}
         placeholder={props.placeholder}
         aria-label={props['aria-label']}
       />

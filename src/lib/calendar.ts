@@ -118,18 +118,24 @@ export type CalendarSource = {
   startsAt: Date | null
   endsAt: Date | null
   dueDate: Date | null
+  /** Last resort for an order with neither a start time nor a due date. */
+  orderDate?: Date | null
 }
+
+/** Which date placed an entry: its start time, its due date or its order date. */
+export type DateBasis = 'start' | 'due' | 'order'
 
 export type Span = {
   /** First and last India day the entry touches. */
   startKey: string
   endKey: string
   allDay: boolean
+  basis: DateBasis
   /** Sort position within a day: all-day first, then by start time. */
   sortMs: number
 }
 
-/** Where an entry sits on the calendar, or null when it has no date at all. */
+/** Where an entry sits on the calendar: start time, else due date, else order date. */
 export function spanOf(source: CalendarSource): Span | null {
   if (source.startsAt) {
     const startKey = istDayKey(source.startsAt)
@@ -142,6 +148,7 @@ export function spanOf(source: CalendarSource): Span | null {
       startKey,
       endKey,
       allDay: istTime(source.startsAt) === '00:00',
+      basis: 'start',
       sortMs: source.startsAt.getTime(),
     }
   }
@@ -149,7 +156,25 @@ export function spanOf(source: CalendarSource): Span | null {
   if (source.dueDate) {
     const key = dateOnlyKey(source.dueDate)
 
-    return { startKey: key, endKey: key, allDay: true, sortMs: istInstant(key).getTime() }
+    return {
+      startKey: key,
+      endKey: key,
+      allDay: true,
+      basis: 'due',
+      sortMs: istInstant(key).getTime(),
+    }
+  }
+
+  if (source.orderDate) {
+    const key = dateOnlyKey(source.orderDate)
+
+    return {
+      startKey: key,
+      endKey: key,
+      allDay: true,
+      basis: 'order',
+      sortMs: istInstant(key).getTime(),
+    }
   }
 
   return null
@@ -164,6 +189,8 @@ const MAX_SPAN_DAYS = 31
  */
 export function bucketByDay<T extends CalendarSource>(
   entries: readonly T[],
+  /** Lower ranks come first within a day (bookings before deliveries, and so on). */
+  rank: (entry: T) => number = () => 0,
 ): Map<string, T[]> {
   const buckets = new Map<string, { entry: T; span: Span }[]>()
 
@@ -188,7 +215,9 @@ export function bucketByDay<T extends CalendarSource>(
   for (const [key, list] of buckets) {
     list.sort(
       (a, b) =>
-        Number(b.span.allDay) - Number(a.span.allDay) || a.span.sortMs - b.span.sortMs,
+        rank(a.entry) - rank(b.entry) ||
+        Number(b.span.allDay) - Number(a.span.allDay) ||
+        a.span.sortMs - b.span.sortMs,
     )
     result.set(
       key,
@@ -197,6 +226,40 @@ export function bucketByDay<T extends CalendarSource>(
   }
 
   return result
+}
+
+/* ---- Layers ------------------------------------------------------------- */
+
+export const LAYER_KEYS = ['orders', 'deliveries', 'invoices', 'payments'] as const
+export type LayerKey = (typeof LAYER_KEYS)[number]
+
+/** Order of importance inside a day cell. */
+export const LAYER_RANK: Record<LayerKey, number> = {
+  orders: 0,
+  deliveries: 1,
+  invoices: 2,
+  payments: 3,
+}
+
+/**
+ * The layers to show from the ?layers= value. Nothing in the URL means every
+ * layer the person may see; an empty value means none; unknown names are
+ * ignored. A layer they may not see is never returned.
+ */
+export function parseLayers(
+  raw: string | null | undefined,
+  allowed: readonly LayerKey[],
+): LayerKey[] {
+  if (raw === null || raw === undefined) return [...allowed]
+
+  const asked = new Set(raw.split(',').map((part) => part.trim()))
+
+  return LAYER_KEYS.filter((key) => asked.has(key) && allowed.includes(key))
+}
+
+/** The ?layers= value for a selection ('' when none are on). */
+export function layersParam(layers: readonly LayerKey[]): string {
+  return LAYER_KEYS.filter((key) => layers.includes(key)).join(',')
 }
 
 /** The chips to draw in a day cell and how many were left out. */

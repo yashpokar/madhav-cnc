@@ -89,7 +89,7 @@ export function CompaniesManager({
 
       <section className="grid grid-cols-1 gap-3">
         <Subheading level={2}>Add a company</Subheading>
-        <div className="flex max-w-xl items-start gap-2">
+        <div className="flex max-w-xl items-center gap-2">
           <Input
             className="min-w-0 flex-1"
             value={name}

@@ -46,9 +46,9 @@ export function Listbox<T>({
           placeholder={placeholder && <span className="block truncate text-zinc-500">{placeholder}</span>}
           className={clsx([
             // Basic layout
-            'relative block w-full appearance-none rounded-lg py-[calc(--spacing(2.5)-1px)] sm:py-[calc(--spacing(1.5)-1px)]',
+            'relative block w-full appearance-none rounded-lg py-[calc(--spacing(2)-1px)]',
             // Set minimum height for when no value is selected
-            'min-h-11 sm:min-h-9',
+            'min-h-10',
             // Horizontal padding
             'pr-[calc(--spacing(7)-1px)] pl-[calc(--spacing(3.5)-1px)] sm:pl-[calc(--spacing(3)-1px)]',
             // Typography

@@ -173,6 +173,10 @@ export async function getInvoiceCompany(companyId: string) {
       gstin: true,
       pan: true,
       logoStoredName: true,
+      signatureStoredName: true,
+      stampStoredName: true,
+      signatoryName: true,
+      signatoryTitle: true,
     },
   })
 }

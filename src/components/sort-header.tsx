@@ -52,8 +52,11 @@ export function SortHeader({
         href={query.toString() ? `${pathname}?${query}` : pathname}
         title={`Sort by ${label.toLowerCase()}`}
         className={clsx(
-          'group relative z-10 inline-flex items-center gap-1 rounded hover:text-zinc-950 dark:hover:text-white',
-          align === 'right' && 'flex-row-reverse',
+          // Block-level flex (not inline-flex) so both alignments sit on the same line box; the
+          // right-aligned link is pushed to the end with an auto margin, arrow first so the label's
+          // right edge lines up with the numbers beneath.
+          'group relative z-10 flex w-fit items-center gap-1 rounded hover:text-zinc-950 dark:hover:text-white',
+          align === 'right' && 'ml-auto flex-row-reverse',
           current && 'font-semibold text-zinc-950 dark:text-white',
         )}
       >

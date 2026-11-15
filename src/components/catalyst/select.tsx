@@ -69,6 +69,7 @@ export const Select = forwardRef(function Select(
     'aria-label'?: string
   },
   // The themed control has no single underlying <select> to hand back.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- forwardRef requires the second parameter
   _ref: React.ForwardedRef<HTMLSelectElement>,
 ) {
   const options: OptionItem[] = []

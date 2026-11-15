@@ -246,6 +246,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
         <div className="flex flex-wrap items-start gap-6">
           <div className="flex size-28 items-center justify-center rounded-lg bg-zinc-100 p-2 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
             {hasLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- user-uploaded logo served by our API route; next/image cannot optimise it
               <img
                 key={logoVersion}
                 src={`/api/company/logo?v=${logoVersion}`}

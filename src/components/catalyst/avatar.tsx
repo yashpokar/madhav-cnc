@@ -45,6 +45,7 @@ export function Avatar({
           </text>
         </svg>
       )}
+      {/* eslint-disable-next-line @next/next/no-img-element -- avatar src is an arbitrary caller-supplied URL */}
       {src && <img className="size-full" src={src} alt={alt} />}
     </span>
   )

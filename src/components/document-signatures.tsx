@@ -28,9 +28,11 @@ export function DocumentSignatures({
           <div className="text-right font-medium">For {company.companyName}</div>
           <div className="flex h-24 items-end justify-end gap-4">
             {company.stampStoredName ? (
+              // eslint-disable-next-line @next/next/no-img-element -- print document: stamp served by our API route, must render as-is
               <img src="/api/company/stamp" alt="Company stamp" className="max-h-24 object-contain" />
             ) : null}
             {company.signatureStoredName ? (
+              // eslint-disable-next-line @next/next/no-img-element -- print document: signature served by our API route, must render as-is
               <img
                 src="/api/company/signature"
                 alt="Authorised signature"

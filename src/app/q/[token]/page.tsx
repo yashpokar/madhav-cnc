@@ -69,6 +69,7 @@ export default async function SharedQuotationPage({
       <header className="flex flex-col gap-5 border-b border-zinc-950/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           {company?.logoStoredName ? (
+            // eslint-disable-next-line @next/next/no-img-element -- logo served by our token route; next/image cannot optimise it
             <img
               src={`/q/${token}/logo`}
               alt={company.companyName ?? 'Logo'}
@@ -288,6 +289,7 @@ export default async function SharedQuotationPage({
                         Open PDF · {item.fileName}
                       </div>
                     ) : (
+                      // eslint-disable-next-line @next/next/no-img-element -- user-uploaded image served by our token route; next/image cannot optimise it
                       <img
                         src={`/q/${token}/image/${item.id}`}
                         alt={item.comment ?? item.fileName}

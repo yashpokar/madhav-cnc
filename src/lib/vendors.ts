@@ -15,8 +15,21 @@ export async function resolveVendor(rawName: string) {
 
   if (known) return known
 
+  // An architect or carpenter from Partners becomes a vendor with their details.
+  const partner = await prisma.partner.findFirst({
+    where: { name: { equals: name, mode: 'insensitive' } },
+    select: { name: true, type: true, phone: true, city: true },
+  })
+
   return prisma.vendor.create({
-    data: { name },
+    data: partner
+      ? {
+          name: partner.name,
+          phone: partner.phone,
+          city: partner.city,
+          description: partner.type === 'ARCHITECT' ? 'Architect' : 'Carpenter',
+        }
+      : { name },
     select: { id: true, name: true },
   })
 }

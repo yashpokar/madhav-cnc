@@ -391,7 +391,7 @@ export function OrderForm({
                   defaultValue={keep('advanceAmount', values.advanceAmount)}
                 />
                 <Description>
-                  Recorded as a receipt in Payments and the Day book.
+                  Recorded as a receipt in Payments.
                 </Description>
               </Field>
               <Field>

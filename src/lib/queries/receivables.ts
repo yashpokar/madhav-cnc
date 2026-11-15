@@ -310,11 +310,6 @@ export async function getReceivables(
     _sum: { amount: true },
     _count: { _all: true },
   })
-  const credited = await prisma.cashCredit.aggregate({
-    where: { entryDate: { gte: thirtyDaysAgo } },
-    _sum: { amount: true },
-    _count: { _all: true },
-  })
 
   return {
     outstanding,
@@ -323,10 +318,8 @@ export async function getReceivables(
     onAccountTotal,
     netReceivable: round2(outstanding - creditOutstanding - onAccountTotal),
     toBillTotal: round2(toBill.reduce((sum, order) => sum + order.total, 0)),
-    collected30:
-      (collected._sum.amount ? num(collected._sum.amount) : 0) +
-      (credited._sum.amount ? num(credited._sum.amount) : 0),
-    collected30Count: collected._count._all + credited._count._all,
+    collected30: collected._sum.amount ? num(collected._sum.amount) : 0,
+    collected30Count: collected._count._all,
     aging,
     invoices: [...open].sort((a, b) => b.overdueBy - a.overdueBy),
     byCustomer,

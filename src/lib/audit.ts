@@ -30,7 +30,6 @@ const gone = ['delete'] as const
 const SPECS: Record<string, Spec> = {
   Expense: { entity: 'expense', label: 'expense', ops: all, name: (r) => text(r.number, r.payeeName) },
   ExpenseCategory: { entity: 'expense-category', label: 'expense category', ops: all, name: (r) => text(r.name) },
-  CashCredit: { entity: 'cash-credit', label: 'credit entry', ops: all, name: (r) => text(r.sourceName) },
   Item: { entity: 'item', label: 'item', ops: all, name: (r) => text(r.name, r.code) },
   Material: { entity: 'material', label: 'material', ops: all, name: (r) => text(r.name) },
   Partner: { entity: 'partner', label: 'partner', ops: all, name: (r) => text(r.name, r.code) },
@@ -39,19 +38,6 @@ const SPECS: Record<string, Spec> = {
     label: 'payment mode',
     ops: all,
     name: (r) => text(r.name),
-  },
-  DayClose: {
-    entity: 'day-close',
-    label: 'day-end check',
-    ops: ['create', 'delete'],
-    name: (r) => (r.closeDate instanceof Date ? r.closeDate.toISOString().slice(0, 10) : null),
-  },
-  BankAccount: { entity: 'bank-account', label: 'bank account', ops: all, name: (r) => text(r.name) },
-  CashDenomination: {
-    entity: 'denomination',
-    label: 'note denomination',
-    ops: all,
-    name: (r) => (typeof r.value === 'number' ? `₹${r.value}` : null),
   },
   ProductionStage: { entity: 'stage', label: 'production stage', ops: all, name: (r) => text(r.name) },
   CompanySetting: { entity: 'company', label: 'company settings', ops: all, name: () => null },

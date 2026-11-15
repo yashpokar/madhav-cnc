@@ -110,7 +110,6 @@ export async function updateVendor(
   revalidatePath('/vendors')
   revalidatePath(`/vendors/${id}`)
   revalidatePath('/expenses')
-  revalidatePath('/daybook')
 
   return { status: 'success', message: 'Vendor saved', id }
 }

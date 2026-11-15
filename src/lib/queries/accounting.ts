@@ -21,36 +21,6 @@ export async function listExpenseCategories(activeOnly = false) {
   })
 }
 
-/** Every source name used on a manual credit so far, A to Z, ignoring case. */
-export async function listCashCreditSources() {
-  const rows = await prisma.cashCredit.findMany({
-    distinct: ['sourceName'],
-    select: { sourceName: true },
-    orderBy: { sourceName: 'asc' },
-  })
-  const seen = new Set<string>()
-
-  return rows
-    .map((row) => row.sourceName.trim())
-    .filter((name) => {
-      const key = name.toLowerCase()
-      if (!name || seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-}
-
-/** Every active vendor's name, A to Z. */
-export async function listExpenseVendors() {
-  const rows = await prisma.vendor.findMany({
-    where: { isActive: true },
-    select: { name: true },
-    orderBy: { name: 'asc' },
-  })
-
-  return rows.map((row) => row.name)
-}
-
 export async function listExpenses({
   search,
   categoryId,

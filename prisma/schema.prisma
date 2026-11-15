@@ -59,8 +59,6 @@ model User {
   invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
   paymentsRecorded Payment[] @relation("PaymentRecordedBy")
   writeOffsRecorded InvoiceWriteOff[] @relation("WriteOffRecordedBy")
-  cashCreditsRecorded CashCredit[] @relation("CashCreditRecordedBy")
-  dayClosesDone DayClose[] @relation("DayCloseBy")
   dispatchesCreated Dispatch[] @relation("DispatchCreatedBy")
   dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
   sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
@@ -670,9 +668,6 @@ model QuotationAttachment {
 model CompanySetting {
   id String @id @default("default")
 
-  /// How the day book looks (density, sides, counting area). Validated and
-  /// defaulted in lib/daybook-layout.ts, so old or empty values still work.
-  daybookLayout Json? @map("daybook_layout")
 
   companyName String  @default("Madhav CNC") @map("company_name")
   addressLine String? @map("address_line")
@@ -1013,102 +1008,6 @@ model InvoiceWriteOff {
   @@map("invoice_write_offs")
 }
 
-// Money received that is not a customer receipt: owner capital, a vendor
-// refund, other income. Shown on the CREDIT side of the cash book.
-model CashCredit {
-  id String @id @default(cuid())
-
-  entryDate  DateTime    @map("entry_date") @db.Date
-  sourceName String      @map("source_name")
-  isChecked  Boolean     @default(false) @map("is_checked")
-  channelId  String?     @map("channel_id")
-  channel    PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
-  amount     Decimal     @db.Decimal(14, 2)
-  mode       PaymentMode @default(CASH)
-  reference  String?
-  notes      String?
-
-  recordedById String? @map("recorded_by_id")
-  recordedBy   User?   @relation("CashCreditRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([entryDate])
-  @@map("cash_credits")
-}
-
-// The day book's counting area: note denominations and bank accounts are
-// configurable lists, and each day stores how many of each note were counted
-// and what each bank showed. Counts are keyed by denomination value (not a
-// foreign key) so editing the list never rewrites history.
-model BankAccount {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  sortOrder Int     @default(0) @map("sort_order")
-  isActive  Boolean @default(true) @map("is_active")
-
-  balances DayTallyBank[]
-  channels PaymentChannel[]
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("bank_accounts")
-}
-
-model CashDenomination {
-  id        String  @id @default(cuid())
-  value     Int     @unique
-  sortOrder Int     @default(0) @map("sort_order")
-  isActive  Boolean @default(true) @map("is_active")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("cash_denominations")
-}
-
-model DayTallyCount {
-  id           String   @id @default(cuid())
-  tallyDate    DateTime @map("tally_date") @db.Date
-  denomination Int
-  count        Int
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([tallyDate, denomination])
-  @@map("day_tally_counts")
-}
-
-model DayTallyBank {
-  id            String      @id @default(cuid())
-  tallyDate     DateTime    @map("tally_date") @db.Date
-  bankAccountId String      @map("bank_account_id")
-  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  balance       Decimal     @db.Decimal(14, 2)
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([tallyDate, bankAccountId])
-  @@map("day_tally_banks")
-}
-
-// A signed-off day: someone confirmed the cash and bank counts. The figures are
-// stored as they stood, so a later correction does not rewrite what was checked.
-model DayClose {
-  id        String   @id @default(cuid())
-  closeDate DateTime @unique @map("close_date") @db.Date
-
-  cashCounted  Decimal  @map("cash_counted") @db.Decimal(14, 2)
-  cashExpected Decimal? @map("cash_expected") @db.Decimal(14, 2)
-  bankCounted  Decimal  @map("bank_counted") @db.Decimal(14, 2)
-  bankExpected Decimal? @map("bank_expected") @db.Decimal(14, 2)
-
-  closedById String? @map("closed_by_id")
-  closedBy   User?   @relation("DayCloseBy", fields: [closedById], references: [id], onDelete: SetNull)
-  closedAt   DateTime @default(now()) @map("closed_at")
-
-  @@map("day_closes")
-}
-
 // A way of paying as the business names it ("HDFC NEFT", "SBI UPI", "CASH"):
 // the underlying kind of payment, and the bank account it moves money through
 // (none for cash). Entries remember the channel they used.
@@ -1116,13 +1015,10 @@ model PaymentChannel {
   id            String       @id @default(cuid())
   name          String       @unique
   mode          PaymentMode
-  bankAccountId String?      @map("bank_account_id")
-  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   sortOrder     Int          @default(0) @map("sort_order")
   isActive      Boolean      @default(true) @map("is_active")
 
   expenses    Expense[]
-  cashCredits CashCredit[]
   payments    Payment[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1138,7 +1034,6 @@ model Payment {
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   amount    Decimal     @db.Decimal(14, 2)
-  isChecked Boolean     @default(false) @map("is_checked")
   mode      PaymentMode @default(UPI)
   /// The business's own name for how it came in, e.g. HDFC NEFT (optional).
   channelId String?          @map("channel_id")
@@ -1237,8 +1132,6 @@ model Expense {
   payeeName   String   @map("payee_name")
   vendorId    String?  @map("vendor_id")
   vendor      Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  /// Ticked off in the day book once verified against the bank or cash.
-  isChecked   Boolean  @default(false) @map("is_checked")
   channelId   String?  @map("channel_id")
   channel     PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
   description String?
@@ -1370,7 +1263,7 @@ model ActivityLog {
 
 /// Someone the business pays: a supplier, a contractor, a utility. Expenses
 /// point at a vendor so contact details live in one place; a vendor created
-/// by typing a name in the day book starts with just the name.
+/// by typing a new name on an expense starts with just the name.
 model Vendor {
   id          String  @id @default(cuid())
   name        String

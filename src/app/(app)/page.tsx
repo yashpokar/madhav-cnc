@@ -1,3 +1,4 @@
+import { BillingBanner } from '@/components/billing-banner'
 import { Heading } from '@/components/catalyst/heading'
 import { Link } from '@/components/catalyst/link'
 import { CreateMenu } from '@/components/create-menu'
@@ -329,6 +330,8 @@ export default async function DashboardPage({
           <CreateMenu allowed={[...create]} />
         </div>
       </header>
+
+      <BillingBanner />
 
       {isAdmin && pending > 0 ? (
         <div

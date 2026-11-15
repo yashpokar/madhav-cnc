@@ -4,7 +4,7 @@ import { getSessionCookie } from 'better-auth/cookies'
 const GUEST_ROUTES = ['/sign-in', '/sign-up']
 // /api/v1 authenticates in its own handlers (the proxy only sees cookies, and
 // the mobile apps send a bearer token); /.well-known serves the app-link files.
-const OPEN_ROUTES = ['/pending', '/q', '/t', '/i', '/join', '/pwa-icon', '/api/v1', '/.well-known']
+const OPEN_ROUTES = ['/pending', '/q', '/t', '/i', '/join', '/pwa-icon', '/api/v1', '/api/billing/phonepe/webhook', '/.well-known']
 
 function matches(pathname: string, routes: readonly string[]) {
   return routes.some(

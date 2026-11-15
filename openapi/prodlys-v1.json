@@ -16,6 +16,188 @@
     }
   ],
   "paths": {
+    "/billing": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "The company plan, entitlements and invoice usage (read-only: manage the plan on the web)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompanyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "plan": {
+                          "type": "string",
+                          "enum": [
+                            "FREE",
+                            "BUSINESS",
+                            "BUSINESS_PRO"
+                          ]
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "FREE",
+                            "ACTIVE",
+                            "EXPIRING",
+                            "GRACE",
+                            "EXPIRED"
+                          ]
+                        },
+                        "entitlements": {
+                          "type": "object",
+                          "properties": {
+                            "invoiceQuota": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "aiPreview": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "invoiceQuota",
+                            "aiPreview"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "usage": {
+                          "type": "object",
+                          "properties": {
+                            "invoicesIssued": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "remaining": {
+                              "nullable": true,
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "invoicesIssued",
+                            "remaining"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "renewsOn": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "enforced": {
+                          "type": "boolean"
+                        },
+                        "manageUrl": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "plan",
+                        "state",
+                        "entitlements",
+                        "usage",
+                        "renewsOn",
+                        "enforced",
+                        "manageUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "COMPANY_REQUIRED: X-Company-Id header is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: Missing, invalid or expired bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "COMPANY_NOT_ACCESSIBLE: The company does not exist or the person may not open it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "426": {
+            "description": "UPGRADE_REQUIRED: The app version is no longer supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED: Too many requests; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL: Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/calendar": {
       "get": {
         "tags": [
@@ -6977,6 +7159,7 @@
                   "IDEMPOTENCY_KEY_REUSED",
                   "RATE_LIMITED",
                   "UPGRADE_REQUIRED",
+                  "PLAN_LIMIT_REACHED",
                   "INTERNAL"
                 ]
               },

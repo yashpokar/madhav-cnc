@@ -12,6 +12,8 @@ export const ERROR_STATUS = {
   IDEMPOTENCY_KEY_REUSED: 422,
   RATE_LIMITED: 429,
   UPGRADE_REQUIRED: 426,
+  /** The company has used its free invoices and is not on a paid plan (billing). */
+  PLAN_LIMIT_REACHED: 402,
   INTERNAL: 500,
 } as const
 

@@ -43,7 +43,7 @@ export function CreateMenu({ allowed }: { allowed: CreateAction[] }) {
 
   return (
     <Dropdown>
-      <DropdownButton>
+      <DropdownButton data-tour="create-menu">
         <PlusIcon />
         Create
         <ChevronDownIcon />

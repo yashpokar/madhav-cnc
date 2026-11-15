@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
   MagnifyingGlassIcon,
   MoonIcon,
+  MapIcon,
   SunIcon,
   ComputerDesktopIcon,
   ClipboardDocumentListIcon,
@@ -61,6 +62,7 @@ import { useRouter } from 'next/navigation'
 import type { NavEntry } from '@/lib/navigation'
 import type { CurrentUser } from '@/lib/session'
 import { ROLE_LABELS } from '@/lib/permissions'
+import { TourProvider, useTour } from '@/components/tour/tour-provider'
 
 const GROUP_ORDER = ['Overview', 'Sell', 'Money', 'People', 'Catalogue'] as const
 
@@ -95,7 +97,15 @@ function isCurrent(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function AppShell({
+export function AppShell(props: Parameters<typeof AppShellFrame>[0]) {
+  return (
+    <TourProvider userId={props.user.id} companyId={props.activeCompanyId} role={props.user.role}>
+      <AppShellFrame {...props} />
+    </TourProvider>
+  )
+}
+
+function AppShellFrame({
   user,
   nav,
   adminNav,
@@ -112,6 +122,7 @@ export function AppShell({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { start: startTour } = useTour()
 
   async function signOut() {
     await authClient.signOut()
@@ -124,6 +135,10 @@ export function AppShell({
       <DropdownItem href="/account">
         <Cog6ToothIcon />
         <DropdownLabel>My account</DropdownLabel>
+      </DropdownItem>
+      <DropdownItem onClick={startTour}>
+        <MapIcon />
+        <DropdownLabel>Take the tour</DropdownLabel>
       </DropdownItem>
       <DropdownDivider />
       <DropdownItem onClick={() => setTheme('light')}>
@@ -152,9 +167,9 @@ export function AppShell({
         <Navbar>
           <NavbarSpacer />
           <NavbarSection>
-            <SearchTrigger className="flex size-9 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-950/5 dark:text-zinc-300 dark:hover:bg-white/10" />
+            <SearchTrigger data-tour="search" className="flex size-9 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-950/5 dark:text-zinc-300 dark:hover:bg-white/10" />
             <Dropdown>
-              <DropdownButton as="button" className="cursor-pointer">
+              <DropdownButton as="button" data-tour="account-menu" className="cursor-pointer">
                 <Avatar
                   src={user.image}
                   initials={user.image ? undefined : initialsOf(user.name)}
@@ -171,13 +186,16 @@ export function AppShell({
       sidebar={
         <Sidebar>
           <SidebarHeader>
-            <CompanySwitcher
-              companies={companies}
-              activeId={activeCompanyId}
-              canManage={user.isSuperAdmin}
-            />
+            <div data-tour="company-switcher">
+              <CompanySwitcher
+                companies={companies}
+                activeId={activeCompanyId}
+                canManage={user.isSuperAdmin}
+              />
+            </div>
             <button
               type="button"
+              data-tour="search"
               onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
               className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm/6 text-zinc-500 ring-1 ring-zinc-950/10 hover:bg-zinc-950/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/5"
             >
@@ -203,6 +221,7 @@ export function AppShell({
                       <SidebarItem
                         key={entry.href}
                         href={entry.href}
+                        data-tour={`nav:${entry.href}`}
                         current={isCurrent(pathname, entry.href)}
                       >
                         {Icon ? <Icon /> : null}
@@ -229,6 +248,7 @@ export function AppShell({
                       <SidebarItem
                         key={entry.href}
                         href={entry.href}
+                        data-tour={`nav:${entry.href}`}
                         current={isCurrent(pathname, entry.href)}
                       >
                         {Icon ? <Icon /> : null}
@@ -245,7 +265,7 @@ export function AppShell({
 
           <SidebarFooter className="max-lg:hidden">
             <Dropdown>
-              <DropdownButton as={SidebarItem}>
+              <DropdownButton as={SidebarItem} data-tour="account-menu">
                 <span className="flex min-w-0 items-center gap-3">
                   <Avatar
                     src={user.image}

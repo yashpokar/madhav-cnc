@@ -174,13 +174,14 @@ export function CommandPalette({ pages }: { pages: readonly NavEntry[] }) {
   )
 }
 
-export function SearchTrigger({ className }: { className?: string }) {
+export function SearchTrigger({ className, ...rest }: { className?: string; 'data-tour'?: string }) {
   return (
     <button
       type="button"
       aria-label="Search"
       onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
       className={className}
+      {...rest}
     >
       <MagnifyingGlassIcon className="size-5" aria-hidden="true" />
     </button>

@@ -135,8 +135,6 @@ export function PartnerCombobox({
 
   return (
     <>
-      <input type="hidden" name={name} value={selected?.id ?? ''} />
-
       <Combobox<PartnerOption | null>
         options={choices}
         value={selected}
@@ -179,6 +177,9 @@ export function PartnerCombobox({
           </ComboboxOption>
         )}
       </Combobox>
+
+      {/* After the control, so the label-then-control spacing still applies. */}
+      <input type="hidden" name={name} value={selected?.id ?? ''} />
 
       <Dialog open={dialogOpen} onClose={setDialogOpen}>
         <DialogTitle>

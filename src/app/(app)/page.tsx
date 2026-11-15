@@ -343,13 +343,22 @@ export default async function DashboardPage({
             {canMoney ? (
               <PeriodTile
                 href={`/payments?${span}`}
-                label="Money in"
+                label="Payments received"
                 value={inr.format(now.received)}
                 current={now.received}
                 previous={before.received}
                 versus={range.compareLabel}
                 tone="good"
-                note="customer receipts"
+                note={`${now.receivedCount} payment${now.receivedCount === 1 ? '' : 's'}`}
+              />
+            ) : null}
+            {canMoney && receivables ? (
+              <PeriodTile
+                href="/payments"
+                label="Payment due"
+                value={inr.format(receivables.outstanding)}
+                tone={receivables.overdue > 0 ? 'bad' : 'default'}
+                note={`${inr.format(receivables.overdue)} overdue · as of today`}
               />
             ) : null}
             {canExpenses ? (

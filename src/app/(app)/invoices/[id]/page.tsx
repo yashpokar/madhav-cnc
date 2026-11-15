@@ -136,6 +136,8 @@ export default async function InvoiceDetailPage({
           canTakePayment={canTakePayment}
           canWriteOff={canWriteOff}
           canCreate={can(user.role, 'invoice:create')}
+          shareToken={invoice.shareToken}
+          baseUrl={process.env.PUBLIC_BASE_URL ?? null}
         />
       </div>
 

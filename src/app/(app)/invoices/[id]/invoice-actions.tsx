@@ -5,7 +5,7 @@ import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrashIcon } from '@heroicons/react/16/solid'
+import { ClipboardIcon, TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
 import { ConfirmButton, DANGER_TRIGGER } from '@/components/confirm-button'
 import { Field, Label } from '@/components/catalyst/fieldset'
@@ -25,6 +25,10 @@ import {
   writeOffInvoice,
   type SimpleResult,
 } from '@/lib/actions/invoices'
+import {
+  ensureInvoiceShareLink,
+  regenerateInvoiceShareLink,
+} from '@/lib/actions/invoice-share'
 import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { whatsappLink } from '@/lib/whatsapp'
 import { InvoiceStatus, WriteOffReason } from '@/generated/prisma/enums'
@@ -40,6 +44,8 @@ export function InvoiceActions({
   canCreate,
   contact,
   modes,
+  shareToken,
+  baseUrl,
 }: {
   id: string
   contact: { name: string; phone: string | null; number: string }
@@ -52,6 +58,9 @@ export function InvoiceActions({
   canWriteOff: boolean
   canCreate: boolean
   modes: PaymentModeOption[]
+  /** The customer link's token, once one has been made. */
+  shareToken: string | null
+  baseUrl: string | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -66,6 +75,90 @@ export function InvoiceActions({
   const [offReason, setOffReason] = useState<WriteOffReason>('CUSTOMER_UNREACHABLE')
   const [offNotes, setOffNotes] = useState('')
   const [offOn, setOffOn] = useState(new Date().toISOString().slice(0, 10))
+  const [token, setToken] = useState(shareToken)
+  const [copied, setCopied] = useState(false)
+  const [otherOpen, setOtherOpen] = useState(false)
+  const [otherPhone, setOtherPhone] = useState('')
+
+  function linkFor(value: string) {
+    const origin = baseUrl ?? window.location.origin
+
+    return `${origin.replace(/\/$/, '')}/i/${value}`
+  }
+
+  function shareMessage(url: string) {
+    const amount =
+      due > 0
+        ? `The amount due is ${currency.format(due)}`
+        : `The total is ${currency.format(total)} (paid in full)`
+
+    return `Hello ${contact.name}, thank you for your business! Here is your invoice ${contact.number} from Madhav CNC. ${amount}. You can view it, see how to pay and download a PDF here: ${url}`
+  }
+
+  /** The customer link, made on first use. */
+  async function ensureLink(): Promise<string | null> {
+    if (token) {
+      return token
+    }
+
+    const outcome = await ensureInvoiceShareLink(id)
+
+    if (!outcome.ok || !outcome.id) {
+      setResult(outcome.ok ? { ok: false, error: 'Could not create the link' } : outcome)
+      return null
+    }
+
+    setToken(outcome.id)
+    router.refresh()
+
+    return outcome.id
+  }
+
+  function sendOnWhatsApp(phone: string | null) {
+    // Open the tab now: browsers block a window opened after a server round trip.
+    const tab = window.open('', '_blank')
+
+    startTransition(async () => {
+      const value = await ensureLink()
+
+      if (!value) {
+        tab?.close()
+        return
+      }
+
+      const target = whatsappLink(phone, shareMessage(linkFor(value)))
+
+      if (tab) {
+        tab.location.href = target
+      } else {
+        window.location.href = target
+      }
+
+      setResult({ ok: true, message: 'WhatsApp opened. Press send there to share the invoice.' })
+    })
+  }
+
+  function copyLink() {
+    startTransition(async () => {
+      const value = await ensureLink()
+
+      if (!value) {
+        return
+      }
+
+      try {
+        await navigator.clipboard.writeText(linkFor(value))
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+        setResult({ ok: true, message: 'Link copied' })
+      } catch {
+        setResult({ ok: false, error: `Could not copy. The link is ${linkFor(value)}` })
+      }
+    })
+  }
+
+  const canShare = status === 'ISSUED' && (canUpdate || Boolean(token))
+  const otherDigits = otherPhone.replace(/\D/g, '')
 
   function run(action: () => Promise<SimpleResult>, after?: () => void) {
     startTransition(async () => {
@@ -138,6 +231,47 @@ export function InvoiceActions({
           </Button>
         ) : null}
 
+        {canShare ? (
+          <Button
+            disabled={pending}
+            onClick={() => sendOnWhatsApp(contact.phone)}
+          >
+            Send on WhatsApp
+          </Button>
+        ) : null}
+
+        {canShare ? (
+          <Button outline disabled={pending} onClick={copyLink}>
+            <ClipboardIcon />
+            {copied ? 'Copied' : 'Copy link'}
+          </Button>
+        ) : null}
+
+        {canShare ? (
+          <Button outline disabled={pending} onClick={() => setOtherOpen((open) => !open)}>
+            Send to another number
+          </Button>
+        ) : null}
+
+        {canUpdate && status === 'ISSUED' && token ? (
+          <ConfirmButton
+            tone="neutral"
+            label="Regenerate link"
+            title="Regenerate the customer link?"
+            description="A new link is created and the one already sent stops opening straight away. You will need to send the new link to the customer."
+            confirmLabel="Regenerate"
+            action={async () => {
+              const outcome = await regenerateInvoiceShareLink(id)
+
+              if (outcome.ok && outcome.id) {
+                setToken(outcome.id)
+              }
+
+              return outcome
+            }}
+          />
+        ) : null}
+
         {status === 'ISSUED' && due > 0 ? (
           <Button
             outline
@@ -181,6 +315,38 @@ export function InvoiceActions({
           </Button>
         ) : null}
       </div>
+
+      {canShare && otherOpen ? (
+        <div className="grid max-w-xl grid-cols-1 gap-3 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+          <Field>
+            <Label>WhatsApp number</Label>
+            <Input
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              autoFocus
+              value={otherPhone}
+              placeholder="98765 43210"
+              onChange={(event) => setOtherPhone(event.target.value)}
+            />
+          </Field>
+          <div className="text-sm/6 text-zinc-500 dark:text-zinc-400">
+            A 10-digit number is treated as an Indian number. Use the country
+            code for any other.
+          </div>
+          <div className="flex gap-2">
+            <Button
+              disabled={pending || otherDigits.length < 10}
+              onClick={() => sendOnWhatsApp(otherPhone)}
+            >
+              Open WhatsApp
+            </Button>
+            <Button plain onClick={() => setOtherOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {offOpen ? (
         <div className="grid max-w-xl grid-cols-1 gap-4 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">

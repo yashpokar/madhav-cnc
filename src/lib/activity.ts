@@ -17,6 +17,11 @@ export type ActivityEntity =
   | 'stage'
   | 'company'
   | 'user'
+  | 'purchase-order'
+  | 'purchase-bill'
+  | 'goods-receipt'
+  | 'vendor-payment'
+  | 'stock'
 
 type Actor = { id: string; name: string } | null
 

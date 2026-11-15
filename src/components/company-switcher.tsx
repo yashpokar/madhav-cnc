@@ -60,19 +60,20 @@ export function CompanySwitcher({
   )
 
   if (companies.length < 2 && !canManage) {
-    return <div className="px-2">{lockup}</div>
+    return <div>{lockup}</div>
   }
 
   return (
     <Dropdown>
       <DropdownButton
-        plain
+        as="button"
+        type="button"
         disabled={pending}
         aria-label="Switch company"
-        className="w-full justify-between"
+        className="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-zinc-950/5 focus-visible:outline-2 focus-visible:outline-accent-500 dark:hover:bg-white/5"
       >
         {lockup}
-        <ChevronUpDownIcon data-slot="icon" />
+        <ChevronUpDownIcon className="size-4 shrink-0 text-zinc-500" aria-hidden="true" />
       </DropdownButton>
       <DropdownMenu className="min-w-64" anchor="bottom start">
         {companies.map((company) => (

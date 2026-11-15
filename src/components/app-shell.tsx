@@ -6,6 +6,7 @@ import {
   ArrowsRightLeftIcon,
   BanknotesIcon,
   BuildingOffice2Icon,
+  BuildingOfficeIcon,
   BuildingStorefrontIcon,
   ChartBarIcon,
   ClockIcon,
@@ -79,6 +80,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/vendors': ShoppingBagIcon,
   '/reports': ChartBarIcon,
   '/admin/users': UsersIcon,
+  '/admin/companies': BuildingOfficeIcon,
   '/admin/activity': ClockIcon,
   '/settings/company': BuildingStorefrontIcon,
 }

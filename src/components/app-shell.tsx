@@ -174,7 +174,7 @@ export function AppShell({
             <CompanySwitcher
               companies={companies}
               activeId={activeCompanyId}
-              canManage={user.role === 'ADMIN'}
+              canManage={user.isSuperAdmin}
             />
             <button
               type="button"

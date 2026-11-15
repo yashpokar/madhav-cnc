@@ -14,7 +14,7 @@ export default async function AppLayout({
 
   const nav = NAV_ENTRIES.filter((entry) => can(user.role, entry.capability))
   const adminNav = ADMIN_ENTRIES.filter((entry) =>
-    can(user.role, entry.capability),
+    can(user.role, entry.capability) && (!entry.superAdminOnly || user.isSuperAdmin),
   )
   const [companies, activeCompanyId] = await Promise.all([
     listAccessibleCompanies(user, prisma),

@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
 import { getActiveCompanyId } from '@/lib/active-company'
-import { requireAdmin } from '@/lib/session'
+import { requireSuperAdmin } from '@/lib/session'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
 
@@ -25,7 +26,7 @@ export async function activateUser(
   userId: string,
   role: UserRole,
 ): Promise<ActionResult> {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
 
   const parsedId = userIdSchema.safeParse(userId)
   const parsedRole = roleSchema.safeParse(role)
@@ -54,6 +55,14 @@ export async function activateUser(
     },
   })
 
+  await logActivity({
+    entity: 'user',
+    id: target.id,
+    action: 'activated',
+    summary: `activated ${target.email} as ${ROLE_LABELS[parsedRole.data]}`,
+    actor: admin,
+  })
+
   // A newly approved person starts in the company the approver is working in.
   const companyId = await getActiveCompanyId()
 
@@ -74,7 +83,7 @@ export async function activateUser(
 }
 
 export async function deactivateUser(userId: string): Promise<ActionResult> {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
 
   const parsed = userIdSchema.safeParse(userId)
 
@@ -112,7 +121,7 @@ export async function changeUserRole(
   userId: string,
   role: UserRole,
 ): Promise<ActionResult> {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
 
   const parsedId = userIdSchema.safeParse(userId)
   const parsedRole = roleSchema.safeParse(role)
@@ -152,6 +161,14 @@ export async function changeUserRole(
     data: { role: parsedRole.data },
   })
 
+  await logActivity({
+    entity: 'user',
+    id: target.id,
+    action: 'role-changed',
+    summary: `changed the default role of ${target.email} from ${ROLE_LABELS[target.role]} to ${ROLE_LABELS[parsedRole.data]}`,
+    actor: admin,
+  })
+
   revalidatePath('/admin/users')
 
   return {
@@ -161,7 +178,7 @@ export async function changeUserRole(
 }
 
 export async function rejectUser(userId: string): Promise<ActionResult> {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
 
   const parsed = userIdSchema.safeParse(userId)
 

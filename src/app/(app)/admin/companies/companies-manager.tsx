@@ -8,10 +8,16 @@ import { Subheading } from '@/components/catalyst/heading'
 import { Checkbox } from '@/components/catalyst/checkbox'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
-import { createCompany, setCompanyAccess } from '@/lib/actions/companies'
+import { Select } from '@/components/catalyst/select'
+import { createCompany, setCompanyAccess, setCompanyRole } from '@/lib/actions/companies'
+import { ROLE_LABELS } from '@/lib/permissions'
+import { UserRole } from '@/generated/prisma/enums'
 
 type Company = { id: string; companyName: string; gstin: string | null; city: string | null }
-type Person = { id: string; name: string; email: string }
+type Person = { id: string; name: string; email: string; role: UserRole }
+type Grant = { key: string; role: UserRole | null }
+
+const ROLES = Object.values(UserRole)
 
 export function CompaniesManager({
   companies,
@@ -20,13 +26,16 @@ export function CompaniesManager({
 }: {
   companies: Company[]
   users: Person[]
-  granted: string[]
+  granted: Grant[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [name, setName] = useState('')
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
-  const [allowed, setAllowed] = useState(() => new Set(granted))
+  // key "userId:companyId" -> the role there (null = default). Present = has access.
+  const [allowed, setAllowed] = useState(
+    () => new Map<string, UserRole | null>(granted.map((row) => [row.key, row.role])),
+  )
 
   function add() {
     startTransition(async () => {
@@ -45,9 +54,9 @@ export function CompaniesManager({
     const key = `${userId}:${companyId}`
 
     setAllowed((current) => {
-      const next = new Set(current)
+      const next = new Map(current)
 
-      if (on) next.add(key)
+      if (on) next.set(key, current.get(key) ?? null)
       else next.delete(key)
 
       return next
@@ -56,6 +65,17 @@ export function CompaniesManager({
       const result = await setCompanyAccess(userId, companyId, on)
 
       if (!result.ok) setMessage({ ok: false, text: result.error })
+    })
+  }
+
+  function changeRole(userId: string, companyId: string, role: UserRole | null) {
+    const key = `${userId}:${companyId}`
+
+    setAllowed((current) => new Map(current).set(key, role))
+    startTransition(async () => {
+      const result = await setCompanyRole(userId, companyId, role)
+
+      setMessage(result.ok ? { ok: true, text: result.message } : { ok: false, text: result.error })
     })
   }
 
@@ -115,13 +135,35 @@ export function CompaniesManager({
                     </td>
                     {companies.map((company) => (
                       <td key={company.id} className="px-4 py-2.5 text-center">
-                        <span className="inline-flex">
+                        <div className="flex flex-col items-center gap-1.5">
                           <Checkbox
                             aria-label={`${person.name} can open ${company.companyName}`}
                             checked={allowed.has(`${person.id}:${company.id}`)}
                             onChange={(on) => toggle(person.id, company.id, on)}
                           />
-                        </span>
+                          {allowed.has(`${person.id}:${company.id}`) ? (
+                            <Select
+                              className="min-w-36"
+                              aria-label={`${person.name}'s role in ${company.companyName}`}
+                              value={allowed.get(`${person.id}:${company.id}`) ?? ''}
+                              disabled={pending}
+                              onChange={(event) =>
+                                changeRole(
+                                  person.id,
+                                  company.id,
+                                  (event.target.value || null) as UserRole | null,
+                                )
+                              }
+                            >
+                              <option value="">Default ({ROLE_LABELS[person.role]})</option>
+                              {ROLES.map((role) => (
+                                <option key={role} value={role}>
+                                  {ROLE_LABELS[role]}
+                                </option>
+                              ))}
+                            </Select>
+                          ) : null}
+                        </div>
                       </td>
                     ))}
                   </tr>

@@ -10,7 +10,7 @@ import { SearchField } from '@/components/search-field'
 import { paginate } from '@/lib/pagination'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { listUsers } from '@/lib/queries/users'
-import { requireAdmin } from '@/lib/session'
+import { requireSuperAdmin } from '@/lib/session'
 import { sortRows } from '@/lib/table-sort'
 import { UserRole } from '@/generated/prisma/enums'
 import { UsersTable } from './users-table'
@@ -25,7 +25,7 @@ const one = (value: string | string[] | undefined) =>
 export default async function AdminUsersPage({
   searchParams,
 }: PageProps<'/admin/users'>) {
-  const admin = await requireAdmin()
+  const admin = await requireSuperAdmin()
   const params = await searchParams
   const users = await listUsers()
   const pending = users.filter((user) => !user.isActive).length
@@ -61,7 +61,8 @@ export default async function AdminUsersPage({
           <Heading>Users</Heading>
           <Text>
             Anyone can register, but no one can sign in until an administrator
-            activates their account and assigns a role.
+            activates their account and assigns a default role. A different role
+            for a particular company can be set under Companies.
           </Text>
         </div>
         {pending > 0 ? (

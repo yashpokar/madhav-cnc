@@ -8,6 +8,8 @@ export type NavEntry = {
   label: string
   capability: `${Resource}:${Action}`
   group?: NavGroup
+  /** Only platform super-admins (global ADMIN) see and may open this. */
+  superAdminOnly?: boolean
 }
 
 /** Grouped by the job being done, in the order people usually do it. */
@@ -34,9 +36,9 @@ export const NAV_ENTRIES: readonly NavEntry[] = ALL_NAV_ENTRIES.filter(
 )
 
 export const ADMIN_ENTRIES: readonly NavEntry[] = [
-  { href: '/admin/users', label: 'Users', capability: 'user:update', group: 'Administration' },
-  { href: '/admin/companies', label: 'Companies', capability: 'user:update', group: 'Administration' },
-  { href: '/admin/activity', label: 'Activity log', capability: 'user:update', group: 'Administration' },
+  { href: '/admin/users', label: 'Users', capability: 'user:update', group: 'Administration', superAdminOnly: true },
+  { href: '/admin/companies', label: 'Companies', capability: 'user:update', group: 'Administration', superAdminOnly: true },
+  { href: '/admin/activity', label: 'Activity log', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   { href: '/settings/company', label: 'Company details', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/payment-modes', label: 'Payment modes', capability: 'settings:update', group: 'Settings' },
 ]

@@ -44,6 +44,7 @@ export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/settings/team', label: 'Team', capability: 'user:update', group: 'Settings' },
   { href: '/settings/company', label: 'Company details', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/payment-modes', label: 'Payment modes', capability: 'settings:update', group: 'Settings' },
+  { href: '/settings/opening-balances', label: 'Opening balances', capability: 'settings:update', group: 'Settings' },
 ]
 
 const MODULE_BY_HREF: Record<string, keyof IndustryModules> = {

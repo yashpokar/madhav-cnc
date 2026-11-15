@@ -7,7 +7,7 @@ import { requireCapability } from '@/lib/session'
 import { CompanyForm } from './company-form'
 
 export const metadata: Metadata = {
-  title: 'Company details',
+  title: 'Business profile',
 }
 
 export default async function CompanySettingsPage() {
@@ -17,7 +17,7 @@ export default async function CompanySettingsPage() {
   return (
     <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
-        <Heading>Company details</Heading>
+        <Heading>Business profile</Heading>
         <Text>
           Used on quotations, orders and invoices. Bank details and the UPI QR
           code are how customers pay you.

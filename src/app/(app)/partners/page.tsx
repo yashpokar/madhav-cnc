@@ -29,7 +29,7 @@ import { requireCapability } from '@/lib/session'
 import { PartnerType } from '@/generated/prisma/enums'
 
 export const metadata: Metadata = {
-  title: 'Architects & Carpenters',
+  title: 'Partners',
 }
 
 const TABS: { label: string; value: string; type?: PartnerType }[] = [
@@ -101,7 +101,7 @@ export default async function PartnersPage({
     <div className="grid grid-cols-1 gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid grid-cols-1 gap-2">
-          <Heading>Architects &amp; Carpenters</Heading>
+          <Heading>Partners</Heading>
           <Text>
             Referral partners. A customer can have a preferred architect and
             carpenter, and every quotation and order records who brought the job.

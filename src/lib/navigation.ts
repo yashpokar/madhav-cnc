@@ -35,7 +35,7 @@ const ALL_NAV_ENTRIES: readonly NavEntry[] = [
   { href: '/statement', label: 'Order statement', capability: 'order:read', group: 'Money' },
   { href: '/customers', label: 'Customers', capability: 'customer:read', group: 'People' },
   { href: '/vendors', label: 'Vendors', capability: 'expense:read', group: 'People' },
-  { href: '/partners', label: 'Architects & Carpenters', capability: 'partner:read', group: 'People' },
+  { href: '/partners', label: 'Partners', capability: 'partner:read', group: 'People' },
   { href: '/items', label: 'Items', capability: 'item:read', group: 'Catalogue' },
 ]
 
@@ -48,9 +48,9 @@ export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/companies', label: 'Companies', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   { href: '/admin/activity', label: 'Activity log', capability: 'user:update', group: 'Administration', superAdminOnly: true },
   // Not superAdminOnly: any administrator of the active company manages its team.
-  { href: '/settings/team', label: 'Team', capability: 'user:update', group: 'Settings' },
-  { href: '/settings/company', label: 'Company details', capability: 'settings:update', group: 'Settings' },
-  { href: '/settings/payment-modes', label: 'Payment modes', capability: 'settings:update', group: 'Settings' },
+  { href: '/settings/team', label: 'Team & roles', capability: 'user:update', group: 'Settings' },
+  { href: '/settings/company', label: 'Business profile', capability: 'settings:update', group: 'Settings' },
+  { href: '/settings/payment-modes', label: 'Payment methods', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/opening-balances', label: 'Opening balances', capability: 'settings:update', group: 'Settings' },
 ]
 

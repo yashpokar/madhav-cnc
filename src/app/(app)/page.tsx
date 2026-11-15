@@ -429,7 +429,7 @@ export default async function DashboardPage({
             </div>
           ) : null}
           {can(role, 'purchase:read') ? <PayablesTile /> : null}
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-zinc-950/10 shadow-xs ring-1 ring-zinc-950/10 md:grid-flow-col md:auto-cols-fr dark:bg-white/10 dark:ring-white/10 [&>:last-child:nth-child(odd)]:col-span-2 md:[&>:last-child:nth-child(odd)]:col-span-1">
+          <div className="grid grid-cols-2 gap-px overflow-hidden surface-card bg-zinc-950/10! md:grid-flow-col md:auto-cols-fr dark:bg-white/10! [&>:last-child:nth-child(odd)]:col-span-2 md:[&>:last-child:nth-child(odd)]:col-span-1">
             {canExpenses ? (
               <PeriodTile
                 href={`/expenses?${span}`}

@@ -62,7 +62,7 @@ export default async function OpeningBalancesPage() {
             {balances.map((b) => (
               <li
                 key={b.channelId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg p-3 ring-1 ring-zinc-950/10 dark:ring-white/10"
+                className="flex flex-wrap items-center justify-between gap-3 surface-card p-3"
               >
                 <span className="font-medium">{b.name}</span>
                 <span className="flex items-center gap-3">

@@ -72,7 +72,7 @@ export function TaskCard({
     task.order.dueDate < new Date()
 
   return (
-    <div className="rounded-lg bg-white p-3 ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10">
+    <div className="surface-card p-3">
       <div className="flex items-start justify-between gap-2">
         <Link
           href={`/orders/${task.order.id}`}

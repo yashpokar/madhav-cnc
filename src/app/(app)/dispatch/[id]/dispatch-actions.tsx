@@ -99,7 +99,7 @@ export function DispatchActions({
       </div>
 
       {receiptOpen ? (
-        <div className="grid max-w-sm grid-cols-1 gap-3 rounded-lg bg-zinc-50 p-4 dark:bg-white/5">
+        <div className="grid max-w-sm grid-cols-1 gap-3 surface-inset p-4">
           <Field>
             <Label>Received by</Label>
             <Input

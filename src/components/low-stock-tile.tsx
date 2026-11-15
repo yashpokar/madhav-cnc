@@ -19,7 +19,7 @@ export async function LowStockTile({ role }: { role: UserRole }) {
   return (
     <Link
       href="/stock?tab=low"
-      className={`${CARD} flex items-center justify-between gap-3 px-4 py-3 text-sm/6 transition hover:bg-zinc-50 print:hidden dark:hover:bg-white/5`}
+      className={`${CARD} surface-card-interactive flex items-center justify-between gap-3 px-4 py-3 text-sm/6 print:hidden`}
     >
       <span>
         <span className="text-xl/7 font-semibold tabular-nums text-red-600 dark:text-red-400">{count}</span>{' '}

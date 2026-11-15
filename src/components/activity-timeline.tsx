@@ -39,7 +39,7 @@ export async function ActivityTimeline({
       </summary>
 
       {items.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-zinc-950/15 px-3 py-4 text-sm/6 text-zinc-500 dark:border-white/15 dark:text-zinc-400">
+        <p className="surface-inset px-3 py-4 text-sm/6 text-zinc-500 dark:text-zinc-400">
           Nothing recorded yet. Changes from now on will appear here.
         </p>
       ) : (

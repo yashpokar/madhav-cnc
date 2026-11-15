@@ -5,7 +5,7 @@ import { Link } from '@/components/catalyst/link'
 
 /** The surface every dashboard card sits on. */
 export const CARD =
-  'rounded-xl bg-white shadow-xs ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10'
+  'surface-card'
 
 /** Whole-rupee money and short dates, as the dashboard shows them. */
 export const inr = moneyWhole
@@ -223,9 +223,9 @@ export function PeriodTile({
       ) : null}
     </>
   )
-  const box = hero ? `${CARD} p-5` : 'bg-white px-4 py-3.5 dark:bg-zinc-900'
+  const box = hero ? `${CARD} p-5` : 'bg-white px-4 py-3.5 dark:bg-[var(--surface-dark)]'
   const hover = hero
-    ? 'transition hover:ring-zinc-950/20 dark:hover:ring-white/20'
+    ? 'surface-card-interactive'
     : 'transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
 
   return href ? (

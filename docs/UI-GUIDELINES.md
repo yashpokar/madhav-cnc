@@ -56,7 +56,37 @@ A hidden input inside a `Field` must come after the control. `Field` spaces the
 control with an adjacent-sibling selector (`label + control`), so anything in
 between removes the gap.
 
+## Surfaces and elevation
+
+Three layers, no more: the canvas (`--canvas`, #f6f7f9 / #0b0f17), cards on the
+canvas, and inset panels inside cards. Everything is defined once in
+`src/app/globals.css`; do not hand-roll `ring-1 ring-zinc-950/5` boxes.
+
+| Class | Use it for |
+| --- | --- |
+| `surface-card` | Anything that holds content on its own: stat cards, dashboard panels, summary boxes, settings sections, list/table containers, empty states. White, `rounded-xl`, `--shadow-card` (hairline plus soft ambient). Add `p-4` (dense) or `p-5`. |
+| `surface-card-interactive` | A card that is a link or button. Adds a stronger shadow on hover, a 1px lift (only when motion is allowed) and a focus ring. |
+| `surface-inset` | A quiet panel nested inside a card or form: a copyable link, a helper block, an inline-action panel. A touch darker than its parent, no shadow, `rounded-lg`. |
+| `surface-tinted-warn/good/bad` | A callout whose message is the point (payment overdue, no dues). Soft tint with a matching hairline. |
+| `StatCard` (`@/components/stat-card`) | One figure: muted label, big tabular value, optional hint, delta and 36px icon tile. Tone (`neutral`, `good`, `warn`, `bad`) colours only the icon tile and the value. Pass `href` to make the whole card a link. Cards in a grid share a height. |
+
+Rules:
+
+- Dark mode lifts surfaces from #0b0f17 to #141a26 with a 1px white/8 ring. No
+  drop shadows in dark.
+- One shadow level for resting cards (`--shadow-card`); `--shadow-pop` is only
+  for popovers, menus and dialogs. Never put a shadowed card inside a card.
+- Cards are `rounded-xl`, inner panels `rounded-lg`. Padding is `p-4` or `p-5`.
+- Tint the content, not the card: a bad figure gets a red value or icon tile, not
+  a red card. Use `surface-tinted-*` only for banners.
+- Forms stay flat on the canvas. Box a form only when it is a settings section.
+- Print is flat: the utilities drop the shadow and keep a hairline outline, so
+  invoices and quotations stay black on white.
+
 ## Do and do not
+
+- Do build a card with `surface-card`; do not combine `bg-zinc-50` with `ring-1`
+  on a rounded box, and do not add `shadow-*` utilities to cards.
 
 - Do use `Field`, `Label`, `Description`, `ErrorMessage` for every form control.
 - Do use `Description` only inside a `Field` (Headless UI throws otherwise); use a

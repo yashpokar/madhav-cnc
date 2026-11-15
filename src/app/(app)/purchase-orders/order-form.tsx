@@ -186,7 +186,7 @@ export function OrderForm({
           <Label>Notes for the vendor</Label>
           <Textarea name="notes" rows={4} defaultValue={values.notes ?? ''} />
         </Field>
-        <div className="self-start rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
+        <div className="self-start surface-card p-4">
           <dl className="grid grid-cols-2 gap-y-2 text-sm/6">
             <dt className="font-medium">Order total (incl. GST)</dt>
             <dd className="text-right text-base/6 font-semibold tabular-nums">

@@ -145,7 +145,7 @@ export default async function ExpensesPage({
           {summary.slice(0, 8).map((row) => (
             <div
               key={row.categoryId ?? 'none'}
-              className="rounded-lg bg-zinc-50 p-4 dark:bg-white/5"
+              className="surface-inset p-4"
             >
               <div className="truncate text-sm/5 text-zinc-500 dark:text-zinc-400">
                 {row.name}

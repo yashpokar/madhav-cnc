@@ -128,7 +128,7 @@ export function CompaniesManager({
         {users.length === 0 ? (
           <Text>Everyone with an account is an administrator, so they can open every company.</Text>
         ) : (
-          <div className="overflow-x-auto rounded-xl ring-1 ring-zinc-950/10 dark:ring-white/10">
+          <div className="overflow-x-auto surface-card">
             <table className="w-full text-left text-sm/6">
               <thead className="border-b border-zinc-950/10 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
                 <tr>

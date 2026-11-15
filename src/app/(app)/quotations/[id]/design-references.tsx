@@ -196,7 +196,7 @@ export function DesignReferences({
           {current.map((item) => (
             <figure
               key={item.id}
-              className="grid grid-cols-1 gap-2 rounded-lg p-3 ring-1 ring-zinc-950/10 dark:ring-white/10"
+              className="grid grid-cols-1 gap-2 surface-card p-3"
             >
               <a
                 href={`/api/attachments/${item.id}`}
@@ -282,7 +282,7 @@ export function DesignReferences({
             {removed.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-1 gap-2 rounded-lg bg-white p-2 ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10"
+                className="grid grid-cols-1 gap-2 surface-card p-2"
               >
                 <a
                   href={`/api/attachments/${item.id}`}

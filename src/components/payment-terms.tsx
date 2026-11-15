@@ -34,7 +34,7 @@ export function PaymentTerms({
       </h2>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <div className="text-xs/5 font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Advance payable ({advancePercent}%)
           </div>
@@ -46,7 +46,7 @@ export function PaymentTerms({
           </div>
         </div>
 
-        <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
+        <div className="surface-card p-4">
           <div className="text-xs/5 font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Balance ({Math.round((100 - advancePercent) * 100) / 100}%)
           </div>

@@ -98,7 +98,7 @@ export function ModesManager({ modes }: { modes: Mode[] }) {
         />
       ) : null}
 
-      <ul className="divide-y divide-zinc-950/5 overflow-hidden rounded-xl bg-white ring-1 ring-zinc-950/10 dark:divide-white/10 dark:bg-zinc-900 dark:ring-white/10">
+      <ul className="divide-y divide-zinc-950/5 overflow-hidden surface-card dark:divide-white/10">
         {modes.map((mode, index) => {
           const open = openId === mode.id
 

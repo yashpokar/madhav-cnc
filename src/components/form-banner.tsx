@@ -58,7 +58,7 @@ export function EmptyState({
   action?: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-zinc-950/15 bg-white/50 px-6 py-12 text-center dark:border-white/15 dark:bg-white/2.5">
+    <div className="surface-card px-6 py-12 text-center">
       <div className="text-sm/6 font-medium text-zinc-950 dark:text-white">
         {title}
       </div>

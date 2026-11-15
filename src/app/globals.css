@@ -80,6 +80,110 @@ html[data-theme='dark'] {
     0 16px 32px -8px rgb(16 24 40 / 0.14);
 }
 
+/*
+ * Surfaces and elevation. See docs/UI-GUIDELINES.md.
+ *  surface-card        white card lifted off the canvas (shadow-card is the hairline + soft ambient)
+ *  surface-card-interactive  same, for a card that is a link or button
+ *  surface-inset       quiet tinted panel inside a card, no shadow
+ *  surface-tinted-*    soft callouts (warn / good / bad) with a matching hairline
+ * Dark: surfaces lift to --surface-dark with a 1px white/8 ring, no drop shadow.
+ * Print: everything is flat, white and hairline-outlined.
+ */
+@utility surface-card {
+  background-color: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  &:where([data-theme='dark'] *) {
+    background-color: var(--surface-dark);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+  @media print {
+    background-color: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+  }
+}
+
+@utility surface-card-interactive {
+  cursor: pointer;
+  transition-property: box-shadow, transform, background-color;
+  transition-duration: 150ms;
+  &:hover {
+    box-shadow: 0 0 0 1px rgb(16 24 40 / 0.1), 0 2px 4px 0 rgb(16 24 40 / 0.05),
+      0 8px 20px -4px rgb(16 24 40 / 0.1);
+  }
+  &:where([data-theme='dark'] *):hover {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16);
+    background-color: color-mix(in oklab, var(--surface-dark) 94%, white);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+  }
+  @media print {
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2) !important;
+    transform: none !important;
+  }
+}
+
+@utility surface-inset {
+  background-color: rgb(16 24 40 / 0.035);
+  border-radius: var(--radius-lg);
+  &:where([data-theme='dark'] *) {
+    background-color: rgb(255 255 255 / 0.04);
+  }
+  @media print {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.15);
+  }
+}
+
+@utility surface-tinted-warn {
+  background-color: #fffbeb;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 1px rgb(217 119 6 / 0.22), 0 1px 2px 0 rgb(217 119 6 / 0.06);
+  &:where([data-theme='dark'] *) {
+    background-color: rgb(251 191 36 / 0.1);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.22);
+  }
+  @media print {
+    background-color: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+  }
+}
+
+@utility surface-tinted-good {
+  background-color: #f3fbe9;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 1px rgb(101 163 13 / 0.25), 0 1px 2px 0 rgb(101 163 13 / 0.06);
+  &:where([data-theme='dark'] *) {
+    background-color: rgb(163 230 53 / 0.1);
+    box-shadow: 0 0 0 1px rgb(163 230 53 / 0.22);
+  }
+  @media print {
+    background-color: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+  }
+}
+
+@utility surface-tinted-bad {
+  background-color: #fef2f2;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 1px rgb(220 38 38 / 0.2), 0 1px 2px 0 rgb(220 38 38 / 0.06);
+  &:where([data-theme='dark'] *) {
+    background-color: rgb(248 113 113 / 0.1);
+    box-shadow: 0 0 0 1px rgb(248 113 113 / 0.22);
+  }
+  @media print {
+    background-color: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2);
+  }
+}
+
 /* Save / Cancel bar: stays in view at the bottom of long forms. */
 @utility form-actions {
   position: sticky;

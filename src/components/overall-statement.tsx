@@ -208,7 +208,7 @@ export async function OverallStatement({
   return (
     <section
       aria-labelledby="overall-statement"
-      className="rounded-lg ring-1 ring-zinc-950/10 dark:ring-white/10"
+      className="surface-card"
     >
       <header className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3">
         <h2

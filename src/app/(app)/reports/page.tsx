@@ -39,7 +39,7 @@ function Card({
   return (
     <section
       aria-label={title}
-      className="rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10"
+      className="surface-card p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <Subheading level={2}>{title}</Subheading>
@@ -125,7 +125,7 @@ export default async function ReportsPage() {
       {canPayments ? (
         <Link
           href="/reports/payment-methods"
-          className="flex flex-wrap items-baseline justify-between gap-x-4 rounded-lg p-4 ring-1 ring-zinc-950/10 hover:bg-zinc-950/2.5 dark:ring-white/10 dark:hover:bg-white/5"
+          className="flex flex-wrap items-baseline justify-between gap-x-4 surface-card surface-card-interactive p-4"
         >
           <span className="font-medium">Payment methods</span>
           <span className="text-sm/5 text-zinc-500 dark:text-zinc-400">

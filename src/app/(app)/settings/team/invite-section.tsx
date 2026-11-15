@@ -165,7 +165,7 @@ export function InviteSection({
       {invites.length > 0 ? (
         <div className="grid grid-cols-1 gap-2">
           <Subheading level={3}>Pending invitations</Subheading>
-          <div className="overflow-x-auto rounded-xl ring-1 ring-zinc-950/10 dark:ring-white/10">
+          <div className="overflow-x-auto surface-card">
             <table className="w-full text-left text-sm/6">
               <thead className="border-b border-zinc-950/10 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
                 <tr>
@@ -245,7 +245,7 @@ export function InviteSection({
               once and expires in a week.
             </DialogDescription>
             <DialogBody className="grid grid-cols-1 gap-4">
-              <div className="rounded-lg bg-zinc-50 p-3 text-sm/6 break-all ring-1 ring-zinc-950/10 select-all dark:bg-white/5 dark:ring-white/10">
+              <div className="surface-inset p-3 text-sm/6 break-all select-all">
                 {link}
               </div>
               <WhatsAppButton invite={created} ctx={ctx} big />

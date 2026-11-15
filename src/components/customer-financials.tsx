@@ -1,3 +1,4 @@
+import { StatCard } from '@/components/stat-card'
 import { Badge } from '@/components/catalyst/badge'
 import { fmtDate, inr, RelatedTable } from '@/components/related-table'
 import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
@@ -14,26 +15,7 @@ function Tile({
   hint?: string
   tone?: 'neutral' | 'warn' | 'bad'
 }) {
-  const toneClass =
-    tone === 'bad'
-      ? 'bg-rose-50 ring-rose-950/10 dark:bg-rose-400/10 dark:ring-rose-400/20'
-      : tone === 'warn'
-        ? 'bg-amber-50 ring-amber-950/10 dark:bg-amber-400/10 dark:ring-amber-400/20'
-        : 'bg-zinc-50 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
-
-  return (
-    <div className={`rounded-lg p-4 ring-1 ${toneClass}`}>
-      <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">{label}</div>
-      <div className="mt-1 text-xl/8 font-semibold tabular-nums">
-        {inr.format(value)}
-      </div>
-      {hint ? (
-        <div className="mt-0.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
-          {hint}
-        </div>
-      ) : null}
-    </div>
-  )
+  return <StatCard label={label} value={inr.format(value)} hint={hint} tone={tone} />
 }
 
 export async function CustomerFinancials({ id }: { id: string }) {
@@ -139,7 +121,7 @@ export async function CustomerDueBanner({ id }: { id: string }) {
     return (
       <div
         role="status"
-        className="rounded-lg bg-lime-50 px-4 py-3 text-sm/6 font-medium text-lime-800 ring-1 ring-lime-950/10 dark:bg-lime-400/10 dark:text-lime-300 dark:ring-lime-400/20"
+        className="surface-tinted-good px-4 py-3 text-sm/6 font-medium text-lime-800 dark:text-lime-300"
       >
         No dues. Everything billed has been settled.
       </div>
@@ -151,10 +133,10 @@ export async function CustomerDueBanner({ id }: { id: string }) {
   return (
     <div
       role="status"
-      className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-lg px-4 py-3 ring-1 ${
+      className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3 ${
         late
-          ? 'bg-rose-50 text-rose-900 ring-rose-950/15 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/30'
-          : 'bg-amber-50 text-amber-900 ring-amber-950/10 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20'
+          ? 'surface-tinted-bad text-rose-900 dark:text-rose-200'
+          : 'surface-tinted-warn text-amber-900 dark:text-amber-200'
       }`}
     >
       <span className="text-sm/6 font-medium">

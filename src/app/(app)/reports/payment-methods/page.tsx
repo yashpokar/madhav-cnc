@@ -58,7 +58,7 @@ export default async function PaymentMethodsPage({
       </div>
 
       {canExpenses && balances.length > 0 ? (
-        <section className="grid grid-cols-1 gap-3 rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10">
+        <section className="grid grid-cols-1 gap-3 surface-card p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <Subheading level={2}>Balance by payment mode</Subheading>
             {canSetOpening ? (
@@ -162,7 +162,7 @@ export default async function PaymentMethodsPage({
             {groups.map((g) => (
               <li
                 key={g.name}
-                className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10"
+                className="surface-card p-4"
               >
                 <div className="truncate font-medium" title={g.name}>
                   {g.name}
@@ -187,7 +187,7 @@ export default async function PaymentMethodsPage({
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 surface-card p-4">
             <span className="font-medium">Grand total</span>
             <span className="flex flex-wrap gap-x-6 gap-y-1 text-sm/6 tabular-nums">
               <span>
@@ -209,7 +209,7 @@ export default async function PaymentMethodsPage({
               <details
                 key={g.name}
                 open={index === 0}
-                className="group rounded-lg ring-1 ring-zinc-950/10 dark:ring-white/10"
+                className="group surface-card"
               >
                 <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-x-4 p-4">
                   <Subheading level={2}>{g.name}</Subheading>

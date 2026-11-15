@@ -116,7 +116,7 @@ export function TeamManager({
 
       <section className="grid grid-cols-1 gap-3">
         <Subheading level={2}>Members</Subheading>
-        <div className="overflow-x-auto rounded-xl ring-1 ring-zinc-950/10 dark:ring-white/10">
+        <div className="overflow-x-auto surface-card">
           <table className="w-full text-left text-sm/6">
             <thead className="border-b border-zinc-950/10 text-zinc-500 dark:border-white/10 dark:text-zinc-400">
               <tr>

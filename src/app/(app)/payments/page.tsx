@@ -57,7 +57,7 @@ function Tile({
           ? 'rounded-lg bg-amber-50 p-4 ring-1 ring-amber-950/10 dark:bg-amber-400/10 dark:ring-amber-400/20'
           : tone === 'bad'
             ? 'rounded-lg bg-rose-50 p-4 ring-1 ring-rose-950/10 dark:bg-rose-400/10 dark:ring-rose-400/20'
-            : 'rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10'
+            : 'surface-card p-4'
       }
     >
       <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">{label}</div>
@@ -308,7 +308,7 @@ export default async function PaymentsPage({
           {data.aging.map((bucket) => (
             <div
               key={bucket.key}
-              className="rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10"
+              className="surface-card p-4"
             >
               <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">
                 {bucket.label}

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { requireCompanyId } from '@/lib/active-company'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
@@ -591,7 +592,7 @@ export async function suggestInterState(
   customerState: string | null,
 ): Promise<boolean> {
   const company = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     select: { state: true },
   })
 
@@ -822,7 +823,7 @@ export async function quickCreateInvoiceFromOrder(
   }
 
   const company = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     select: { invoiceTerms: true },
   })
 

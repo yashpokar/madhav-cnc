@@ -1,95 +1,56 @@
 import { prisma } from '@/lib/prisma'
+import { requireCompanyId } from '@/lib/active-company'
 import { NoteKind, PartnerType } from '@/generated/prisma/enums'
 
-const SEQUENCES = {
-  customer: { sequence: 'customer_code_seq', prefix: 'CUST' },
-  item: { sequence: 'item_code_seq', prefix: 'ITM' },
-  quotation: { sequence: 'quotation_number_seq', prefix: 'QUO' },
-  order: { sequence: 'order_number_seq', prefix: 'ORD' },
-  dispatch: { sequence: 'dispatch_number_seq', prefix: 'DC' },
-  invoice: { sequence: 'invoice_number_seq', prefix: 'INV' },
-  payment: { sequence: 'payment_number_seq', prefix: 'PAY' },
-  expense: { sequence: 'expense_number_seq', prefix: 'EXP' },
-  CREDIT: { sequence: 'credit_note_number_seq', prefix: 'CN' },
-  DEBIT: { sequence: 'debit_note_number_seq', prefix: 'DN' },
-  ARCHITECT: { sequence: 'architect_code_seq', prefix: 'ARC' },
-  CARPENTER: { sequence: 'carpenter_code_seq', prefix: 'CAR' },
+/** Each kind of number: its counter key and the letters it starts with. */
+const KINDS = {
+  customer: 'CUST',
+  item: 'ITM',
+  quotation: 'QUO',
+  order: 'ORD',
+  dispatch: 'DC',
+  invoice: 'INV',
+  payment: 'PAY',
+  expense: 'EXP',
+  CREDIT: 'CN',
+  DEBIT: 'DN',
+  ARCHITECT: 'ARC',
+  CARPENTER: 'CAR',
 } as const
 
-async function nextValue(sequence: string) {
-  const rows = await prisma.$queryRawUnsafe<{ nextval: bigint }[]>(
-    `SELECT nextval('${sequence}') AS nextval`,
-  )
+/**
+ * The next number for the active company. Every company counts on its own, so
+ * one company's invoices run INV-0001, INV-0002 whatever the others issue. The
+ * increment is a single statement, so two people saving at once never share a
+ * number.
+ */
+async function nextValue(key: keyof typeof KINDS) {
+  const companyId = await requireCompanyId()
 
-  return Number(rows[0].nextval)
+  const rows = await prisma.$queryRaw<{ value: number }[]>`
+    INSERT INTO document_counters (company_id, key, value)
+    VALUES (${companyId}, ${key}, 1)
+    ON CONFLICT (company_id, key)
+    DO UPDATE SET value = document_counters.value + 1
+    RETURNING value
+  `
+
+  return rows[0].value
 }
 
-export async function nextCustomerCode() {
-  const { sequence, prefix } = SEQUENCES.customer
-  const value = await nextValue(sequence)
+async function next(key: keyof typeof KINDS) {
+  const value = await nextValue(key)
 
-  return `${prefix}-${String(value).padStart(4, '0')}`
+  return `${KINDS[key]}-${String(value).padStart(4, '0')}`
 }
 
-export async function nextItemCode() {
-  const { sequence, prefix } = SEQUENCES.item
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextQuotationNumber() {
-  const { sequence, prefix } = SEQUENCES.quotation
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextOrderNumber() {
-  const { sequence, prefix } = SEQUENCES.order
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextDispatchNumber() {
-  const { sequence, prefix } = SEQUENCES.dispatch
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextInvoiceNumber() {
-  const { sequence, prefix } = SEQUENCES.invoice
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextPaymentNumber() {
-  const { sequence, prefix } = SEQUENCES.payment
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextExpenseNumber() {
-  const { sequence, prefix } = SEQUENCES.expense
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextNoteNumber(kind: NoteKind) {
-  const { sequence, prefix } = SEQUENCES[kind]
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
-
-export async function nextPartnerCode(type: PartnerType) {
-  const { sequence, prefix } = SEQUENCES[type]
-  const value = await nextValue(sequence)
-
-  return `${prefix}-${String(value).padStart(4, '0')}`
-}
+export const nextCustomerCode = () => next('customer')
+export const nextItemCode = () => next('item')
+export const nextQuotationNumber = () => next('quotation')
+export const nextOrderNumber = () => next('order')
+export const nextDispatchNumber = () => next('dispatch')
+export const nextInvoiceNumber = () => next('invoice')
+export const nextPaymentNumber = () => next('payment')
+export const nextExpenseNumber = () => next('expense')
+export const nextNoteNumber = (kind: NoteKind) => next(kind)
+export const nextPartnerCode = (type: PartnerType) => next(type)

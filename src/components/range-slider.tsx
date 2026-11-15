@@ -16,11 +16,11 @@ const THUMB = [
   'pointer-events-none absolute inset-x-0 top-0 h-6 w-full appearance-none bg-transparent focus:outline-hidden',
   '[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-zinc-950 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md dark:[&::-webkit-slider-thumb]:border-white dark:[&::-webkit-slider-thumb]:bg-zinc-900',
   '[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-zinc-950 [&::-moz-range-thumb]:bg-white',
-  'focus-visible:[&::-webkit-slider-thumb]:ring-4 focus-visible:[&::-webkit-slider-thumb]:ring-gold-400/40',
+  'focus-visible:[&::-webkit-slider-thumb]:ring-4 focus-visible:[&::-webkit-slider-thumb]:ring-accent-400/40',
 ].join(' ')
 
 const box =
-  'w-full min-w-0 rounded-lg border border-zinc-950/10 bg-white py-1.5 pr-2.5 pl-6 text-sm/6 text-zinc-950 tabular-nums focus:border-zinc-950/30 focus:outline-2 focus:outline-gold-400 dark:border-white/10 dark:bg-white/5 dark:text-white'
+  'w-full min-w-0 rounded-lg border border-zinc-950/10 bg-white py-1.5 pr-2.5 pl-6 text-sm/6 text-zinc-950 tabular-nums focus:border-zinc-950/30 focus:outline-2 focus:outline-accent-400 dark:border-white/10 dark:bg-white/5 dark:text-white'
 
 /**
  * An amount filter that matches the date-range filter: one field showing the
@@ -80,7 +80,7 @@ export function RangeSlider({
               <Headless.PopoverButton
                 className={clsx(
                   'flex h-9 w-full min-w-56 items-center gap-2 rounded-lg border bg-white px-3 pr-9 text-left text-sm/6 shadow-xs dark:bg-white/5',
-                  'border-zinc-950/10 hover:border-zinc-950/20 focus:outline-2 focus:outline-gold-400 dark:border-white/10 dark:hover:border-white/20',
+                  'border-zinc-950/10 hover:border-zinc-950/20 focus:outline-2 focus:outline-accent-400 dark:border-white/10 dark:hover:border-white/20',
                 )}
               >
                 <BanknotesIcon className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />

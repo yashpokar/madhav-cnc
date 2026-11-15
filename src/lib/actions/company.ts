@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { requireCompanyId } from '@/lib/active-company'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { companySettingSchema } from '@/lib/validation/company'
@@ -48,9 +49,9 @@ export async function updateCompanySetting(
   }
 
   await prisma.companySetting.upsert({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     update: { ...parsed.data, updatedById: user.id },
-    create: { id: 'default', ...parsed.data, updatedById: user.id },
+    create: { id: await requireCompanyId(), ...parsed.data, updatedById: user.id },
   })
 
   revalidatePath('/settings/company')
@@ -62,7 +63,7 @@ export async function removeUpiQr(): Promise<SimpleResult> {
   const user = await requireCapability('settings:update')
 
   const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     select: { upiQrStoredName: true },
   })
 
@@ -73,7 +74,7 @@ export async function removeUpiQr(): Promise<SimpleResult> {
   await deleteUpload(setting.upiQrStoredName)
 
   await prisma.companySetting.update({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     data: { upiQrStoredName: null, upiQrMimeType: null, updatedById: user.id },
   })
 

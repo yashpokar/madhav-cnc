@@ -46,7 +46,7 @@ export default async function SharedQuotationPage({
 
   const [quotation, company] = await Promise.all([
     getSharedQuotation(share.quotationId),
-    getPublicCompany(),
+    getPublicCompany(share.quotationId),
   ])
 
   if (!quotation) {

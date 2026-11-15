@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getActiveCompanyId } from '@/lib/active-company'
 import { requireAdmin } from '@/lib/session'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
@@ -52,6 +53,17 @@ export async function activateUser(
       activatedById: admin.id,
     },
   })
+
+  // A newly approved person starts in the company the approver is working in.
+  const companyId = await getActiveCompanyId()
+
+  if (companyId) {
+    await prisma.userCompany.upsert({
+      where: { userId_companyId: { userId: target.id, companyId } },
+      update: {},
+      create: { userId: target.id, companyId },
+    })
+  }
 
   revalidatePath('/admin/users')
 

@@ -63,7 +63,7 @@ export function SortHeader({
           className={clsx(
             'size-3.5 transition',
             current
-              ? 'text-gold-600 dark:text-gold-400'
+              ? 'text-accent-600 dark:text-accent-400'
               : 'text-zinc-300 group-hover:text-zinc-500 dark:text-zinc-600 dark:group-hover:text-zinc-300',
           )}
         />

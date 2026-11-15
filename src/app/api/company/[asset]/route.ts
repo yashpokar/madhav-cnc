@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireCompanyId } from '@/lib/active-company'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { can } from '@/lib/permissions'
@@ -33,11 +34,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   if (!spec) return new NextResponse('Not found', { status: 404 })
   if (!user || !user.isActive) return new NextResponse('Not signed in', { status: 401 })
 
-  const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
-    select: { [spec.stored]: true, [spec.mime]: true },
-  })
-  const stored = setting?.[spec.stored]
+  const setting = (await prisma.companySetting.findUnique({
+    where: { id: await requireCompanyId() },
+  })) as Record<string, unknown> | null
+  const stored = setting?.[spec.stored] as string | null | undefined
 
   if (!stored) return new NextResponse(`No ${spec.label} set`, { status: 404 })
 
@@ -46,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
 
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
-        'Content-Type': setting?.[spec.mime] ?? 'image/png',
+        'Content-Type': (setting?.[spec.mime] as string | null) ?? 'image/png',
         'Cache-Control': 'private, max-age=600',
       },
     })
@@ -84,18 +84,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
 
   const { storedName } = await saveUpload(Buffer.from(await file.arrayBuffer()), file.type)
 
-  const previous = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
-    select: { [spec.stored]: true },
-  })
+  const previous = (await prisma.companySetting.findUnique({
+    where: { id: await requireCompanyId() },
+  })) as Record<string, unknown> | null
 
   await prisma.companySetting.upsert({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     update: { [spec.stored]: storedName, [spec.mime]: file.type, updatedById: user.id },
-    create: { id: 'default', [spec.stored]: storedName, [spec.mime]: file.type, updatedById: user.id },
+    create: { id: await requireCompanyId(), [spec.stored]: storedName, [spec.mime]: file.type, updatedById: user.id },
   })
 
-  const old = previous?.[spec.stored]
+  const old = previous?.[spec.stored] as string | null | undefined
 
   if (old) await deleteUpload(old)
 
@@ -112,17 +111,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Not permitted' }, { status: 403 })
   }
 
-  const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
-    select: { [spec.stored]: true },
-  })
-  const stored = setting?.[spec.stored]
+  const setting = (await prisma.companySetting.findUnique({
+    where: { id: await requireCompanyId() },
+  })) as Record<string, unknown> | null
+  const stored = setting?.[spec.stored] as string | null | undefined
 
   if (!stored) return NextResponse.json({ error: `No ${spec.label} to remove` }, { status: 404 })
 
   await deleteUpload(stored)
   await prisma.companySetting.update({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     data: { [spec.stored]: null, [spec.mime]: null, updatedById: user.id },
   })
 

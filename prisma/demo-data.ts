@@ -8,13 +8,14 @@ const d = (offset: number) => {
 }
 
 async function main() {
+  process.env.SEED_COMPANY_ID ??= 'default'
   const customers = await Promise.all(
     [
       ['C-0001', 'Vijay Interiors', '9876500001', 'Surat'],
       ['C-0002', 'Sunilbhai Diva', '9876500002', 'Navsari'],
       ['C-0003', 'Rujulbhai Shah', '9876500003', 'Vapi'],
     ].map(([code, name, phone, city]) =>
-      prisma.customer.upsert({ where: { code }, update: {}, create: { code, name, phone, city } }),
+      prisma.customer.upsert({ where: { companyId_code: { companyId: process.env.SEED_COMPANY_ID ?? 'default', code } }, update: {}, create: { code, name, phone, city } }),
     ),
   )
 
@@ -37,7 +38,7 @@ async function main() {
   const statuses = ['DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'COMPLETED', 'CANCELLED'] as const
   for (const [i, status] of statuses.entries()) {
     const number = `ORD-${String(i + 1).padStart(4, '0')}`
-    if (await prisma.order.findUnique({ where: { number } })) continue
+    if (await prisma.order.findFirst({ where: { number } })) continue
     const base = 1000 * (i + 1)
     const order = await prisma.order.create({
       data: {

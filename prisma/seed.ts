@@ -2,6 +2,10 @@ import 'dotenv/config'
 import { auth } from '../src/lib/auth'
 import { prisma } from '../src/lib/prisma'
 
+/** Scripts run outside a request, so they name their company explicitly. */
+const COMPANY_ID = process.env.SEED_COMPANY_ID ?? 'default'
+process.env.SEED_COMPANY_ID = COMPANY_ID
+
 const EXPENSE_CATEGORIES = [
   'Raw material',
   'Hardware & fittings',
@@ -23,7 +27,7 @@ const EXPENSE_CATEGORIES = [
 async function seedExpenseCategories() {
   for (const [index, name] of EXPENSE_CATEGORIES.entries()) {
     await prisma.expenseCategory.upsert({
-      where: { name },
+      where: { companyId_name: { companyId: COMPANY_ID, name } },
       update: {},
       create: { name, sortOrder: (index + 1) * 10 },
     })
@@ -33,6 +37,11 @@ async function seedExpenseCategories() {
 }
 
 async function main() {
+  await prisma.companySetting.upsert({
+    where: { id: COMPANY_ID },
+    update: {},
+    create: { id: COMPANY_ID },
+  })
   await seedExpenseCategories()
 
   const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@madhavcnc.local'

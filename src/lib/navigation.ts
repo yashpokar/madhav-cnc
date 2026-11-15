@@ -35,6 +35,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = ALL_NAV_ENTRIES.filter(
 
 export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/admin/users', label: 'Users', capability: 'user:update' },
+  { href: '/admin/companies', label: 'Companies', capability: 'user:update' },
   { href: '/admin/activity', label: 'Activity log', capability: 'user:update' },
   {
     href: '/settings/company',

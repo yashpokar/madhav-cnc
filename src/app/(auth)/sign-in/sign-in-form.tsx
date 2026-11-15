@@ -16,9 +16,11 @@ import { authClient } from '@/lib/auth-client'
 
 export function SignInForm({
   next,
+  inviteToken,
   googleEnabled,
 }: {
   next: string
+  inviteToken: string | null
   googleEnabled: boolean
 }) {
   const router = useRouter()
@@ -95,7 +97,7 @@ export function SignInForm({
       </div>
 
       <Text>
-        Need an account? <TextLink href="/sign-up">
+        Need an account? <TextLink href={inviteToken ? `/sign-up?invite=${inviteToken}` : '/sign-up'}>
           <Strong>Register</Strong>
         </TextLink>
       </Text>

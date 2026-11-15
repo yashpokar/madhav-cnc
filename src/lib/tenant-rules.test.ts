@@ -314,3 +314,14 @@ describe('balance adjustments', () => {
     ).toEqual(['ch1'])
   })
 })
+
+describe('invitations', () => {
+  it('are scoped to a company and filtered on read', () => {
+    expect(SCOPED.has('Invitation')).toBe(true)
+    expect(ownedBy('Invitation', 'c1')).toEqual({ companyId: 'c1' })
+    expect(scopeWhere('Invitation', 'findMany', { status: 'PENDING' }, 'c1')).toEqual({
+      status: 'PENDING',
+      companyId: 'c1',
+    })
+  })
+})

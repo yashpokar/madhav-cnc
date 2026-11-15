@@ -11,15 +11,8 @@ import {
   DropdownLabel,
   DropdownMenu,
 } from '@/components/catalyst/dropdown'
+import { BrandMark } from '@/components/brand-mark'
 import { switchCompany } from '@/lib/actions/companies'
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join('')
 
 export type CompanyChoice = { id: string; companyName: string }
 
@@ -45,12 +38,7 @@ export function CompanySwitcher({
 
   const lockup = (
     <span className="flex min-w-0 items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-xs/4 font-semibold text-zinc-700 ring-1 ring-zinc-950/5 dark:bg-white/10 dark:text-zinc-200 dark:ring-white/10"
-      >
-        {initials(active?.companyName ?? '?')}
-      </span>
+      <BrandMark className="size-9" />
       <span className="min-w-0 text-left">
         <span className="block truncate text-sm/5 font-semibold text-zinc-950 dark:text-white">
           {active?.companyName ?? 'No company'}

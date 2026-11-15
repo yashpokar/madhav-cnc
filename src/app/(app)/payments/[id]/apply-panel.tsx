@@ -36,11 +36,18 @@ export function ApplyPanel({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState<SimpleResult | null>(null)
-  const [applied, setApplied] = useState<Record<string, string>>(
-    Object.fromEntries(
-      Object.entries(current).map(([key, value]) => [key, String(value)]),
-    ),
-  )
+  const [applied, setApplied] = useState<Record<string, string>>(() => {
+    const existing = Object.entries(current)
+
+    // A single open invoice and nothing applied yet: offer the obvious answer.
+    if (existing.length === 0 && invoices.length === 1) {
+      const take = round2(Math.min(receiptAmount, invoices[0].due))
+
+      return take > 0 ? { [invoices[0].id]: String(take) } : {}
+    }
+
+    return Object.fromEntries(existing.map(([key, value]) => [key, String(value)]))
+  })
 
   const allocated = round2(
     invoices.reduce((sum, invoice) => sum + num(applied[invoice.id] ?? ''), 0),

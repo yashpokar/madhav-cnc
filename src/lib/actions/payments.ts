@@ -118,6 +118,25 @@ export async function createReceipt(
     }
   }
 
+  // With nothing chosen and a single open invoice there is nothing to decide:
+  // the money belongs to that invoice. Several open invoices still need a choice.
+  let allocationRows = checked.rows
+
+  if (allocationRows.length === 0) {
+    const open = (await openInvoiceBalances(parsed.data.customerId)).filter(
+      (row) => row.due > 0,
+    )
+
+    if (open.length === 1) {
+      allocationRows = [
+        {
+          invoiceId: open[0].id,
+          amount: round2(Math.min(parsed.data.amount, open[0].due)),
+        },
+      ]
+    }
+  }
+
   const method = await resolvePaymentMode(parsed.data.channelId)
 
   if (!method) {
@@ -143,7 +162,7 @@ export async function createReceipt(
       paidOn: parsed.data.paidOn,
       notes: parsed.data.notes,
       recordedById: user.id,
-      allocations: { create: checked.rows },
+      allocations: { create: allocationRows },
     },
   })
 

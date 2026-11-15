@@ -101,3 +101,17 @@ export const quotationInputSchema = z.object({
 
 export type QuotationLineData = z.output<typeof quotationLineSchema>
 export type QuotationData = z.output<typeof quotationInputSchema>
+
+/**
+ * The service layer and the API use the same schema: it is already
+ * JSON-native (dates are 'yyyy-mm-dd' strings, numbers are coerced), the web
+ * adapter only adds the FormData -> object step in front of it.
+ */
+export const quotationJsonSchema = quotationInputSchema
+
+/** A staff comment on a quotation. */
+export const staffCommentBodySchema = z
+  .string()
+  .trim()
+  .min(1, 'Write a comment first')
+  .max(1000)

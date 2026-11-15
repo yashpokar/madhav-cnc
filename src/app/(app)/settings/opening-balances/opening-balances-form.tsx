@@ -69,14 +69,14 @@ export function OpeningBalancesForm({ rows: initial }: { rows: Row[] }) {
           return (
             <li
               key={row.channelId}
-              className="grid grid-cols-1 gap-4 rounded-lg p-4 ring-1 ring-zinc-950/10 sm:grid-cols-[1fr_1fr_1fr] dark:ring-white/10"
+              className="grid grid-cols-1 gap-4 rounded-lg p-4 ring-1 ring-zinc-950/10 sm:grid-cols-[1fr_1fr_1fr] sm:items-end dark:ring-white/10"
             >
-              <div className="flex items-center gap-2 font-medium">
+              <div className="flex min-h-10 items-center gap-2 font-medium">
                 {row.name}
                 {!row.isActive ? <Badge color="zinc">Inactive</Badge> : null}
               </div>
               <Field>
-                <Label>Opening balance (use − if negative)</Label>
+                <Label>Opening balance</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -99,7 +99,7 @@ export function OpeningBalancesForm({ rows: initial }: { rows: Row[] }) {
         })}
       </ul>
 
-      <Text>Leave the amount blank to have no opening balance for a mode.</Text>
+      <Text>Use a minus sign for a negative balance, such as an overdraft. Leave the amount blank to have no opening balance for a mode.</Text>
 
       <div>
         <Button disabled={pending} onClick={save}>

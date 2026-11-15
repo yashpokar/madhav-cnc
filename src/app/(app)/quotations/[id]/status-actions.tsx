@@ -102,7 +102,7 @@ export function StatusActions({
 
         {canCreateOrder && (status === 'ACCEPTED' || status === 'CONVERTED') ? (
           <Button
-            outline={status === 'CONVERTED' && !!convertedOrder}
+            {...(status === 'CONVERTED' && convertedOrder ? { outline: true as const } : { color: 'dark/zinc' as const })}
             disabled={pending}
             onClick={() =>
               run(

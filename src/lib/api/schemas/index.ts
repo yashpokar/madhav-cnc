@@ -12,6 +12,11 @@ export const metaResponse = z.object({
   minAppVersion: z.object({ ios: z.string(), android: z.string() }),
   latestAppVersion: z.string(),
   maintenance: z.boolean(),
+  release: z.object({
+    version: z.string(),
+    commit: z.string(),
+    builtAt: z.string().nullable(),
+  }),
 })
 
 export const companySummary = z.object({

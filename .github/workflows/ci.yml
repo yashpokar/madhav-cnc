@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Never connected to by the static checks; Prisma only needs a well-formed URL.
+  DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+  BETTER_AUTH_SECRET: ci-dummy-secret-ci-dummy-secret-0123
+  BETTER_AUTH_URL: http://localhost:3000
+
+jobs:
+  # Required check: "Static checks"
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Prisma schema is valid
+        run: pnpm exec prisma validate
+      - name: Generate route types
+        run: pnpm exec next typegen
+      - name: Type check
+        run: pnpm exec tsc --noEmit
+      - name: Lint
+        run: pnpm exec eslint
+
+  # Required check: "Unit tests"
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Includes the OpenAPI stale-spec guard (kit.test.ts compares
+      # openapi/prodlys-v1.json with the generated document).
+      - name: Vitest
+        run: pnpm exec vitest run
+
+  # Required check: "Migration safety"
+  migrations:
+    name: Migration safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      SHADOW_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_shadow
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+
+      - name: Applied migrations are never edited or deleted
+        if: github.event_name == 'pull_request'
+        run: |
+          base="origin/${{ github.base_ref }}"
+          changed="$(git diff --name-only --diff-filter=MD "$base"...HEAD -- prisma/migrations)"
+          if [ -n "$changed" ]; then
+            echo "::error::These migrations already exist on ${{ github.base_ref }} and must not be edited or deleted. Add a new migration instead."
+            echo "$changed"
+            exit 1
+          fi
+          echo "No existing migration was modified or deleted."
+
+      - name: Apply every migration to an empty database
+        run: pnpm exec prisma migrate deploy
+
+      - name: Schema matches the migrations (no drift)
+        run: |
+          psql "postgresql://ci:ci@localhost:5432/ci" -c 'create database ci_shadow'
+          pnpm exec prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema prisma/schema.prisma \
+            --exit-code \
+            || { echo "::error::prisma/schema.prisma differs from the migrations. Run 'pnpm db:migrate' and commit the new migration."; exit 1; }
+
+      - name: Applied database matches the schema
+        run: |
+          pnpm exec prisma migrate diff \
+            --from-config-datasource \
+            --to-schema prisma/schema.prisma \
+            --exit-code
+
+  # Required check: "Build and smoke"
+  build:
+    name: Build and smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      BETTER_AUTH_URL: http://localhost:3100
+      PORT: '3100'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # A server component calling a client function fails here, not in production.
+      - name: Production build
+        run: pnpm build
+      - name: Apply migrations
+        run: pnpm exec prisma migrate deploy
+      - name: Start the production server
+        run: |
+          pnpm exec next start -p 3100 > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            curl -fs -o /dev/null http://localhost:3100/sign-in && exit 0
+            sleep 2
+          done
+          echo "::error::server did not start"
+          cat server.log
+          exit 1
+      - name: Smoke test
+        env:
+          BASE_URL: http://localhost:3100
+        run: node scripts/smoke.mjs
+      - name: Server log
+        if: failure()
+        run: cat server.log || true
+      - name: Stop the server
+        if: always()
+        run: kill "$(cat server.pid)" || true

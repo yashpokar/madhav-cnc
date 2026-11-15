@@ -1,0 +1,61 @@
+name: Post-deploy check
+
+# Railway deploys every push to main by itself. This workflow deploys nothing: it
+# waits until production serves the pushed commit, then runs a read-only smoke
+# test. A red run here means "main is not healthy in production": GitHub emails
+# the author of the push, and the rollback steps are in docs/RELEASING.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit expected to be live (blank = the latest commit on main)
+        required: false
+
+# Only the newest main matters; an older commit never becomes live again.
+concurrency:
+  group: post-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PROD_URL: ${{ vars.PROD_URL || 'https://app.prodlys.com' }}
+
+jobs:
+  verify:
+    name: Production is live and healthy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Wait for the deploy (up to 15 minutes)
+        run: |
+          expected="${{ inputs.sha || github.sha }}"
+          deadline=$((SECONDS + 900))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            live="$(curl -fsS --max-time 20 "$PROD_URL/sign-in" 2>/dev/null | grep -o 'data-dpl-id="[^"]*"' | head -1 | cut -d'"' -f2 || true)"
+            echo "live=${live:-<none>} expected=$expected"
+            if [ "$live" = "$expected" ]; then
+              echo "Production is serving $expected"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::Production did not serve $expected within 15 minutes. Check the Railway deployment (build or start failure keeps the previous deployment serving)."
+          exit 1
+
+      - name: Read-only smoke test
+        env:
+          BASE_URL: ${{ env.PROD_URL }}
+          SMOKE_MODE: readonly
+          EXPECT_COMMIT: ${{ inputs.sha || github.sha }}
+        run: node scripts/smoke.mjs

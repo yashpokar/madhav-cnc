@@ -50,7 +50,7 @@ import {
   SidebarSpacer,
 } from '@/components/catalyst/sidebar'
 import { SidebarLayout } from '@/components/catalyst/sidebar-layout'
-import { BrandLockup } from '@/components/brand-mark'
+import { CompanySwitcher, type CompanyChoice } from '@/components/company-switcher'
 import { CommandPalette, SearchTrigger } from '@/components/command-palette'
 import { setTheme } from '@/lib/theme'
 import Link from 'next/link'
@@ -95,11 +95,15 @@ export function AppShell({
   user,
   nav,
   adminNav,
+  companies,
+  activeCompanyId,
   children,
 }: {
   user: CurrentUser
   nav: readonly NavEntry[]
   adminNav: readonly NavEntry[]
+  companies: CompanyChoice[]
+  activeCompanyId: string | null
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -172,7 +176,11 @@ export function AppShell({
       sidebar={
         <Sidebar>
           <SidebarHeader>
-            <BrandLockup subtitle="Order management" />
+            <CompanySwitcher
+              companies={companies}
+              activeId={activeCompanyId}
+              canManage={user.role === 'ADMIN'}
+            />
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
@@ -316,7 +324,7 @@ function BottomNav({
               aria-current={current ? 'page' : undefined}
               className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]/4 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
                 current
-                  ? 'text-zinc-950 dark:text-gold-300'
+                  ? 'text-zinc-950 dark:text-accent-300'
                   : 'text-zinc-500 dark:text-zinc-400'
               }`}
             >

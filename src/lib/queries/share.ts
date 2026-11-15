@@ -150,9 +150,13 @@ export async function getSharedQuotation(quotationId: string) {
   }
 }
 
-export async function getPublicCompany() {
+export async function getPublicCompany(quotationId: string) {
+  const owner = await prisma.quotation.findUnique({
+    where: { id: quotationId },
+    select: { companyId: true },
+  })
   const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: owner?.companyId ?? '' },
     select: {
       companyName: true,
       addressLine: true,

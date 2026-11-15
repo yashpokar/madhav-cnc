@@ -177,7 +177,7 @@ export async function createExpenseCategory(
     }
   }
 
-  const duplicate = await prisma.expenseCategory.findUnique({
+  const duplicate = await prisma.expenseCategory.findFirst({
     where: { name: parsed.data.name },
     select: { id: true },
   })

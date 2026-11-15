@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@/generated/prisma/client'
 import { withAudit } from '@/lib/audit'
+import { withCompanyScope } from '@/lib/company-scope'
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL
@@ -9,10 +10,12 @@ function createPrismaClient() {
     throw new Error('DATABASE_URL is not set')
   }
 
-  return withAudit(
-    new PrismaClient({
-      adapter: new PrismaPg({ connectionString }),
-    }),
+  return withCompanyScope(
+    withAudit(
+      new PrismaClient({
+        adapter: new PrismaPg({ connectionString }),
+      }),
+    ),
   )
 }
 

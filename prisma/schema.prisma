@@ -17,10 +17,10 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String  @id @default(cuid())
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false) @map("email_verified")
+  email         String  @unique
+  emailVerified Boolean @default(false) @map("email_verified")
   image         String?
 
   role          UserRole  @default(VIEWER)
@@ -30,43 +30,44 @@ model User {
   activatedAt   DateTime? @map("activated_at")
   activatedById String?   @map("activated_by_id")
 
-  activatedBy   User?     @relation("UserActivations", fields: [activatedById], references: [id], onDelete: SetNull)
-  activatedUsers User[]   @relation("UserActivations")
+  activatedBy    User?  @relation("UserActivations", fields: [activatedById], references: [id], onDelete: SetNull)
+  activatedUsers User[] @relation("UserActivations")
 
-  sessions      Session[]
-  accounts      Account[]
+  sessions Session[]
+  accounts Account[]
 
-  partnersCreated  Partner[]  @relation("PartnerCreatedBy")
-  partnersUpdated  Partner[]  @relation("PartnerUpdatedBy")
-  customersCreated Customer[] @relation("CustomerCreatedBy")
-  customersUpdated Customer[] @relation("CustomerUpdatedBy")
-  itemsCreated     Item[]     @relation("ItemCreatedBy")
-  itemsUpdated     Item[]     @relation("ItemUpdatedBy")
-  materialsCreated Material[] @relation("MaterialCreatedBy")
-  quotationsCreated Quotation[] @relation("QuotationCreatedBy")
-  quotationsUpdated Quotation[] @relation("QuotationUpdatedBy")
-  ordersCreated     Order[]     @relation("OrderCreatedBy")
-  ordersUpdated     Order[]     @relation("OrderUpdatedBy")
-  productionTasksAssigned  ProductionTask[] @relation("ProductionTaskAssignee")
-  productionTasksCompleted ProductionTask[] @relation("ProductionTaskCompletedBy")
-  attachmentsUploaded QuotationAttachment[] @relation("AttachmentUploadedBy")
-  attachmentsRemoved  QuotationAttachment[] @relation("AttachmentRemovedBy")
-  companySettingsUpdated CompanySetting[] @relation("CompanySettingUpdatedBy")
-  expensesCreated Expense[] @relation("ExpenseCreatedBy")
-  notesCreated    CreditDebitNote[] @relation("NoteCreatedBy")
-  notesUpdated    CreditDebitNote[] @relation("NoteUpdatedBy")
-  invoicesCreated Invoice[] @relation("InvoiceCreatedBy")
-  invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
-  paymentsRecorded Payment[] @relation("PaymentRecordedBy")
-  writeOffsRecorded InvoiceWriteOff[] @relation("WriteOffRecordedBy")
-  dispatchesCreated Dispatch[] @relation("DispatchCreatedBy")
-  dispatchesUpdated Dispatch[] @relation("DispatchUpdatedBy")
-  sharesCreated   QuotationShare[]   @relation("ShareCreatedBy")
-  commentsAuthored QuotationComment[] @relation("CommentAuthor")
-  activities      ActivityLog[]      @relation("ActivityUser")
+  partnersCreated          Partner[]             @relation("PartnerCreatedBy")
+  partnersUpdated          Partner[]             @relation("PartnerUpdatedBy")
+  customersCreated         Customer[]            @relation("CustomerCreatedBy")
+  customersUpdated         Customer[]            @relation("CustomerUpdatedBy")
+  itemsCreated             Item[]                @relation("ItemCreatedBy")
+  itemsUpdated             Item[]                @relation("ItemUpdatedBy")
+  materialsCreated         Material[]            @relation("MaterialCreatedBy")
+  quotationsCreated        Quotation[]           @relation("QuotationCreatedBy")
+  quotationsUpdated        Quotation[]           @relation("QuotationUpdatedBy")
+  ordersCreated            Order[]               @relation("OrderCreatedBy")
+  ordersUpdated            Order[]               @relation("OrderUpdatedBy")
+  productionTasksAssigned  ProductionTask[]      @relation("ProductionTaskAssignee")
+  productionTasksCompleted ProductionTask[]      @relation("ProductionTaskCompletedBy")
+  attachmentsUploaded      QuotationAttachment[] @relation("AttachmentUploadedBy")
+  attachmentsRemoved       QuotationAttachment[] @relation("AttachmentRemovedBy")
+  companySettingsUpdated   CompanySetting[]      @relation("CompanySettingUpdatedBy")
+  expensesCreated          Expense[]             @relation("ExpenseCreatedBy")
+  notesCreated             CreditDebitNote[]     @relation("NoteCreatedBy")
+  notesUpdated             CreditDebitNote[]     @relation("NoteUpdatedBy")
+  invoicesCreated          Invoice[]             @relation("InvoiceCreatedBy")
+  invoicesUpdated          Invoice[]             @relation("InvoiceUpdatedBy")
+  paymentsRecorded         Payment[]             @relation("PaymentRecordedBy")
+  writeOffsRecorded        InvoiceWriteOff[]     @relation("WriteOffRecordedBy")
+  dispatchesCreated        Dispatch[]            @relation("DispatchCreatedBy")
+  dispatchesUpdated        Dispatch[]            @relation("DispatchUpdatedBy")
+  sharesCreated            QuotationShare[]      @relation("ShareCreatedBy")
+  commentsAuthored         QuotationComment[]    @relation("CommentAuthor")
+  activities               ActivityLog[]         @relation("ActivityUser")
 
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  userCompanies UserCompany[]
 
   @@index([role])
   @@index([isActive])
@@ -80,8 +81,8 @@ model Session {
   ipAddress String?  @map("ip_address")
   userAgent String?  @map("user_agent")
 
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -91,13 +92,13 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @default(cuid())
-  issuer                String
-  accountId             String    @map("account_id")
-  providerId            String    @map("provider_id")
+  id         String @id @default(cuid())
+  issuer     String
+  accountId  String @map("account_id")
+  providerId String @map("provider_id")
 
-  userId                String    @map("user_id")
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   password              String?
   accessToken           String?   @map("access_token")
@@ -107,8 +108,8 @@ model Account {
   refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
   scope                 String?
 
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([issuer, accountId])
   @@index([userId])
@@ -122,8 +123,8 @@ model Verification {
   value      String
   expiresAt  DateTime @map("expires_at")
 
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([identifier])
   @@map("verifications")
@@ -146,61 +147,69 @@ enum CustomerStatus {
 }
 
 model Partner {
-  id       String      @id @default(cuid())
-  code     String      @unique
-  type     PartnerType
-  name     String
-  firmName String?     @map("firm_name")
-  phone    String
-  altPhone String?     @map("alt_phone")
-  email    String?
-  address  String?
-  city     String?
-  state    String?
-  pincode  String?
-  isActive Boolean     @default(true) @map("is_active")
-  notes    String?
+  id String @id @default(cuid())
 
-  preferredByArchitect Customer[] @relation("CustomerPreferredArchitect")
-  preferredByCarpenter Customer[] @relation("CustomerPreferredCarpenter")
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String
+  type      PartnerType
+  name      String
+  firmName  String?        @map("firm_name")
+  phone     String
+  altPhone  String?        @map("alt_phone")
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  pincode   String?
+  isActive  Boolean        @default(true) @map("is_active")
+  notes     String?
+
+  preferredByArchitect  Customer[]  @relation("CustomerPreferredArchitect")
+  preferredByCarpenter  Customer[]  @relation("CustomerPreferredCarpenter")
   quotationsAsArchitect Quotation[] @relation("QuotationArchitect")
   quotationsAsCarpenter Quotation[] @relation("QuotationCarpenter")
   ordersAsArchitect     Order[]     @relation("OrderArchitect")
   ordersAsCarpenter     Order[]     @relation("OrderCarpenter")
 
-  createdById String?  @map("created_by_id")
-  createdBy   User?    @relation("PartnerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedById String?  @map("updated_by_id")
-  updatedBy   User?    @relation("PartnerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("PartnerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("PartnerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, code])
   @@index([type])
   @@index([isActive])
   @@index([name])
   @@index([phone])
+  @@index([companyId])
   @@map("partners")
 }
 
 model Customer {
-  id       String         @id @default(cuid())
-  code     String         @unique
-  name     String
-  type     CustomerType   @default(INDIVIDUAL)
-  status   CustomerStatus @default(ACTIVE)
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  type      CustomerType   @default(INDIVIDUAL)
+  status    CustomerStatus @default(ACTIVE)
 
   phone    String
-  altPhone String?        @map("alt_phone")
+  altPhone String? @map("alt_phone")
   email    String?
 
-  address  String?
-  city     String?
-  state    String?
-  pincode  String?
+  address String?
+  city    String?
+  state   String?
+  pincode String?
 
-  gstin    String?
-  pan      String?
+  gstin String?
+  pan   String?
 
   dateOfBirth     DateTime? @map("date_of_birth") @db.Date
   anniversaryDate DateTime? @map("anniversary_date") @db.Date
@@ -213,26 +222,28 @@ model Customer {
   paymentTermsDays Int?    @map("payment_terms_days")
   notes            String?
 
-  createdById String?  @map("created_by_id")
-  createdBy   User?    @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedById String?  @map("updated_by_id")
-  updatedBy   User?    @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  quotations Quotation[]
-  orders     Order[]
-  invoices   Invoice[]
+  quotations       Quotation[]
+  orders           Order[]
+  invoices         Invoice[]
   creditDebitNotes CreditDebitNote[]
   payments         Payment[]
 
+  @@unique([companyId, code])
   @@index([status])
   @@index([name])
   @@index([phone])
   @@index([city])
   @@index([preferredArchitectId])
   @@index([preferredCarpenterId])
+  @@index([companyId])
   @@map("customers")
 }
 
@@ -268,10 +279,13 @@ enum UnitOfMeasure {
 }
 
 model Material {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  sortOrder Int     @default(0) @map("sort_order")
-  isActive  Boolean @default(true) @map("is_active")
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int            @default(0) @map("sort_order")
+  isActive  Boolean        @default(true) @map("is_active")
 
   items Item[]
 
@@ -281,18 +295,23 @@ model Material {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, name])
   @@index([isActive])
+  @@index([companyId])
   @@map("materials")
 }
 
 model Item {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id String @id @default(cuid())
+
+  companyId   String         @default("") @map("company_id")
+  company     CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String
   name        String
   description String?
-  type        ItemType   @default(MATERIAL)
-  supplyType  SupplyType @default(GOODS) @map("supply_type")
-  isFlatRate  Boolean    @default(false) @map("is_flat_rate")
+  type        ItemType       @default(MATERIAL)
+  supplyType  SupplyType     @default(GOODS) @map("supply_type")
+  isFlatRate  Boolean        @default(false) @map("is_flat_rate")
 
   materialId String?   @map("material_id")
   material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
@@ -328,10 +347,12 @@ model Item {
   orderLines     OrderLine[]
   invoiceLines   InvoiceLine[]
 
+  @@unique([companyId, code])
   @@index([type])
   @@index([materialId])
   @@index([isActive])
   @@index([name])
+  @@index([companyId])
   @@map("items")
 }
 
@@ -356,13 +377,16 @@ enum DiscountType {
 }
 
 model Quotation {
-  id       String          @id @default(cuid())
-  number   String
-  revision Int             @default(1)
-  status   QuotationStatus @default(DRAFT)
+  id String @id @default(cuid())
 
-  parentId String?     @map("parent_id")
-  parent   Quotation?  @relation("QuotationRevisions", fields: [parentId], references: [id], onDelete: SetNull)
+  companyId String          @default("") @map("company_id")
+  company   CompanySetting  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  revision  Int             @default(1)
+  status    QuotationStatus @default(DRAFT)
+
+  parentId  String?     @map("parent_id")
+  parent    Quotation?  @relation("QuotationRevisions", fields: [parentId], references: [id], onDelete: SetNull)
   revisions Quotation[] @relation("QuotationRevisions")
 
   customerId String   @map("customer_id")
@@ -410,12 +434,13 @@ model Quotation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([number, revision])
+  @@unique([companyId, number, revision])
   @@index([status])
   @@index([customerId])
   @@index([architectId])
   @@index([carpenterId])
   @@index([quotationDate])
+  @@index([companyId])
   @@map("quotations")
 }
 
@@ -469,9 +494,12 @@ enum OrderStatus {
 }
 
 model Order {
-  id     String      @id @default(cuid())
-  number String      @unique
-  status OrderStatus @default(DRAFT)
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  status    OrderStatus    @default(DRAFT)
 
   /// Public, revocable token for the customer-facing tracking page.
   trackingToken String? @unique @map("tracking_token")
@@ -487,10 +515,10 @@ model Order {
   carpenterId String?  @map("carpenter_id")
   carpenter   Partner? @relation("OrderCarpenter", fields: [carpenterId], references: [id], onDelete: SetNull)
 
-  subject      String?
-  orderDate    DateTime  @map("order_date") @db.Date
-  dueDate      DateTime? @map("due_date") @db.Date
-  customerPoNumber String? @map("customer_po_number")
+  subject          String?
+  orderDate        DateTime  @map("order_date") @db.Date
+  dueDate          DateTime? @map("due_date") @db.Date
+  customerPoNumber String?   @map("customer_po_number")
 
   siteAddress String? @map("site_address")
   siteCity    String? @map("site_city")
@@ -506,7 +534,7 @@ model Order {
   roundOff       Decimal @default(0) @map("round_off") @db.Decimal(6, 2)
   total          Decimal @default(0) @db.Decimal(14, 2)
 
-  transportCharge        Decimal @default(0) @map("transport_charge") @db.Decimal(12, 2)
+  transportCharge         Decimal @default(0) @map("transport_charge") @db.Decimal(12, 2)
   transportTaxRatePercent Decimal @default(0) @map("transport_tax_rate_percent") @db.Decimal(5, 2)
 
   advanceAmount Decimal @default(0) @map("advance_amount") @db.Decimal(14, 2)
@@ -530,11 +558,13 @@ model Order {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, number])
   @@index([status])
   @@index([customerId])
   @@index([quotationId])
   @@index([orderDate])
   @@index([dueDate])
+  @@index([companyId])
   @@map("orders")
 }
 
@@ -588,18 +618,23 @@ enum ProductionTaskStatus {
 }
 
 model ProductionStage {
-  id           String       @id @default(cuid())
-  name         String       @unique
-  sortOrder    Int          @default(0) @map("sort_order")
-  isActive     Boolean      @default(true) @map("is_active")
-  linkedStatus OrderStatus? @map("linked_status")
+  id String @id @default(cuid())
+
+  companyId    String         @default("") @map("company_id")
+  company      CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int            @default(0) @map("sort_order")
+  isActive     Boolean        @default(true) @map("is_active")
+  linkedStatus OrderStatus?   @map("linked_status")
 
   tasks ProductionTask[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, name])
   @@index([isActive])
+  @@index([companyId])
   @@map("production_stages")
 }
 
@@ -666,8 +701,7 @@ model QuotationAttachment {
 }
 
 model CompanySetting {
-  id String @id @default("default")
-
+  id String @id @default(cuid())
 
   companyName String  @default("Madhav CNC") @map("company_name")
   addressLine String? @map("address_line")
@@ -696,7 +730,7 @@ model CompanySetting {
   signatoryName       String? @map("signatory_name")
   signatoryTitle      String? @map("signatory_title")
 
-  upiId          String? @map("upi_id")
+  upiId           String? @map("upi_id")
   upiQrStoredName String? @map("upi_qr_stored_name")
   upiQrMimeType   String? @map("upi_qr_mime_type")
 
@@ -704,8 +738,27 @@ model CompanySetting {
 
   invoiceTerms String? @map("invoice_terms")
 
-  updatedById String? @map("updated_by_id")
-  updatedBy   User?   @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById      String?           @map("updated_by_id")
+  partners         Partner[]
+  customers        Customer[]
+  materials        Material[]
+  items            Item[]
+  quotations       Quotation[]
+  orders           Order[]
+  productionStages ProductionStage[]
+  dispatchs        Dispatch[]
+  invoices         Invoice[]
+  payments         Payment[]
+  paymentChannels  PaymentChannel[]
+  expenseCategorys ExpenseCategory[]
+  expenses         Expense[]
+  creditDebitNotes CreditDebitNote[]
+  vendors          Vendor[]
+  activityLogs     ActivityLog[]
+  counters         DocumentCounter[]
+  access           UserCompany[]
+
+  updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -738,10 +791,10 @@ model QuotationShare {
   viewCount    Int       @default(0) @map("view_count")
   lastViewedAt DateTime? @map("last_viewed_at")
 
-  decision           ShareDecision @default(PENDING)
-  respondedAt        DateTime?     @map("responded_at")
-  respondedByName    String?       @map("responded_by_name")
-  responseNote       String?       @map("response_note")
+  decision        ShareDecision @default(PENDING)
+  respondedAt     DateTime?     @map("responded_at")
+  respondedByName String?       @map("responded_by_name")
+  responseNote    String?       @map("response_note")
 
   amendedAt DateTime? @map("amended_at")
 
@@ -789,9 +842,12 @@ enum DispatchStatus {
 }
 
 model Dispatch {
-  id     String         @id @default(cuid())
-  number String         @unique
-  status DispatchStatus @default(DRAFT)
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  status    DispatchStatus @default(DRAFT)
 
   orderId String @map("order_id")
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
@@ -824,9 +880,11 @@ model Dispatch {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, number])
   @@index([orderId])
   @@index([status])
   @@index([dispatchDate])
+  @@index([companyId])
   @@map("dispatches")
 }
 
@@ -884,9 +942,12 @@ enum PaymentMode {
 }
 
 model Invoice {
-  id     String        @id @default(cuid())
-  number String        @unique
-  status InvoiceStatus @default(DRAFT)
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  status    InvoiceStatus  @default(DRAFT)
 
   orderId String? @map("order_id")
   order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
@@ -924,10 +985,10 @@ model Invoice {
   notes String?
   terms String?
 
-  lines    InvoiceLine[]
+  lines              InvoiceLine[]
   paymentAllocations PaymentAllocation[]
-  writeOffs InvoiceWriteOff[]
-  creditDebitNotes CreditDebitNote[]
+  writeOffs          InvoiceWriteOff[]
+  creditDebitNotes   CreditDebitNote[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -937,10 +998,12 @@ model Invoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, number])
   @@index([status])
   @@index([customerId])
   @@index([orderId])
   @@index([invoiceDate])
+  @@index([companyId])
   @@map("invoices")
 }
 
@@ -1020,34 +1083,42 @@ model InvoiceWriteOff {
 // the underlying kind of payment, and the bank account it moves money through
 // (none for cash). Entries remember the channel they used.
 model PaymentChannel {
-  id            String       @id @default(cuid())
-  name          String       @unique
-  mode          PaymentMode
-  sortOrder     Int          @default(0) @map("sort_order")
-  isActive      Boolean      @default(true) @map("is_active")
+  id String @id @default(cuid())
 
-  expenses    Expense[]
-  payments    Payment[]
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  mode      PaymentMode
+  sortOrder Int            @default(0) @map("sort_order")
+  isActive  Boolean        @default(true) @map("is_active")
+
+  expenses Expense[]
+  payments Payment[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([companyId, name])
+  @@index([companyId])
   @@map("payment_channels")
 }
 
 model Payment {
-  id     String @id @default(cuid())
-  number String @unique
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
 
   customerId String   @map("customer_id")
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
-  amount    Decimal     @db.Decimal(14, 2)
-  mode      PaymentMode @default(UPI)
+  amount    Decimal         @db.Decimal(14, 2)
+  mode      PaymentMode     @default(UPI)
   /// The business's own name for how it came in, e.g. HDFC NEFT (optional).
-  channelId String?          @map("channel_id")
-  channel   PaymentChannel?  @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  channelId String?         @map("channel_id")
+  channel   PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
   reference String?
-  paidOn    DateTime    @map("paid_on") @db.Date
+  paidOn    DateTime        @map("paid_on") @db.Date
   notes     String?
 
   /// Set when this receipt is the advance taken on an order. It is edited on
@@ -1063,8 +1134,10 @@ model Payment {
 
   allocations PaymentAllocation[]
 
+  @@unique([companyId, number])
   @@index([customerId])
   @@index([paidOn])
+  @@index([companyId])
   @@map("payments")
 }
 
@@ -1113,34 +1186,42 @@ enum NoteStatus {
 }
 
 model ExpenseCategory {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  sortOrder Int     @default(0) @map("sort_order")
-  isActive  Boolean @default(true) @map("is_active")
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int            @default(0) @map("sort_order")
+  isActive  Boolean        @default(true) @map("is_active")
 
   expenses Expense[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, name])
   @@index([isActive])
+  @@index([companyId])
   @@map("expense_categories")
 }
 
 model Expense {
-  id     String @id @default(cuid())
-  number String @unique
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
 
   categoryId String?          @map("category_id")
   category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  expenseDate DateTime @map("expense_date") @db.Date
+  expenseDate DateTime        @map("expense_date") @db.Date
   /// The vendor's name as it was when the expense was saved; vendorId is the
   /// live record (contact details), which can be missing for old entries.
-  payeeName   String   @map("payee_name")
-  vendorId    String?  @map("vendor_id")
-  vendor      Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  channelId   String?  @map("channel_id")
+  payeeName   String          @map("payee_name")
+  vendorId    String?         @map("vendor_id")
+  vendor      Vendor?         @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  channelId   String?         @map("channel_id")
   channel     PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
   description String?
 
@@ -1166,25 +1247,30 @@ model Expense {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, number])
   @@index([expenseDate])
   @@index([categoryId])
   @@index([orderId])
+  @@index([companyId])
   @@map("expenses")
 }
 
 model CreditDebitNote {
-  id     String     @id @default(cuid())
-  number String     @unique
-  kind   NoteKind
-  status NoteStatus @default(DRAFT)
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  kind      NoteKind
+  status    NoteStatus     @default(DRAFT)
 
   partyType NoteParty  @map("party_type")
   reason    NoteReason @default(OTHER)
 
-  customerId String?   @map("customer_id")
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  vendorName String?   @map("vendor_name")
-  vendorGstin String?  @map("vendor_gstin")
+  customerId  String?   @map("customer_id")
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vendorName  String?   @map("vendor_name")
+  vendorGstin String?   @map("vendor_gstin")
 
   invoiceId String?  @map("invoice_id")
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
@@ -1215,11 +1301,13 @@ model CreditDebitNote {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([companyId, number])
   @@index([kind])
   @@index([status])
   @@index([customerId])
   @@index([invoiceId])
   @@index([noteDate])
+  @@index([companyId])
   @@map("credit_debit_notes")
 }
 
@@ -1252,6 +1340,9 @@ model CreditDebitNoteLine {
 model ActivityLog {
   id String @id @default(cuid())
 
+  companyId String?         @map("company_id")
+  company   CompanySetting? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   entityType String @map("entity_type")
   entityId   String @map("entity_id")
   action     String
@@ -1266,6 +1357,7 @@ model ActivityLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([entityType, entityId, createdAt])
+  @@index([companyId])
   @@map("activity_logs")
 }
 
@@ -1273,9 +1365,12 @@ model ActivityLog {
 /// point at a vendor so contact details live in one place; a vendor created
 /// by typing a new name on an expense starts with just the name.
 model Vendor {
-  id          String  @id @default(cuid())
+  id String @id @default(cuid())
+
+  companyId   String         @default("") @map("company_id")
+  company     CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name        String
-  contactName String? @map("contact_name")
+  contactName String?        @map("contact_name")
   phone       String?
   email       String?
   gstin       String?
@@ -1283,7 +1378,7 @@ model Vendor {
   city        String?
   /// What they supply or why they are paid, e.g. "Edge banding, monthly".
   description String?
-  isActive    Boolean @default(true) @map("is_active")
+  isActive    Boolean        @default(true) @map("is_active")
 
   expenses Expense[]
 
@@ -1291,5 +1386,32 @@ model Vendor {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([name])
+  @@index([companyId])
   @@map("vendors")
+}
+
+/// Which companies a person may open. Administrators can open every company
+/// without a row here.
+model UserCompany {
+  userId    String         @map("user_id")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String         @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, companyId])
+  @@map("user_companies")
+}
+
+/// The last number issued for each kind of document, per company, so every
+/// company's invoices (and the rest) run 1, 2, 3 on their own.
+model DocumentCounter {
+  companyId String         @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String
+  value     Int            @default(0)
+
+  @@id([companyId, key])
+  @@map("document_counters")
 }

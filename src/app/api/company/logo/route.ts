@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireCompanyId } from '@/lib/active-company'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { can } from '@/lib/permissions'
@@ -12,7 +13,7 @@ import {
 
 export async function GET() {
   const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     select: { logoStoredName: true, logoMimeType: true },
   })
 
@@ -70,19 +71,19 @@ export async function POST(request: Request) {
   const { storedName } = await saveUpload(bytes, file.type)
 
   const previous = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     select: { logoStoredName: true },
   })
 
   await prisma.companySetting.upsert({
-    where: { id: 'default' },
+    where: { id: await requireCompanyId() },
     update: {
       logoStoredName: storedName,
       logoMimeType: file.type,
       updatedById: user.id,
     },
     create: {
-      id: 'default',
+      id: await requireCompanyId(),
       logoStoredName: storedName,
       logoMimeType: file.type,
       updatedById: user.id,

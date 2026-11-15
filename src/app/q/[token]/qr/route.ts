@@ -14,8 +14,12 @@ export async function GET(
     return new NextResponse('Not available', { status: 404 })
   }
 
+  const owner = await prisma.quotation.findUnique({
+    where: { id: share.quotationId },
+    select: { companyId: true },
+  })
   const setting = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: owner?.companyId ?? '' },
     select: { upiQrStoredName: true, upiQrMimeType: true },
   })
 

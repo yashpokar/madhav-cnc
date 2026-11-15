@@ -131,8 +131,12 @@ export function withAudit(base: PrismaClient) {
                 ? { id: String(row.id), name: row.name }
                 : null)
 
+            const { getActiveCompanyId } = await import('@/lib/active-company')
+
             await base.activityLog.create({
               data: {
+                companyId:
+                  typeof row.companyId === 'string' ? row.companyId : await getActiveCompanyId(),
                 entityType: spec.entity,
                 entityId: String(row.id ?? ''),
                 action: operation === 'delete' ? 'deleted' : operation === 'create' ? 'created' : 'updated',

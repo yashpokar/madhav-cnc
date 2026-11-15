@@ -43,6 +43,7 @@ export default async function TrackingPage({
   const order = await prisma.order.findUnique({
     where: { trackingToken: token },
     select: {
+      companyId: true,
       number: true,
       status: true,
       subject: true,
@@ -71,7 +72,7 @@ export default async function TrackingPage({
   }
 
   const company = await prisma.companySetting.findUnique({
-    where: { id: 'default' },
+    where: { id: order.companyId },
     select: { companyName: true, phone: true },
   })
 

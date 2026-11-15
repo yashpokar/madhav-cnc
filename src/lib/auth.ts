@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { APIError } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
+import { bearer } from 'better-auth/plugins'
 import { prisma } from '@/lib/prisma'
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID
@@ -22,9 +23,12 @@ const configuredOrigins = [
     ),
 ].filter((origin): origin is string => Boolean(origin))
 
+// The native apps (Expo) call from the prodlys:// scheme. Harmless for web.
+const appSchemeOrigins = ['prodlys://', 'prodlys://*']
+
 const trustedOrigins = allowAllOrigins
-  ? ['*', 'http://*', 'https://*', ...configuredOrigins]
-  : configuredOrigins
+  ? ['*', 'http://*', 'https://*', ...configuredOrigins, ...appSchemeOrigins]
+  : [...configuredOrigins, ...appSchemeOrigins]
 
 export const auth = betterAuth({
   appName: 'Prodlys',
@@ -98,7 +102,8 @@ export const auth = betterAuth({
   },
 
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
+    // Phones stay signed in for a month; web visitors get the same session.
+    expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
   },
 
@@ -128,7 +133,10 @@ export const auth = betterAuth({
     },
   },
 
-  plugins: [nextCookies()],
+  // bearer() lets the mobile apps send `Authorization: Bearer <token>` (the token
+  // is returned in the `set-auth-token` header of sign-in). nextCookies() must
+  // stay last.
+  plugins: [bearer(), nextCookies()],
 })
 
 export type Session = typeof auth.$Infer.Session

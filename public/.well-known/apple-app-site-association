@@ -1,0 +1,12 @@
+{
+  "_TEMPLATE": "PLACEHOLDER VALUES. Replace REPLACE_WITH_APPLE_TEAM_ID and the bundle id, then delete this key. See docs/mobile-api.md.",
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.com.prodlys.app"],
+        "components": [{ "/": "/join/*" }]
+      }
+    ]
+  }
+}

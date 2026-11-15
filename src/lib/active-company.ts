@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { requestContext } from '@/lib/api/request-context'
 
 /** The cookie that remembers which company a person is working in. */
 export const COMPANY_COOKIE = 'company'
@@ -21,6 +22,29 @@ export type CompanyScope =
  * client at the top: session -> auth -> prisma would be a cycle.
  */
 export const getCompanyScope = cache(async (): Promise<CompanyScope> => {
+  // Mobile API requests (see src/lib/api/handler.ts) run inside a request
+  // context. The company they named in X-Company-Id is used INSTEAD of the
+  // cookie, and is still checked against what the person may open. A request
+  // that named no company sees no company data: it never falls back to the
+  // first one.
+  const api = requestContext.getStore()
+
+  if (api) {
+    if (!api.companyId) return { kind: 'none' }
+
+    const { getBaseUser } = await import('@/lib/session')
+    const person = await getBaseUser()
+
+    if (!person || !person.isActive) return { kind: 'none' }
+
+    const { prisma } = await import('@/lib/prisma')
+    const allowed = await listAccessibleCompanies(person, prisma)
+
+    return allowed.some((c) => c.id === api.companyId)
+      ? { kind: 'company', companyId: api.companyId }
+      : { kind: 'none' }
+  }
+
   // Seed scripts have no request, so they name their company in the environment.
   if (process.env.SEED_COMPANY_ID) {
     return { kind: 'company', companyId: process.env.SEED_COMPANY_ID }

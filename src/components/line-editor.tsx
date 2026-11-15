@@ -208,11 +208,11 @@ export function LineEditor({
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="overflow-x-auto">
-        <table className="stack-table w-full min-w-[76rem] text-left text-sm/6">
+        <table className="stack-table w-full min-w-[66rem] text-left text-sm/6">
           <thead className="text-zinc-500 dark:text-zinc-400">
             <tr>
               <th className="w-8 pb-2 font-medium">#</th>
-              <th className="pb-2 pr-3 font-medium">Item / description</th>
+              <th className="min-w-56 pb-2 pr-3 font-medium">Item / description</th>
               <th className="w-24 pb-2 pr-3 font-medium">Unit</th>
               <th className="w-36 pb-2 pr-3 font-medium">Material</th>
               <th className="w-56 pb-2 pr-3 font-medium">Size × pcs</th>

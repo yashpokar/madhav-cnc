@@ -35,7 +35,7 @@ export default async function NewVendorPaymentPage({
   const known = vendors.some((row) => row.id === vendor)
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>Record vendor payment</Heading>
         <Text>

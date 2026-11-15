@@ -317,7 +317,7 @@ export default async function DashboardPage({
 
   return (
     <div className="grid grid-cols-1 gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4 print:hidden">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 print:hidden">
         <div className="grid gap-1">
           <p className="text-sm/6 text-zinc-500 dark:text-zinc-400">{todayLong}</p>
           <Heading>

@@ -28,7 +28,7 @@ export default async function NewReceiptPage({
   const modes = await listPaymentModeOptions()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>Record receipt</Heading>
         <Text>

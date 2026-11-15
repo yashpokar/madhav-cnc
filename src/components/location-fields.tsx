@@ -52,7 +52,7 @@ export function LocationFields({
   names,
   errors,
   gstinFieldName = 'gstin',
-  className = 'grid grid-cols-1 gap-6 sm:grid-cols-3',
+  className = 'grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3',
   city: controlledCity,
   pincode: controlledPincode,
   onCityChange,
@@ -213,7 +213,7 @@ export function LocationFields({
     fromGstin && chosen && chosen.gstCode !== fromGstin.gstCode ? fromGstin : null
 
   return (
-    <div ref={rootRef} className="space-y-3">
+    <div ref={rootRef} className="space-y-2">
       <div className={className}>
         <Field>
           <Label>State</Label>

@@ -69,7 +69,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
 
   return (
     <div className="grid grid-cols-1 gap-8">
-      <form action={formAction} className="grid grid-cols-1 gap-8">
+      <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
         {state.status === 'error' ? (
           <FormBanner tone="error">{state.message}</FormBanner>
         ) : null}
@@ -80,7 +80,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
         <Fieldset>
           <Legend>Business</Legend>
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
               <Field className="sm:col-span-2">
                 <Label>Company name</Label>
                 <Input
@@ -121,7 +121,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               errors={{ pincode: errors.pincode }}
             />
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
               <Field>
                 <Label>Email</Label>
                 <Input
@@ -134,7 +134,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               </Field>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>GSTIN</Label>
                 <Input
@@ -162,7 +162,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
         <Text>
           Bank details, UPI and other ways to pay are now set up under{' '}
           <Link href="/settings/payment-modes" className="font-medium underline">
-            Payment modes
+            Payment methods
           </Link>
           .
         </Text>
@@ -199,7 +199,7 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               />
               <Description>Default terms printed on invoices.</Description>
             </Field>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Signatory name</Label>
                 <Input

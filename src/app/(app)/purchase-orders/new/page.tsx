@@ -29,7 +29,7 @@ export default async function NewOrderPage({
   const vendor = vendorParam ? vendors.find((row) => row.id === vendorParam) : undefined
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New purchase order</Heading>
         <Text>What you are asking a vendor to supply. Send it to them once it is ready.</Text>

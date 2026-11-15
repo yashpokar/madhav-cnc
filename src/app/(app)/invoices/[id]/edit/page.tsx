@@ -40,7 +40,7 @@ export default async function EditInvoicePage({
   const action = updateInvoice.bind(null, invoice.id)
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{invoice.number}</Heading>
         <Text>{invoice.customer.name}</Text>

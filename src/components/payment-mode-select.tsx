@@ -7,7 +7,7 @@ import { useQuickContext } from '@/lib/quick-context'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 
 /**
- * Picks one of the company's payment modes ("Cash", "HDFC NEFT", "SBI UPI").
+ * Picks one of the company's payment methods ("Cash", "HDFC NEFT", "SBI UPI").
  * Posts the mode's id under `name`, and reports it through `onChange` when the
  * form keeps the value in state instead.
  */
@@ -49,7 +49,7 @@ export function PaymentModeSelect({
   if (modes.length === 0) {
     return (
       <p className="text-sm/6 text-zinc-500">
-        No payment modes yet. Add them under Settings → Payment modes.
+        No payment methods yet. Add them under Settings → Payment methods.
       </p>
     )
   }
@@ -63,7 +63,7 @@ export function PaymentModeSelect({
         onChange?.(next)
         if (remember && userId) rememberDefaults(userId, companyId, { paymentMode: next })
       }}
-      aria-label="Payment mode"
+      aria-label="Payment method"
     >
       {modes.map((mode) => (
         <ListboxOption key={mode.id} value={mode.id}>

@@ -37,7 +37,7 @@ export default async function NewQuotationPage({
   const today = todayIso()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New quotation</Heading>
         <Text>A number is assigned automatically when you save.</Text>

@@ -91,7 +91,6 @@ export function TimePicker({
       }}
       onClose={() => setQuery('')}
     >
-      {name ? <input type="hidden" name={name} value={current} /> : null}
       <span
         data-slot="control"
         data-invalid={invalid || typedInvalid ? '' : undefined}
@@ -150,6 +149,7 @@ export function TimePicker({
           </Headless.ComboboxButton>
         </span>
       </span>
+      {name ? <input type="hidden" name={name} value={current} /> : null}
       {typedInvalid ? (
         <span role="alert" className="sr-only">
           Not a valid time. Try 3pm or 15:30.

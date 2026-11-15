@@ -79,7 +79,7 @@ export function DispatchForm({
     }))
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       <input type="hidden" name="orderId" value={values.orderId} />
       <input type="hidden" name="lines" value={JSON.stringify(selected)} />
 
@@ -160,7 +160,7 @@ export function DispatchForm({
       <Fieldset>
         <Legend>Transport</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Dispatch date</Label>
               <Input
@@ -188,7 +188,7 @@ export function DispatchForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Driver name</Label>
               <Input
@@ -229,7 +229,7 @@ export function DispatchForm({
             />
             <Description>Prefilled from the order&apos;s site address.</Description>
           </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>City</Label>
               <Input
@@ -261,7 +261,7 @@ export function DispatchForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

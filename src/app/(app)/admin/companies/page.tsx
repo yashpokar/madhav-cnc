@@ -26,7 +26,7 @@ export default async function AdminCompaniesPage() {
   ])
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid gap-2">
         <Heading>Companies</Heading>
         <Text>

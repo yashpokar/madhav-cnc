@@ -180,7 +180,7 @@ export function NoteForm({
   )?.[1]
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="partyType" value={partyType} />
       <input type="hidden" name="lines" value={serialised} />
@@ -200,7 +200,7 @@ export function NoteForm({
       <Fieldset>
         <Legend>Note</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Type</Label>
               <Select
@@ -244,7 +244,7 @@ export function NoteForm({
           </div>
 
           {isCustomer ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Customer</Label>
                 <Select
@@ -298,7 +298,7 @@ export function NoteForm({
               </Field>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Vendor</Label>
                 <Input
@@ -321,7 +321,7 @@ export function NoteForm({
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Note date</Label>
               <Input
@@ -549,7 +549,7 @@ export function NoteForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

@@ -143,7 +143,7 @@ export function ReceiptForm({
   )
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       <input type="hidden" name="customerId" value={customerId} />
       <input type="hidden" name="allocations" value={serialised} />
       <input type="hidden" name="openingApplied" value={openingAmount || ''} />
@@ -155,7 +155,7 @@ export function ReceiptForm({
       <Fieldset>
         <Legend>Receipt</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Customer</Label>
               <CustomerCombobox
@@ -200,7 +200,7 @@ export function ReceiptForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Received on</Label>
               <Input
@@ -386,7 +386,7 @@ export function ReceiptForm({
         </div>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

@@ -18,7 +18,7 @@ export default async function OpeningBalancesPage() {
   const [rows, balances] = await Promise.all([listOpeningBalances(), getChannelBalances()])
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Link
           href="/settings/company"
@@ -28,7 +28,7 @@ export default async function OpeningBalancesPage() {
         </Link>
         <Heading>Opening balances</Heading>
         <Text className="max-w-2xl">
-          What each payment mode held on the day you started using the system:
+          What each payment method held on the day you started using the system:
           cash in hand, or the balance in a bank account. Receipts and expenses
           dated on or after that day are added on top; earlier history is not
           counted again. A balance can be negative (an overdraft). Customer and

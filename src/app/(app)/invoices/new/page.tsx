@@ -112,7 +112,7 @@ export default async function NewInvoicePage({
   const today = todayIso()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New invoice</Heading>
         <Text>

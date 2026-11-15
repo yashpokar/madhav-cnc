@@ -73,8 +73,8 @@ export default async function VendorPaymentsPage({
   })
 
   return (
-    <div className="grid grid-cols-1 gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="grid grid-cols-1 gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="grid grid-cols-1 gap-2">
           <Heading>Vendor payments</Heading>
           <Text>Money paid out to vendors, and which bills it settled.</Text>

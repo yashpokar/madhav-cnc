@@ -55,7 +55,7 @@ export function VendorForm({
     submitted[name] ?? fallback ?? ''
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? <FormBanner tone="error">{state.message}</FormBanner> : null}
       {state.status === 'success' ? <FormBanner tone="success">{state.message}</FormBanner> : null}
 
@@ -100,7 +100,7 @@ export function VendorForm({
       <Fieldset>
         <Legend>Contact</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Contact person</Label>
               <Input name="contactName" defaultValue={keep('contactName', values.contactName)} />
@@ -120,7 +120,7 @@ export function VendorForm({
               {errors.email ? <ErrorMessage>{errors.email}</ErrorMessage> : null}
             </Field>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field className="sm:col-span-2">
               <Label>Address</Label>
               <Input name="address" defaultValue={keep('address', values.address)} />
@@ -140,7 +140,7 @@ export function VendorForm({
             />
             {errors.gstin ? <ErrorMessage>{errors.gstin}</ErrorMessage> : null}
           </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Opening payable (you owe them)</Label>
               <Input
@@ -181,7 +181,7 @@ export function VendorForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

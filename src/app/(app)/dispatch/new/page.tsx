@@ -103,7 +103,7 @@ export default async function NewDispatchPage({
   const today = new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New delivery challan</Heading>
         <Text>

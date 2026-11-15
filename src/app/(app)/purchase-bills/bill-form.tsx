@@ -144,7 +144,7 @@ export function BillForm({
   )
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-6xl grid-cols-1 gap-6">
       <input type="hidden" name="vendorId" value={vendorId} />
       <input type="hidden" name="poId" value={values.poId ?? ''} />
       <input type="hidden" name="lines" value={serialised} />
@@ -158,7 +158,7 @@ export function BillForm({
       <Fieldset>
         <Legend>Bill</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Vendor</Label>
               <VendorPicker
@@ -182,7 +182,7 @@ export function BillForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Bill date</Label>
               <Input
@@ -284,7 +284,7 @@ export function BillForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

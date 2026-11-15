@@ -164,7 +164,7 @@ export function QuotationForm({
   )?.[1]
 
   return (
-    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid w-full max-w-6xl grid-cols-1 gap-6">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
       <input type="hidden" name="lines" value={serialisedLines} />
@@ -179,8 +179,8 @@ export function QuotationForm({
       <Fieldset>
         <Legend>Quotation</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
               <Label>Customer</Label>
               <CustomerCombobox
                 options={customers}
@@ -196,7 +196,7 @@ export function QuotationForm({
                 </Description>
               )}
             </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Quotation date</Label>
               <Input
                 name="quotationDate"
@@ -205,18 +205,7 @@ export function QuotationForm({
                 required
               />
             </Field>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field className="sm:col-span-2">
-              <Label>Subject</Label>
-              <Input
-                name="subject"
-                defaultValue={keep('subject', values.subject)}
-                placeholder="Kitchen and wardrobes, 3BHK"
-              />
-            </Field>
-            <Field>
+            <Field className="sm:col-span-3">
               <Label>Valid until</Label>
               <Input
                 name="validUntil"
@@ -225,9 +214,16 @@ export function QuotationForm({
               />
             </Field>
           </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Field key={`arch-${partnerKey}`}>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
+            <Field className="sm:col-span-6">
+              <Label>Subject</Label>
+              <Input
+                name="subject"
+                defaultValue={keep('subject', values.subject)}
+                placeholder="Kitchen and wardrobes, 3BHK"
+              />
+            </Field>
+            <Field className="sm:col-span-3" key={`arch-${partnerKey}`}>
               <Label>Architect</Label>
               <PartnerCombobox
                 name="architectId"
@@ -238,7 +234,7 @@ export function QuotationForm({
                 noneLabel="No architect"
               />
             </Field>
-            <Field key={`carp-${partnerKey}`}>
+            <Field className="sm:col-span-3" key={`carp-${partnerKey}`}>
               <Label>Carpenter</Label>
               <PartnerCombobox
                 name="carpenterId"
@@ -277,6 +273,7 @@ export function QuotationForm({
             onPincodeChange={setSitePincode}
             errors={{ pincode: errors.sitePincode }}
             gstinFieldName={null}
+            className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-4 sm:[&>*:first-child]:col-span-2"
           />
         </FieldGroup>
       </Fieldset>
@@ -301,7 +298,7 @@ export function QuotationForm({
         <Fieldset>
           <Legend>Discount</Legend>
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
               <Field>
                 <Label>Type</Label>
                 <Listbox
@@ -380,7 +377,7 @@ export function QuotationForm({
 
       <Fieldset>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Notes</Label>
               <Textarea name="notes" rows={4} defaultValue={keep('notes', values.notes)} />
@@ -394,7 +391,7 @@ export function QuotationForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

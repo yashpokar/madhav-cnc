@@ -66,7 +66,7 @@ export function PartnerForm({
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form action={formAction} className="grid w-full max-w-5xl grid-cols-1 gap-6">
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
       ) : null}
@@ -77,7 +77,7 @@ export function PartnerForm({
       <Fieldset>
         <Legend>Details</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <Field>
               <Label>Type</Label>
               <Select name="type" defaultValue={keep('type', values.type)} disabled={lockType}>
@@ -112,7 +112,7 @@ export function PartnerForm({
             <Description>Optional.</Description>
           </Field>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-3">
             <Field>
               <Label>Phone</Label>
               <Input
@@ -180,7 +180,7 @@ export function PartnerForm({
         </FieldGroup>
       </Fieldset>
 
-      <div className="flex justify-end gap-3">
+      <div className="form-actions">
         <Button type="button" plain onClick={() => router.back()}>
           Cancel
         </Button>

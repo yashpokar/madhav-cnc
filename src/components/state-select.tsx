@@ -61,7 +61,7 @@ export function StateSelect({
       : null
 
   return (
-    <div className="relative">
+    <div data-slot="control" className="relative">
       <Combobox<StateOption | null>
         options={options}
         value={selected}

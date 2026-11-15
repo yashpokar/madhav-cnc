@@ -147,7 +147,7 @@ export function TableCell({ className, children, ...props }: React.ComponentProp
         'relative px-3 first:pl-(--gutter,--spacing(2)) last:pr-(--gutter,--spacing(2))',
         !striped && 'border-b border-zinc-950/5 dark:border-white/5',
         grid && 'border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-white/5',
-        dense ? 'py-2' : 'py-3',
+        dense ? 'py-2' : 'py-2.5',
         !bleed && 'sm:first:pl-1 sm:last:pr-1'
       )}
     >

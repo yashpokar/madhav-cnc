@@ -51,7 +51,7 @@ export default async function ExpensePage({
   if (primary && expense.reference && !storedDetails[primary]) storedDetails[primary] = expense.reference
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{expense.number}</Heading>
         <Text>

@@ -36,7 +36,7 @@ export default async function NewOrderPage({ searchParams }: PageProps<'/orders/
   const modes = await listPaymentModeOptions()
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>New {industry.terms.order.toLowerCase()}</Heading>
         <Text>A number is assigned automatically when you save.</Text>

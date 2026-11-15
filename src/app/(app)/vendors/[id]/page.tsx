@@ -47,7 +47,7 @@ export default async function VendorPage({
   const purchases = can(user.role, 'purchase:read') ? await vendorPurchases(vendor.id) : null
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <Heading>{vendor.name}</Heading>

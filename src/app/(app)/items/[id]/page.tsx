@@ -30,7 +30,7 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
   const action = updateItem.bind(null, item.id)
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{item.name}</Heading>
         <Text>

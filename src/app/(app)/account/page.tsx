@@ -33,7 +33,7 @@ export default async function AccountPage() {
   }))
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-10">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid gap-2">
         <Heading>My account</Heading>
         <Text>Your profile, password and how Prodlys looks for you.</Text>

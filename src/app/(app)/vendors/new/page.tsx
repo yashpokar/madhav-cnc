@@ -13,7 +13,7 @@ export default async function NewVendorPage() {
   await requireCapability('expense:create')
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>Add vendor</Heading>
         <Text>Someone you pay: a supplier, contractor or utility.</Text>

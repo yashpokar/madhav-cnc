@@ -44,7 +44,7 @@ export default async function VendorStatementPage({
   const settled = Math.abs(statement.net) < 0.005
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div className="grid grid-cols-1 gap-2">
           <Heading>{statement.vendor.name}</Heading>

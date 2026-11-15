@@ -48,7 +48,7 @@ export default async function EditCustomerPage({
   const account = canAdjust ? await customerAccount(customer.id) : null
 
   return (
-    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-6">
       <div className="grid grid-cols-1 gap-2">
         <Heading>{customer.name}</Heading>
         <Text>

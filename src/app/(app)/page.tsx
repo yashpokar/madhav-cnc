@@ -149,12 +149,15 @@ export default async function DashboardPage({
       ? { href: '/invoices/new', text: `${toInvoice.count} completed order${toInvoice.count === 1 ? '' : 's'} not yet invoiced`, tone: 'warn' as const }
       : null,
     orders && orders.readyToDispatch > 0
-      ? { href: '/orders', text: `${orders.readyToDispatch} order${orders.readyToDispatch === 1 ? ' is' : 's are'} ready to dispatch`, tone: 'info' as const }
+      ? { href: '/orders?tab=ready', text: `${orders.readyToDispatch} order${orders.readyToDispatch === 1 ? ' is' : 's are'} ready to dispatch`, tone: 'warn' as const }
       : null,
     production && production.onHold > 0
       ? { href: '/production', text: `${production.onHold} production task${production.onHold === 1 ? ' is' : 's are'} on hold`, tone: 'warn' as const }
       : null,
-  ].filter((item): item is NonNullable<typeof item> => item !== null)
+  ]
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    // Red first, then amber, keeping the order above within each tone.
+    .sort((a, b) => Number(b.tone === 'bad') - Number(a.tone === 'bad'))
 
   const create = (
     [
@@ -199,16 +202,7 @@ export default async function DashboardPage({
         }
       : null,
     dispatch
-      ? { href: '/dispatch', label: 'Challans in transit', value: dispatch.inTransit, hint: `${dispatch.drafts} draft` }
-      : null,
-    receivables
-      ? {
-          href: '/payments',
-          label: 'Outstanding',
-          value: inr.format(receivables.outstanding),
-          hint: `${inr.format(receivables.overdue)} overdue`,
-          tone: receivables.overdue > 0 ? ('warn' as const) : undefined,
-        }
+      ? { href: '/dispatch?tab=dispatched', label: 'Challans in transit', value: dispatch.inTransit, hint: `${dispatch.drafts} draft` }
       : null,
     ledger
       ? {
@@ -238,7 +232,17 @@ export default async function DashboardPage({
       </Panel>
     ) : null,
     orders ? (
-      <Panel key="orders" title="Orders by due date" href="/orders" empty="No open orders. Nice and quiet.">
+      <Panel
+        key="orders"
+        title="Orders by due date"
+        href="/orders"
+        linkLabel={orders.openCount > orders.list.length ? `View all ${orders.openCount}` : 'View all'}
+        empty={
+          can(role, 'order:create')
+            ? 'No open orders. Convert an accepted quotation, or create one from the + menu.'
+            : 'No open orders. Nice and quiet.'
+        }
+      >
         {orders.list.map((order) => (
           <Row
             key={order.id}
@@ -256,7 +260,12 @@ export default async function DashboardPage({
         key="quotes"
         title="Quotes to follow up"
         href="/quotations?tab=sent"
-        empty="No quotations are waiting on a customer."
+        empty={
+          can(role, 'quotation:create')
+            ? 'Nothing is waiting on a customer. Send a draft quotation to start the clock.'
+            : 'No quotations are waiting on a customer.'
+        }
+        linkLabel={quotes.awaiting > quotes.list.length ? `View all ${quotes.awaiting}` : 'View all'}
       >
         {quotes.list.map((quotation) => (
           <Row
@@ -328,6 +337,39 @@ export default async function DashboardPage({
           </Link>
         </div>
       ) : null}
+
+      <section aria-label="Needs attention" className={`${CARD} print:hidden`}>
+        <h2 className="px-4 pt-4 text-sm/6 font-semibold">Needs attention</h2>
+        {attention.length === 0 ? (
+          <p className="flex items-center gap-2 px-4 pt-2 pb-5 text-sm/6 text-zinc-500 dark:text-zinc-400">
+            <span aria-hidden="true" className="size-2 rounded-full bg-lime-500" />
+            All clear. Nothing is late or waiting on you.
+          </p>
+        ) : (
+          <ul className="mt-2 divide-y divide-zinc-950/5 pb-2 dark:divide-white/5">
+            {attention.map((item) => (
+              <li key={item.text}>
+                <Link
+                  href={item.href}
+                  className="flex items-start gap-3 px-4 py-2.5 text-sm/6 hover:bg-zinc-50 dark:hover:bg-white/5"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`mt-2 size-2 shrink-0 rounded-full ${
+                      item.tone === 'bad'
+                        ? 'bg-red-500'
+                        : item.tone === 'warn'
+                          ? 'bg-amber-500'
+                          : 'bg-blue-500'
+                    }`}
+                  />
+                  {item.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {activity && now && before ? (
         <section aria-label={`Activity: ${range.label}`} className="grid gap-3 print:hidden">
@@ -433,49 +475,16 @@ export default async function DashboardPage({
         </section>
       ) : null}
 
-      <div className={`grid grid-cols-1 gap-3 print:hidden ${showChart ? 'lg:grid-cols-3' : ''}`}>
-        {showChart && activity?.series ? (
-          <section className={`${CARD} p-4 lg:col-span-2`}>
+      {showChart && activity?.series ? (
+        <div className="print:hidden">
+          <section className={`${CARD} p-4`}>
             <h2 className="mb-3 text-sm/6 font-semibold">
               Money in and out{activity.series.weekly ? ', by week' : ', by day'}
             </h2>
             <MoneyBars buckets={activity.series.buckets} weekly={activity.series.weekly} />
           </section>
-        ) : null}
-
-        <section className={CARD}>
-          <h2 className="px-4 pt-4 text-sm/6 font-semibold">Needs attention</h2>
-          {attention.length === 0 ? (
-            <p className="flex items-center gap-2 px-4 pt-2 pb-5 text-sm/6 text-zinc-500 dark:text-zinc-400">
-              <span aria-hidden="true" className="size-2 rounded-full bg-lime-500" />
-              All clear. Nothing is late or waiting on you.
-            </p>
-          ) : (
-            <ul className="mt-2 divide-y divide-zinc-950/5 pb-2 dark:divide-white/5">
-              {attention.map((item) => (
-                <li key={item.text}>
-                  <Link
-                    href={item.href}
-                    className="flex items-start gap-3 px-4 py-2.5 text-sm/6 hover:bg-zinc-50 dark:hover:bg-white/5"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`mt-2 size-2 shrink-0 rounded-full ${
-                        item.tone === 'bad'
-                          ? 'bg-red-500'
-                          : item.tone === 'warn'
-                            ? 'bg-amber-500'
-                            : 'bg-blue-500'
-                      }`}
-                    />
-                    {item.text}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+        </div>
+      ) : null}
 
       <div className="print:hidden">
         <NowStrip items={nowItems} />

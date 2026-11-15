@@ -89,6 +89,16 @@ const SEGMENT_STYLES: Record<ProductionTaskStatus, string> = {
   SKIPPED: 'bg-zinc-400 dark:bg-zinc-500',
 }
 
+/**
+ * Vertical rhythm of the stage list, in px. Every collapsed row is ROW_HEIGHT
+ * tall with ROW_GAP between rows; the node is centred on the first row line and
+ * the rail runs from one node edge to the next, so nothing drifts.
+ */
+const ROW_HEIGHT = 44
+const ROW_GAP = 8
+const NODE_SIZE = 28
+const NODE_TOP = (ROW_HEIGHT - NODE_SIZE) / 2
+
 const MINUTE = 60_000
 
 /** The current time, ticking each minute. 0 on the server so hydration matches. */
@@ -290,7 +300,7 @@ export function ProductionPanel({
         </FormBanner>
       ) : null}
 
-      <ol className="grid grid-cols-1">
+      <ol className="grid grid-cols-1" style={{ gap: ROW_GAP }}>
         {tasks.map((task, index) => {
           const isCurrent = task.id === current?.id
 
@@ -524,18 +534,19 @@ function StageRow({
     ) : null
 
   return (
-    <li className="relative py-0.5 pl-11">
+    <li className="relative pl-11">
       {last ? null : (
         <span
           aria-hidden
-          className={`absolute top-[42px] -bottom-[6px] left-3.5 w-px -translate-x-1/2 ${
+          style={{ top: NODE_TOP + NODE_SIZE, bottom: -(ROW_GAP + NODE_TOP) }}
+          className={`absolute left-3.5 w-px -translate-x-1/2 ${
             finished && nextFinished
               ? 'bg-lime-500/60'
               : 'bg-zinc-950/15 dark:bg-white/20'
           }`}
         />
       )}
-      <span className="absolute top-2.5 left-0">
+      <span className="absolute left-0" style={{ top: NODE_TOP }}>
         <StageNode task={task} state={state} />
       </span>
 
@@ -546,13 +557,17 @@ function StageRow({
             : ''
         }`}
       >
-        <div className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1">
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-1"
+          style={{ minHeight: ROW_HEIGHT }}
+        >
           <button
             type="button"
             aria-expanded={open}
             aria-controls={bodyId}
             onClick={onToggle}
-            className="group flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-500 sm:flex-none"
+            className="group flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-500 sm:flex-none"
+            style={{ height: ROW_HEIGHT }}
           >
             <span
               className={`max-w-40 shrink-0 truncate text-sm/6 ${

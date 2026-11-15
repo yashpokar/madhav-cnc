@@ -104,6 +104,20 @@ export default async function DispatchDetailPage({
         />
       </div>
 
+      {dispatch.status === 'DELIVERED' && can(user.role, 'invoice:create') ? (
+        <section
+          aria-label="Next step"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-lime-50 p-3 ring-1 ring-lime-950/10 print:hidden dark:bg-lime-400/10 dark:ring-lime-400/20"
+        >
+          <div className="min-w-0 flex-1 basis-64 text-sm/6 font-medium text-zinc-950 dark:text-white">
+            Delivered. Next, bill the customer for this order.
+          </div>
+          <Button href={`/invoices/new?order=${dispatch.order.id}`}>
+            Create invoice
+          </Button>
+        </section>
+      ) : null}
+
       <Divider className="print:hidden" />
 
       <div className="hidden print:block">

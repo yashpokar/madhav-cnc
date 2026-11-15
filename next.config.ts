@@ -8,6 +8,11 @@ const extraOrigins = (process.env.ALLOWED_ORIGINS ?? '')
 const allowAllOrigins = process.env.ALLOW_ALL_ORIGINS !== 'false'
 
 const nextConfig: NextConfig = {
+  // Tags every build with its commit. A browser tab left open across a deploy
+  // notices the mismatch and reloads itself, instead of failing with "Failed to
+  // find Server Action". Unset locally, where there is nothing to protect.
+  deploymentId: process.env.RAILWAY_GIT_COMMIT_SHA || undefined,
+
   // Pages folded into others; keep old links and bookmarks working.
   async redirects() {
     return [

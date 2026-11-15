@@ -349,7 +349,7 @@ export default async function DashboardPage({
                 previous={before.received}
                 versus={range.compareLabel}
                 tone="good"
-                note="receipts + day-book credits"
+                note="customer receipts"
               />
             ) : null}
             {canExpenses ? (

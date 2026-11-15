@@ -133,12 +133,9 @@ const sum = (value: { toNumber: () => number } | null | undefined) => value?.toN
 async function activityFor(span: Span, scope: { money: boolean; expenses: boolean; orders: boolean; quotes: boolean }) {
   const between = { gte: span.from, lte: span.to }
 
-  const [receipts, credits, spent, billed, orders, quotes] = await Promise.all([
+  const [receipts, spent, billed, orders, quotes] = await Promise.all([
     scope.money
       ? prisma.payment.aggregate({ where: { paidOn: between }, _sum: { amount: true } })
-      : null,
-    scope.money
-      ? prisma.cashCredit.aggregate({ where: { entryDate: between }, _sum: { amount: true } })
       : null,
     scope.expenses
       ? prisma.expense.aggregate({ where: { expenseDate: between }, _sum: { total: true } })
@@ -167,7 +164,7 @@ async function activityFor(span: Span, scope: { money: boolean; expenses: boolea
   ])
 
   return {
-    received: sum(receipts?._sum.amount) + sum(credits?._sum.amount),
+    received: sum(receipts?._sum.amount),
     spent: sum(spent?._sum.total),
     billed: sum(billed?._sum.total),
     billedCount: billed?._count._all ?? 0,
@@ -182,12 +179,9 @@ async function activityFor(span: Span, scope: { money: boolean; expenses: boolea
 async function moneySeries(span: Span, scope: { money: boolean; expenses: boolean }) {
   const between = { gte: span.from, lte: span.to }
 
-  const [receipts, credits, expenses] = await Promise.all([
+  const [receipts, expenses] = await Promise.all([
     scope.money
       ? prisma.payment.groupBy({ by: ['paidOn'], where: { paidOn: between }, _sum: { amount: true } })
-      : [],
-    scope.money
-      ? prisma.cashCredit.groupBy({ by: ['entryDate'], where: { entryDate: between }, _sum: { amount: true } })
       : [],
     scope.expenses
       ? prisma.expense.groupBy({ by: ['expenseDate'], where: { expenseDate: between }, _sum: { total: true } })
@@ -212,7 +206,6 @@ async function moneySeries(span: Span, scope: { money: boolean; expenses: boolea
   }
 
   for (const row of receipts) put(row.paidOn, 'received', sum(row._sum.amount))
-  for (const row of credits) put(row.entryDate, 'received', sum(row._sum.amount))
   for (const row of expenses) put(row.expenseDate, 'spent', sum(row._sum.total))
 
   return { buckets, weekly: step > 1 }

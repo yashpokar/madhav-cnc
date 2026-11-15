@@ -89,16 +89,42 @@ export async function getVendor(id: string) {
 }
 
 /** Active vendors for pickers: the name, plus a line to tell similar ones apart. */
+/**
+ * Everyone an expense can be paid to: vendors, plus the architects and
+ * carpenters from Partners (who are often paid commission), marked as such.
+ * A partner who already has a vendor of the same name is listed once.
+ */
 export async function listVendorOptions() {
-  const rows = await prisma.vendor.findMany({
-    where: { isActive: true },
-    orderBy: { name: 'asc' },
-    select: { id: true, name: true, phone: true, city: true, description: true },
-  })
+  const [vendors, partners] = await Promise.all([
+    prisma.vendor.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, phone: true, city: true, description: true },
+    }),
+    prisma.partner.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, type: true, phone: true, city: true },
+    }),
+  ])
 
-  return rows.map((row) => ({
+  const taken = new Set(vendors.map((row) => row.name.trim().toLowerCase()))
+
+  const fromVendors = vendors.map((row) => ({
     id: row.id,
     name: row.name,
     detail: [row.phone, row.city].filter(Boolean).join(' · ') || row.description || '',
   }))
+
+  const fromPartners = partners
+    .filter((row) => !taken.has(row.name.trim().toLowerCase()))
+    .map((row) => ({
+      id: `partner:${row.id}`,
+      name: row.name,
+      detail: [row.type === 'ARCHITECT' ? 'Architect' : 'Carpenter', row.phone, row.city]
+        .filter(Boolean)
+        .join(' · '),
+    }))
+
+  return [...fromVendors, ...fromPartners].sort((a, b) => a.name.localeCompare(b.name))
 }

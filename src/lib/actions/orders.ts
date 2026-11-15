@@ -18,8 +18,8 @@ import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { OrderStatus } from '@/generated/prisma/enums'
 
 /**
- * The advance taken on an order is kept as a receipt (so it shows in Payments
- * and the Day book) tied to the order. It is never applied to an invoice; the
+ * The advance taken on an order is kept as a receipt (so it shows in Payments)
+ * tied to the order. It is never applied to an invoice; the
  * invoice deducts it as "advance adjusted", so it is not counted twice.
  */
 async function syncAdvancePayment(

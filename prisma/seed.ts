@@ -16,6 +16,7 @@ const EXPENSE_CATEGORIES = [
   'Office & admin',
   'Bank & finance charges',
   'Taxes & fees',
+  'Commission',
   'Other',
 ]
 

@@ -64,6 +64,17 @@ export async function CustomerFinancials({ id }: { id: string }) {
                 : 'Nothing owed'
           }
         />
+        {data.opening > 0 ? (
+          <Tile
+            label="Opening balance"
+            value={data.opening}
+            hint={
+              data.openingAsOf
+                ? `Owed before the system, as of ${fmtDate(data.openingAsOf)}`
+                : 'Owed before the system'
+            }
+          />
+        ) : null}
         {data.onAccount > 0 ? (
           <Tile label="Advance on account" value={data.onAccount} hint="Received, not yet applied" />
         ) : null}

@@ -109,7 +109,21 @@ export default async function VendorPage({
           <VendorForm
             action={updateVendor.bind(null, vendor.id)}
             submitLabel="Save changes"
-            values={vendor}
+            values={{
+              name: vendor.name,
+              contactName: vendor.contactName,
+              phone: vendor.phone,
+              email: vendor.email,
+              gstin: vendor.gstin,
+              address: vendor.address,
+              city: vendor.city,
+              description: vendor.description,
+              isActive: vendor.isActive,
+              openingPayable: vendor.openingPayable.toNumber(),
+              openingAsOf: vendor.openingAsOf
+                ? vendor.openingAsOf.toISOString().slice(0, 10)
+                : null,
+            }}
           />
         </>
       ) : null}

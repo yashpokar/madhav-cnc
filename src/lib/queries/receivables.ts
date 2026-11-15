@@ -4,6 +4,7 @@ import {
   bucketFor,
   daysOverdue,
   invoiceDue,
+  openingRemaining,
   round2,
   startOfDay,
   uninvoicedDue,
@@ -31,7 +32,7 @@ export async function getReceivables(
       }
     : undefined
 
-  const [invoices, notes, uninvoiced, recentPayments, allReceipts] =
+  const [invoices, notes, uninvoiced, recentPayments, allReceipts, openingCustomers] =
     await Promise.all([
     prisma.invoice.findMany({
       where: { status: 'ISSUED' },
@@ -88,6 +89,7 @@ export async function getReceivables(
         modeName: true,
         reference: true,
         orderId: true,
+        openingApplied: true,
         customer: { select: { id: true, name: true } },
         allocations: {
           select: { amount: true, invoice: { select: { number: true } } },
@@ -100,10 +102,61 @@ export async function getReceivables(
         customerId: true,
         customer: { select: { id: true, name: true } },
         orderId: true,
+        openingApplied: true,
         allocations: { select: { amount: true } },
       },
     }),
+    prisma.customer.findMany({
+      where: { openingDue: { gt: 0 } },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        openingDue: true,
+        openingAsOf: true,
+      },
+    }),
   ])
+
+  // What receipts have already settled of each customer's opening balance.
+  const openingAppliedBy = new Map<string, number>()
+
+  for (const receipt of allReceipts) {
+    const applied = num(receipt.openingApplied)
+
+    if (applied > 0) {
+      openingAppliedBy.set(
+        receipt.customerId,
+        round2((openingAppliedBy.get(receipt.customerId) ?? 0) + applied),
+      )
+    }
+  }
+
+  // Balances carried from before the system, aged from their "as of" date.
+  const openingRows = openingCustomers
+    .map((customer) => {
+      const due = openingRemaining(
+        num(customer.openingDue),
+        openingAppliedBy.get(customer.id) ?? 0,
+      )
+      const overdueBy = customer.openingAsOf
+        ? daysOverdue(customer.openingAsOf, today)
+        : 0
+
+      return {
+        customer: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+        },
+        asOf: customer.openingAsOf,
+        openingDue: num(customer.openingDue),
+        due,
+        overdueBy,
+        bucket: bucketFor(overdueBy),
+      }
+    })
+    .filter((row) => row.due > 0)
 
   const open = invoices
     .map((invoice) => {
@@ -140,15 +193,21 @@ export async function getReceivables(
     })
     .filter((invoice) => invoice.due > 0)
 
-  const outstanding = round2(open.reduce((sum, row) => sum + row.due, 0))
+  // Open invoices plus what is left of the opening balances.
+  const outstanding = round2(
+    open.reduce((sum, row) => sum + row.due, 0) +
+      openingRows.reduce((sum, row) => sum + row.due, 0),
+  )
   const overdue = round2(
-    open
+    [...open, ...openingRows]
       .filter((row) => row.overdueBy > 0)
       .reduce((sum, row) => sum + row.due, 0),
   )
 
   const aging = AGING_BUCKETS.map((bucket) => {
-    const rows = open.filter((row) => row.bucket === bucket.key)
+    const rows = [...open, ...openingRows].filter(
+      (row) => row.bucket === bucket.key,
+    )
 
     return {
       key: bucket.key,
@@ -168,7 +227,7 @@ export async function getReceivables(
     )
     const unallocated = receipt.orderId
       ? 0
-      : round2(num(receipt.amount) - allocated)
+      : round2(num(receipt.amount) - allocated - num(receipt.openingApplied))
 
     if (unallocated <= 0) continue
 
@@ -215,6 +274,26 @@ export async function getReceivables(
     }
 
     existing.invoices += 1
+    existing.due = round2(existing.due + row.due)
+    existing.overdue = round2(
+      existing.overdue + (row.overdueBy > 0 ? row.due : 0),
+    )
+    existing.oldestDays = Math.max(existing.oldestDays, row.overdueBy)
+
+    byCustomerMap.set(row.customer.id, existing)
+  }
+
+  for (const row of openingRows) {
+    const existing = byCustomerMap.get(row.customer.id) ?? {
+      id: row.customer.id,
+      name: row.customer.name,
+      phone: row.customer.phone,
+      invoices: 0,
+      due: 0,
+      overdue: 0,
+      oldestDays: 0,
+    }
+
     existing.due = round2(existing.due + row.due)
     existing.overdue = round2(
       existing.overdue + (row.overdueBy > 0 ? row.due : 0),
@@ -329,6 +408,7 @@ export async function getReceivables(
     collected30Count: collected._count._all,
     aging,
     invoices: [...open].sort((a, b) => b.overdueBy - a.overdueBy),
+    openingBalances: openingRows,
     byCustomer,
     toBill,
     payments: recentPayments.map((payment) => {
@@ -348,7 +428,12 @@ export async function getReceivables(
         isAdvance: Boolean(payment.orderId),
         amount: num(payment.amount),
         allocated: round2(allocated),
-        unallocated: payment.orderId ? 0 : round2(num(payment.amount) - allocated),
+        openingApplied: num(payment.openingApplied),
+        unallocated: payment.orderId
+          ? 0
+          : round2(
+              num(payment.amount) - allocated - num(payment.openingApplied),
+            ),
         invoiceNumbers: payment.allocations.map(
           (allocation) => allocation.invoice.number,
         ),
@@ -364,7 +449,7 @@ export type Receivables = Awaited<ReturnType<typeof getReceivables>>
  * what was written off as not recoverable ("defaulted").
  */
 export async function getCustomerLedger(today = new Date()) {
-  const [invoices, payments] = await Promise.all([
+  const [invoices, payments, openingCustomers, openingApplied] = await Promise.all([
     prisma.invoice.findMany({
       where: { status: 'ISSUED' },
       select: {
@@ -381,6 +466,21 @@ export async function getCustomerLedger(today = new Date()) {
       by: ['customerId'],
       _sum: { amount: true },
     }),
+    prisma.customer.findMany({
+      where: { openingDue: { gt: 0 } },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        openingDue: true,
+        openingAsOf: true,
+      },
+    }),
+    prisma.payment.groupBy({
+      by: ['customerId'],
+      where: { openingApplied: { gt: 0 } },
+      _sum: { openingApplied: true },
+    }),
   ])
 
   type Row = {
@@ -393,6 +493,8 @@ export async function getCustomerLedger(today = new Date()) {
     overdue: number
     defaulted: number
     oldestDays: number
+    /** Part of `due` that is the balance carried from before the system. */
+    opening: number
   }
 
   const rows = new Map<string, Row>()
@@ -408,6 +510,7 @@ export async function getCustomerLedger(today = new Date()) {
       overdue: 0,
       defaulted: 0,
       oldestDays: 0,
+      opening: 0,
     }
 
     const paid = invoice.paymentAllocations.reduce(
@@ -462,8 +565,52 @@ export async function getCustomerLedger(today = new Date()) {
         overdue: 0,
         defaulted: 0,
         oldestDays: 0,
+        opening: 0,
       })
     }
+  }
+
+  // The opening balance is its own amount in a customer's due, aged from its date.
+  const appliedByCustomer = new Map(
+    openingApplied.map((p) => [
+      p.customerId,
+      p._sum.openingApplied ? num(p._sum.openingApplied) : 0,
+    ]),
+  )
+
+  for (const customer of openingCustomers) {
+    const left = openingRemaining(
+      num(customer.openingDue),
+      appliedByCustomer.get(customer.id) ?? 0,
+    )
+
+    if (left <= 0) continue
+
+    const row = rows.get(customer.id) ?? {
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      billed: 0,
+      received: 0,
+      due: 0,
+      overdue: 0,
+      defaulted: 0,
+      oldestDays: 0,
+      opening: 0,
+    }
+    const late = customer.openingAsOf
+      ? daysOverdue(customer.openingAsOf, today)
+      : 0
+
+    row.opening = left
+    row.due = round2(row.due + left)
+
+    if (late > 0) {
+      row.overdue = round2(row.overdue + left)
+      row.oldestDays = Math.max(row.oldestDays, late)
+    }
+
+    rows.set(row.id, row)
   }
 
   for (const row of rows.values()) {

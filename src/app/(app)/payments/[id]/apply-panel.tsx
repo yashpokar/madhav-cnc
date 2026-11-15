@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { ConfirmButton } from '@/components/confirm-button'
 import { Input } from '@/components/catalyst/input'
+import { Description, Field, Label } from '@/components/catalyst/fieldset'
 import { FormBanner } from '@/components/form-banner'
 import { deleteReceipt, updateAllocations } from '@/lib/actions/payments'
 import type { SimpleResult } from '@/lib/actions/payments'
@@ -23,6 +24,8 @@ export function ApplyPanel({
   receiptAmount,
   invoices,
   current,
+  openingLeft,
+  openingApplied: initialOpening,
   canUpdate,
   canDelete,
 }: {
@@ -30,17 +33,29 @@ export function ApplyPanel({
   receiptAmount: number
   invoices: OpenInvoice[]
   current: Record<string, number>
+  /** What is left of the opening balance, not counting this receipt's own part. */
+  openingLeft: number
+  openingApplied: number
   canUpdate: boolean
   canDelete: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState<SimpleResult | null>(null)
+  const [opening, setOpening] = useState(
+    initialOpening > 0 ? String(initialOpening) : '',
+  )
   const [applied, setApplied] = useState<Record<string, string>>(() => {
     const existing = Object.entries(current)
 
-    // A single open invoice and nothing applied yet: offer the obvious answer.
-    if (existing.length === 0 && invoices.length === 1) {
+    // A single open invoice and nothing applied yet: offer the obvious answer
+    // (unless the customer also has an opening balance, which needs a choice).
+    if (
+      existing.length === 0 &&
+      initialOpening <= 0 &&
+      openingLeft <= 0 &&
+      invoices.length === 1
+    ) {
       const take = round2(Math.min(receiptAmount, invoices[0].due))
 
       return take > 0 ? { [invoices[0].id]: String(take) } : {}
@@ -49,11 +64,14 @@ export function ApplyPanel({
     return Object.fromEntries(existing.map(([key, value]) => [key, String(value)]))
   })
 
+  const openingAmount = openingLeft > 0 ? num(opening) : 0
   const allocated = round2(
-    invoices.reduce((sum, invoice) => sum + num(applied[invoice.id] ?? ''), 0),
+    invoices.reduce((sum, invoice) => sum + num(applied[invoice.id] ?? ''), 0) +
+      openingAmount,
   )
   const unallocated = round2(receiptAmount - allocated)
-  const overApplied = allocated > receiptAmount + 0.005
+  const overApplied =
+    allocated > receiptAmount + 0.005 || openingAmount > openingLeft + 0.005
 
   function autoAllocate() {
     let left = receiptAmount
@@ -68,6 +86,7 @@ export function ApplyPanel({
     }
 
     setApplied(next)
+    setOpening('')
   }
 
   function save() {
@@ -78,6 +97,7 @@ export function ApplyPanel({
           invoiceId: invoice.id,
           amount: num(applied[invoice.id] ?? ''),
         })),
+        openingAmount,
       )
 
       setResult(outcome)
@@ -96,16 +116,41 @@ export function ApplyPanel({
         </FormBanner>
       ) : null}
 
-      {canUpdate && invoices.length > 0 ? (
+      {canUpdate && (invoices.length > 0 || openingLeft > 0) ? (
         <>
           <div className="flex flex-wrap gap-3">
             <Button outline type="button" onClick={autoAllocate}>
               Apply oldest first
             </Button>
-            <Button outline type="button" onClick={() => setApplied({})}>
+            <Button
+              outline
+              type="button"
+              onClick={() => {
+                setApplied({})
+                setOpening('')
+              }}
+            >
               Clear
             </Button>
           </div>
+
+          {openingLeft > 0 ? (
+            <Field className="max-w-sm">
+              <Label>Apply to opening balance</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                max={openingLeft}
+                value={opening}
+                onChange={(event) => setOpening(event.target.value)}
+              />
+              <Description>
+                {currency.format(openingLeft)} of the opening balance is
+                outstanding.
+              </Description>
+            </Field>
+          ) : null}
 
           <div className="overflow-x-auto">
             <table className="stack-table w-full min-w-[40rem] text-left text-sm/6">
@@ -173,7 +218,7 @@ export function ApplyPanel({
         </>
       ) : null}
 
-      {canUpdate && invoices.length === 0 ? (
+      {canUpdate && invoices.length === 0 && openingLeft <= 0 ? (
         <p className="text-sm/6 text-zinc-500 dark:text-zinc-400">
           This customer has no other open invoices right now.
         </p>

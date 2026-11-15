@@ -120,6 +120,8 @@ export default async function EditCustomerPage({
           preferredCarpenterId: customer.preferredCarpenterId,
           paymentTermsDays: customer.paymentTermsDays,
           notes: customer.notes,
+          openingDue: customer.openingDue.toNumber(),
+          openingAsOf: toDateInput(customer.openingAsOf),
         }}
       />
 

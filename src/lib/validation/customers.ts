@@ -1,5 +1,10 @@
 import { z } from 'zod'
 import { CustomerStatus, CustomerType } from '@/generated/prisma/enums'
+import {
+  openingAmount,
+  openingDate,
+  requireOpeningDate,
+} from '@/lib/validation/opening'
 
 const optionalText = (max: number) =>
   z
@@ -89,7 +94,11 @@ export const customerInputSchema = z.object({
     .optional()
     .transform((value) => (value === '' || value === undefined ? null : value)),
   notes: optionalText(1000),
-})
+  openingDue: openingAmount,
+  openingAsOf: openingDate,
+}).superRefine((data, ctx) =>
+  requireOpeningDate(data.openingDue, data.openingAsOf, ctx),
+)
 
 export type CustomerInput = z.input<typeof customerInputSchema>
 export type CustomerData = z.output<typeof customerInputSchema>

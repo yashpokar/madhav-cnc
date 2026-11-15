@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { daysOverdue, openingRemaining } from '@/lib/receivables-math'
 
 type DecimalLike = { toNumber: () => number }
 
@@ -57,6 +58,40 @@ export async function openInvoiceBalances(
     .filter((invoice) => invoice.due > 0)
 }
 
+/**
+ * What is still owed from before the system for one customer. Pass a payment
+ * id to leave that receipt's own opening portion out (when editing it).
+ */
+export async function openingBalanceFor(
+  customerId: string,
+  ignorePaymentId?: string,
+) {
+  const [customer, applied] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { openingDue: true, openingAsOf: true },
+    }),
+    prisma.payment.aggregate({
+      where: {
+        customerId,
+        ...(ignorePaymentId ? { id: { not: ignorePaymentId } } : {}),
+      },
+      _sum: { openingApplied: true },
+    }),
+  ])
+
+  const openingDue = customer ? num(customer.openingDue) : 0
+  const appliedSum = applied._sum.openingApplied
+    ? num(applied._sum.openingApplied)
+    : 0
+
+  return {
+    openingDue,
+    asOf: customer?.openingAsOf ?? null,
+    remaining: openingRemaining(openingDue, appliedSum),
+  }
+}
+
 export async function getReceipt(id: string) {
   const payment = await prisma.payment.findUnique({
     where: { id },
@@ -85,19 +120,27 @@ export async function getReceipt(id: string) {
   }
 
   const amount = num(payment.amount)
+  const openingApplied = num(payment.openingApplied)
   const allocated = round2(
     payment.allocations.reduce(
       (sum, allocation) => sum + num(allocation.amount),
       0,
     ),
   )
+  // What this receipt could still be applied to, leaving its own portion out.
+  const opening = await openingBalanceFor(payment.customerId, payment.id)
 
   return {
     ...payment,
     amount,
     allocated,
+    openingApplied,
+    openingLeft: opening.remaining,
+    openingAsOf: opening.asOf,
     // An order's advance is deducted on the invoice itself, never applied.
-    unallocated: payment.orderId ? 0 : round2(amount - allocated),
+    unallocated: payment.orderId
+      ? 0
+      : round2(amount - allocated - openingApplied),
     allocations: payment.allocations.map((allocation) => ({
       id: allocation.id,
       amount: num(allocation.amount),
@@ -110,7 +153,7 @@ export async function getReceipt(id: string) {
 }
 
 export async function customerAccount(customerId: string) {
-  const [customer, invoices, receipts, credits] = await Promise.all([
+  const [customer, invoices, receipts, credits, opening] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: customerId },
       select: { id: true, name: true, phone: true },
@@ -128,6 +171,7 @@ export async function customerAccount(customerId: string) {
         modeName: true,
         reference: true,
         orderId: true,
+        openingApplied: true,
         allocations: { select: { amount: true } },
       },
     }),
@@ -147,13 +191,19 @@ export async function customerAccount(customerId: string) {
         total: true,
       },
     }),
+    openingBalanceFor(customerId),
   ])
 
   if (!customer) {
     return null
   }
 
-  const due = round2(invoices.reduce((sum, invoice) => sum + invoice.due, 0))
+  const invoiceDueTotal = round2(
+    invoices.reduce((sum, invoice) => sum + invoice.due, 0),
+  )
+  // The one definition of a customer's due: open invoices plus what is left
+  // of the balance carried from before the system.
+  const due = round2(invoiceDueTotal + opening.remaining)
   const onAccount = round2(
     receipts.reduce((sum, receipt) => {
       const allocated = receipt.allocations.reduce(
@@ -163,7 +213,11 @@ export async function customerAccount(customerId: string) {
 
       return receipt.orderId
         ? sum
-        : sum + Math.max(0, num(receipt.amount) - allocated)
+        : sum +
+            Math.max(
+              0,
+              num(receipt.amount) - allocated - num(receipt.openingApplied),
+            )
     }, 0),
   )
   const creditNotes = credits.map((note) => ({
@@ -177,6 +231,10 @@ export async function customerAccount(customerId: string) {
   return {
     customer,
     invoices,
+    invoiceDue: invoiceDueTotal,
+    opening: opening.remaining,
+    openingDue: opening.openingDue,
+    openingAsOf: opening.asOf,
     due,
     onAccount,
     credit,
@@ -200,7 +258,12 @@ export async function customerAccount(customerId: string) {
         amount: num(receipt.amount),
         orderId: receipt.orderId,
         allocated,
-        unallocated: receipt.orderId ? 0 : round2(num(receipt.amount) - allocated),
+        openingApplied: num(receipt.openingApplied),
+        unallocated: receipt.orderId
+          ? 0
+          : round2(
+              num(receipt.amount) - allocated - num(receipt.openingApplied),
+            ),
       }
     }),
   }
@@ -238,6 +301,12 @@ export async function customerFinancials(customerId: string) {
       .filter((invoice) => invoice.dueDate && invoice.dueDate.getTime() < today)
       .reduce((sum, invoice) => sum + invoice.due, 0),
   )
+  const openingLate =
+    account.opening > 0 &&
+    account.openingAsOf &&
+    daysOverdue(account.openingAsOf, new Date()) > 0
+      ? account.opening
+      : 0
   const rows = writeOffs.map((row) => ({ ...row, amount: num(row.amount) }))
 
   return {
@@ -247,7 +316,9 @@ export async function customerFinancials(customerId: string) {
       account.receipts.reduce((sum, receipt) => sum + receipt.amount, 0),
     ),
     outstanding: account.due,
-    overdue,
+    overdue: round2(overdue + openingLate),
+    opening: account.opening,
+    openingAsOf: account.openingAsOf,
     onAccount: account.onAccount,
     credit: account.credit,
     writtenOff: round2(rows.reduce((sum, row) => sum + row.amount, 0)),

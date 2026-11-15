@@ -37,11 +37,13 @@ export function ReceiptForm({
   customers: initialCustomers,
   initialCustomerId,
   initialInvoices,
+  initialOpeningLeft,
   modes,
 }: {
   customers: { id: string; name: string; phone: string }[]
   initialCustomerId: string
   initialInvoices: OpenInvoice[]
+  initialOpeningLeft: number
   modes: PaymentModeOption[]
 }) {
   const router = useRouter()
@@ -58,27 +60,37 @@ export function ReceiptForm({
   const [loading, startLoading] = useTransition()
   const [amount, setAmount] = useState('')
   const [applied, setApplied] = useState<Record<string, string>>({})
+  const [openingLeft, setOpeningLeft] = useState(initialOpeningLeft)
+  const [openingApplied, setOpeningApplied] = useState('')
 
   function pickCustomer(nextId: string) {
     setCustomerId(nextId)
     setApplied({})
+    setOpeningApplied('')
 
     if (!nextId) {
       setInvoices([])
+      setOpeningLeft(0)
       return
     }
 
     startLoading(async () => {
-      setInvoices(await openInvoicesFor(nextId))
+      const result = await openInvoicesFor(nextId)
+
+      setInvoices(result.invoices)
+      setOpeningLeft(result.openingLeft)
     })
   }
 
   const total = num(amount)
+  const openingAmount = openingLeft > 0 ? num(openingApplied) : 0
   const allocated = round2(
-    invoices.reduce((sum, invoice) => sum + num(applied[invoice.id] ?? ''), 0),
+    invoices.reduce((sum, invoice) => sum + num(applied[invoice.id] ?? ''), 0) +
+      openingAmount,
   )
+  const openingTooMuch = openingAmount > openingLeft + 0.005
   const unallocated = round2(total - allocated)
-  const overApplied = allocated > total + 0.005
+  const overApplied = allocated > total + 0.005 || openingTooMuch
 
   function autoAllocate() {
     let left = total
@@ -93,6 +105,7 @@ export function ReceiptForm({
     }
 
     setApplied(next)
+    setOpeningApplied('')
   }
 
   const serialised = JSON.stringify(
@@ -113,6 +126,7 @@ export function ReceiptForm({
     <form action={formAction} className="grid grid-cols-1 gap-8">
       <input type="hidden" name="customerId" value={customerId} />
       <input type="hidden" name="allocations" value={serialised} />
+      <input type="hidden" name="openingApplied" value={openingAmount || ''} />
 
       {state.status === 'error' ? (
         <FormBanner tone="error">{state.message}</FormBanner>
@@ -157,6 +171,9 @@ export function ReceiptForm({
                     : invoices.length === 0
                       ? 'No open invoices — this will sit on account.'
                       : `${invoices.length} open invoice${invoices.length === 1 ? '' : 's'}, ${currency.format(dueTotal)} outstanding`}
+                  {!loading && openingLeft > 0
+                    ? ` Opening balance ${currency.format(openingLeft)} also outstanding.`
+                    : ''}
                 </Description>
               ) : null}
             </Field>
@@ -213,7 +230,9 @@ export function ReceiptForm({
         {invoices.length === 0 ? (
           <Text className="mt-4">
             {customerId
-              ? 'This customer has no open invoices. The full amount will sit on account and can be applied to a future invoice.'
+              ? openingLeft > 0
+                ? 'This customer has no open invoices. Without a choice below, the amount goes to their opening balance first and any excess sits on account.'
+                : 'This customer has no open invoices. The full amount will sit on account and can be applied to a future invoice.'
               : 'Pick a customer to see their open invoices.'}
           </Text>
         ) : (
@@ -227,7 +246,14 @@ export function ReceiptForm({
               >
                 Apply oldest first
               </Button>
-              <Button outline type="button" onClick={() => setApplied({})}>
+              <Button
+                outline
+                type="button"
+                onClick={() => {
+                  setApplied({})
+                  setOpeningApplied('')
+                }}
+              >
                 Clear
               </Button>
             </div>
@@ -286,6 +312,30 @@ export function ReceiptForm({
             </div>
           </>
         )}
+
+        {openingLeft > 0 ? (
+          <Field className="mt-6 max-w-sm">
+            <Label>Apply to opening balance</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              max={openingLeft}
+              value={openingApplied}
+              onChange={(event) => setOpeningApplied(event.target.value)}
+              invalid={openingTooMuch}
+            />
+            <Description>
+              {currency.format(openingLeft)} of their opening balance is still
+              outstanding.
+            </Description>
+            {openingTooMuch ? (
+              <ErrorMessage>
+                That is more than the opening balance outstanding.
+              </ErrorMessage>
+            ) : null}
+          </Field>
+        ) : null}
 
         <div className="mt-6 max-w-sm rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
           <dl className="grid grid-cols-2 gap-y-2 text-sm/6">

@@ -66,7 +66,7 @@ export default async function CustomerStatementPage({
     mode: (row) => modeText(row),
     reference: (row) => row.reference,
     amount: (row) => row.amount,
-    applied: (row) => row.allocated,
+    applied: (row) => row.allocated + row.openingApplied,
     onaccount: (row) => row.unallocated,
   })
   const filtered =
@@ -119,8 +119,13 @@ export default async function CustomerStatementPage({
             Open bills
           </div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
-            {currency.format(account.due)}
+            {currency.format(account.invoiceDue)}
           </div>
+          {account.opening > 0 ? (
+            <div className="mt-0.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
+              + {currency.format(account.opening)} opening balance
+            </div>
+          ) : null}
         </div>
         <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">
@@ -161,7 +166,7 @@ export default async function CustomerStatementPage({
       <div>
         <Subheading level={2}>Open invoices</Subheading>
         <div className="mt-4">
-          {account.invoices.length === 0 ? (
+          {account.invoices.length === 0 && account.opening <= 0 ? (
             <EmptyState
               title="No open invoices"
               description="Everything billed to this customer is settled."
@@ -203,6 +208,28 @@ export default async function CustomerStatementPage({
                     </TableCell>
                   </TableRow>
                 ))}
+                {account.opening > 0 ? (
+                  <TableRow>
+                    <TableCell className="font-medium">Opening balance</TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">
+                      {account.openingAsOf
+                        ? `as of ${dateFormat.format(account.openingAsOf)}`
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">
+                      —
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {currency.format(account.openingDue)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {currency.format(account.openingDue - account.opening)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {currency.format(account.opening)}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           )}
@@ -291,7 +318,7 @@ export default async function CustomerStatementPage({
                       {currency.format(receipt.amount)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {currency.format(receipt.allocated)}
+                      {currency.format(receipt.allocated + receipt.openingApplied)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {receipt.unallocated > 0 ? (

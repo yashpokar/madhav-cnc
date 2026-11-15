@@ -11,7 +11,8 @@ import { round2 } from '@/lib/pricing'
 import { receiptInputSchema } from '@/lib/validation/payments'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
-import { openInvoiceBalances } from '@/lib/queries/payments'
+import { openInvoiceBalances, openingBalanceFor } from '@/lib/queries/payments'
+import { planAutoApply, validateOpeningApplied } from '@/lib/receivables-math'
 
 export type { FormState, SimpleResult }
 
@@ -32,7 +33,33 @@ function parse(formData: FormData) {
     paidOn: formData.get('paidOn'),
     notes: formData.get('notes'),
     allocations,
+    openingApplied: formData.get('openingApplied') || 0,
   })
+}
+
+/** The opening portion must fit what is left of the opening balance and the receipt. */
+async function validateOpening(
+  customerId: string,
+  receiptTotal: number,
+  invoiceAllocated: number,
+  openingApplied: number,
+  ignorePaymentId?: string,
+): Promise<{ ok: true; amount: number } | { ok: false; error: string }> {
+  const amount = round2(openingApplied)
+
+  if (amount <= 0) {
+    return { ok: true, amount: 0 }
+  }
+
+  const opening = await openingBalanceFor(customerId, ignorePaymentId)
+  const checked = validateOpeningApplied({
+    receipt: receiptTotal,
+    invoiceAllocated,
+    openingApplied: amount,
+    openingLeft: opening.remaining,
+  })
+
+  return checked.ok ? { ok: true, amount } : checked
 }
 
 async function validateAllocations(
@@ -118,23 +145,51 @@ export async function createReceipt(
     }
   }
 
-  // With nothing chosen and a single open invoice there is nothing to decide:
-  // the money belongs to that invoice. Several open invoices still need a choice.
-  let allocationRows = checked.rows
+  const invoiceAllocated = round2(
+    checked.rows.reduce((sum, row) => sum + row.amount, 0),
+  )
+  const openingChecked = await validateOpening(
+    parsed.data.customerId,
+    parsed.data.amount,
+    invoiceAllocated,
+    parsed.data.openingApplied,
+  )
 
-  if (allocationRows.length === 0) {
+  if (!openingChecked.ok) {
+    return {
+      status: 'error',
+      message: openingChecked.error,
+      values: rawValues(formData),
+    }
+  }
+
+  // With nothing chosen and exactly one thing it could belong to (a single
+  // open invoice, or only an opening balance) there is nothing to decide.
+  // Several open items still need a choice, and an explicit choice (including
+  // the opening balance) is never overridden.
+  let allocationRows = checked.rows
+  let openingApplied = openingChecked.amount
+
+  if (allocationRows.length === 0 && openingApplied === 0) {
     const open = (await openInvoiceBalances(parsed.data.customerId)).filter(
       (row) => row.due > 0,
     )
+    const opening = await openingBalanceFor(parsed.data.customerId)
+    const plan = planAutoApply({
+      receipt: parsed.data.amount,
+      explicitInvoiceTotal: 0,
+      explicitOpening: 0,
+      openInvoiceDues: open.map((row) => row.due),
+      openingLeft: opening.remaining,
+    })
 
-    if (open.length === 1) {
+    if (plan.invoiceIndex !== null) {
       allocationRows = [
-        {
-          invoiceId: open[0].id,
-          amount: round2(Math.min(parsed.data.amount, open[0].due)),
-        },
+        { invoiceId: open[plan.invoiceIndex].id, amount: plan.invoiceAmount },
       ]
     }
+
+    openingApplied = plan.openingAmount
   }
 
   const method = await resolvePaymentMode(parsed.data.channelId)
@@ -162,6 +217,7 @@ export async function createReceipt(
       paidOn: parsed.data.paidOn,
       notes: parsed.data.notes,
       recordedById: user.id,
+      openingApplied,
       allocations: { create: allocationRows },
     },
   })
@@ -182,6 +238,7 @@ export async function createReceipt(
 export async function updateAllocations(
   paymentId: string,
   requested: { invoiceId: string; amount: number }[],
+  openingApplied = 0,
 ): Promise<SimpleResult> {
   const user = await requireCapability('payment:update')
 
@@ -212,7 +269,23 @@ export async function updateAllocations(
     return { ok: false, error: checked.error }
   }
 
+  const openingChecked = await validateOpening(
+    payment.customerId,
+    payment.amount.toNumber(),
+    round2(checked.rows.reduce((sum, row) => sum + row.amount, 0)),
+    openingApplied,
+    paymentId,
+  )
+
+  if (!openingChecked.ok) {
+    return { ok: false, error: openingChecked.error }
+  }
+
   await prisma.$transaction([
+    prisma.payment.update({
+      where: { id: paymentId },
+      data: { openingApplied: openingChecked.amount },
+    }),
     prisma.paymentAllocation.deleteMany({ where: { paymentId } }),
     ...checked.rows.map((row) =>
       prisma.paymentAllocation.create({
@@ -278,5 +351,10 @@ export async function deleteReceipt(paymentId: string): Promise<SimpleResult> {
 export async function openInvoicesFor(customerId: string) {
   await requireCapability('payment:read')
 
-  return openInvoiceBalances(customerId)
+  const [invoices, opening] = await Promise.all([
+    openInvoiceBalances(customerId),
+    openingBalanceFor(customerId),
+  ])
+
+  return { invoices, openingLeft: opening.remaining }
 }

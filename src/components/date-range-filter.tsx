@@ -104,7 +104,7 @@ export function DateRangeFilter({
             <span className="relative block">
               <Headless.PopoverButton
                 className={clsx(
-                  'flex h-9 w-full min-w-60 items-center gap-2 rounded-lg border bg-white px-3 pr-9 text-left text-sm/6 shadow-xs dark:bg-white/5',
+                  'flex h-10 w-full min-w-60 items-center gap-2 rounded-lg border bg-white px-3 pr-9 text-left text-sm/6 shadow-xs dark:bg-white/5',
                   'border-zinc-950/10 hover:border-zinc-950/20 focus:outline-2 focus:outline-accent-400 dark:border-white/10 dark:hover:border-white/20',
                 )}
               >

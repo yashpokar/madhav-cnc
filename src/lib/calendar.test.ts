@@ -8,7 +8,10 @@ import {
   istDayKey,
   istInstant,
   isDayKey,
+  LAYER_RANK,
+  layersParam,
   monthGrid,
+  parseLayers,
   monthRange,
   rangesOverlap,
   scheduleFromFields,
@@ -167,5 +170,69 @@ describe('form fields', () => {
       endDate: '2026-11-20',
       endTime: '13:30',
     })
+  })
+})
+
+describe('date fallbacks', () => {
+  const blank = { startsAt: null, endsAt: null, dueDate: null }
+
+  it('places an order with neither start nor due date on its order date', () => {
+    const span = spanOf({ ...blank, orderDate: new Date('2026-11-15T00:00:00Z') })
+
+    expect(span).toMatchObject({ startKey: '2026-11-15', endKey: '2026-11-15', allDay: true, basis: 'order' })
+  })
+
+  it('prefers the start time, then the due date, then the order date', () => {
+    const orderDate = new Date('2026-11-01T00:00:00Z')
+    const dueDate = new Date('2026-11-10T00:00:00Z')
+    const startsAt = istInstant('2026-11-20', '10:00')
+
+    expect(spanOf({ startsAt, endsAt: null, dueDate, orderDate })?.basis).toBe('start')
+    expect(spanOf({ ...blank, dueDate, orderDate })).toMatchObject({ basis: 'due', startKey: '2026-11-10' })
+    expect(spanOf({ ...blank, orderDate })?.basis).toBe('order')
+    expect(spanOf(blank)).toBeNull()
+  })
+
+  it('buckets an order-date entry onto its day', () => {
+    const buckets = bucketByDay([{ ...blank, orderDate: new Date('2026-11-15T00:00:00Z') }])
+
+    expect([...buckets.keys()]).toEqual(['2026-11-15'])
+  })
+})
+
+describe('layers', () => {
+  const all = ['orders', 'deliveries', 'invoices', 'payments'] as const
+
+  it('shows every allowed layer when none is chosen', () => {
+    expect(parseLayers(undefined, all)).toEqual([...all])
+    expect(parseLayers(null, ['orders', 'payments'])).toEqual(['orders', 'payments'])
+  })
+
+  it('reads the chosen layers, ignoring unknown and forbidden ones', () => {
+    expect(parseLayers('payments,orders,bogus', all)).toEqual(['orders', 'payments'])
+    expect(parseLayers('orders,invoices', ['orders'])).toEqual(['orders'])
+    expect(parseLayers('', all)).toEqual([])
+  })
+
+  it('writes the param in a stable order', () => {
+    expect(layersParam(['payments', 'orders'])).toBe('orders,payments')
+    expect(layersParam([])).toBe('')
+  })
+
+  it('ranks bookings first, then deliveries, invoices and payments inside a day', () => {
+    const items = [
+      { id: 'pay', layer: 'payments' as const },
+      { id: 'inv', layer: 'invoices' as const },
+      { id: 'ord', layer: 'orders' as const },
+      { id: 'del', layer: 'deliveries' as const },
+    ].map((item) => ({
+      ...item,
+      startsAt: null,
+      endsAt: null,
+      dueDate: new Date('2026-11-15T00:00:00Z'),
+    }))
+    const day = bucketByDay(items, (item) => LAYER_RANK[item.layer]).get('2026-11-15')
+
+    expect(day?.map((item) => item.id)).toEqual(['ord', 'del', 'inv', 'pay'])
   })
 })

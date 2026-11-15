@@ -397,9 +397,13 @@ export default async function DashboardPage({
                   size="hero"
                   href="/payments"
                   label="Payment due"
-                  value={inr.format(receivables.outstanding)}
+                  value={inr.format(receivables.outstanding + receivables.toBillDue)}
                   tone={receivables.overdue > 0 ? 'bad' : 'default'}
-                  note="all customers, today"
+                  note={
+                    receivables.toBillDue > 0
+                      ? `incl. ${inr.format(receivables.toBillDue)} not yet invoiced`
+                      : 'all customers, today'
+                  }
                   status={
                     receivables.overdue > 0
                       ? { text: `${inr.format(receivables.overdue)} overdue`, tone: 'bad' }
@@ -446,7 +450,11 @@ export default async function DashboardPage({
                 current={now.billed}
                 previous={before.billed}
                 versus={range.compareLabel}
-                note={`${now.billedCount} invoice${now.billedCount === 1 ? '' : 's'} issued`}
+                note={`${now.billedCount} invoice${now.billedCount === 1 ? '' : 's'} issued${
+                  receivables && receivables.toBillTotal > 0
+                    ? ` · ${inr.format(receivables.toBillTotal)} delivered, not invoiced`
+                    : ''
+                }`}
               />
             ) : null}
             {canOrders ? (

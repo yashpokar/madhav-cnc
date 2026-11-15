@@ -31,10 +31,13 @@ export function CompanySwitcher({
   companies,
   activeId,
   canManage,
+  roleLabel,
 }: {
   companies: CompanyChoice[]
   activeId: string | null
   canManage: boolean
+  /** The person's role in the active company, shown under its name. */
+  roleLabel?: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -44,7 +47,7 @@ export function CompanySwitcher({
     <span className="flex min-w-0 items-center gap-3">
       <span
         aria-hidden="true"
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-600 text-xs/4 font-semibold text-white"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-xs/4 font-semibold text-zinc-700 ring-1 ring-zinc-950/5 dark:bg-white/10 dark:text-zinc-200 dark:ring-white/10"
       >
         {initials(active?.companyName ?? '?')}
       </span>
@@ -53,7 +56,7 @@ export function CompanySwitcher({
           {active?.companyName ?? 'No company'}
         </span>
         <span className="block truncate text-xs/5 text-zinc-500 dark:text-zinc-400">
-          Workspace
+          {roleLabel ?? 'Workspace'}
         </span>
       </span>
     </span>

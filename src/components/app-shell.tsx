@@ -195,15 +195,16 @@ function AppShellFrame({
       sidebar={
         <Sidebar>
           <SidebarHeader>
-            <div className="mb-4 flex items-center gap-2.5 px-0.5 max-lg:hidden">
-              <BrandMark className="size-7" />
-              <Wordmark className="text-base/6" />
+            <div className="mb-3 flex items-center gap-2 px-0.5 max-lg:hidden">
+              <BrandMark className="size-6" />
+              <Wordmark className="text-sm/6" />
             </div>
             <div data-tour="company-switcher">
               <CompanySwitcher
                 companies={companies}
                 activeId={activeCompanyId}
                 canManage={user.isSuperAdmin}
+                roleLabel={user.isSuperAdmin ? 'Platform admin' : ROLE_LABELS[user.role]}
               />
             </div>
             <button

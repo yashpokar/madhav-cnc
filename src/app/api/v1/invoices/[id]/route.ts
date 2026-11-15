@@ -1,11 +1,12 @@
 import { ApiError } from '@/lib/api/errors'
-import { apiRoute, replyWithEtag } from '@/lib/api/handler'
+import { apiRoute, reply, replyWithEtag } from '@/lib/api/handler'
 import { invoiceDetailFor } from '@/lib/api/reads/detail'
 import { invoiceDetailOut } from '@/lib/api/reads/mappers'
 import { invoiceInputSchema } from '@/lib/api/schemas/writes'
 import { actorOf, must, saved } from '@/lib/api/writes'
 import { getInvoice } from '@/lib/queries/invoices'
 import { updateInvoice } from '@/lib/services/invoices'
+import { deleteInvoice } from '@/lib/services/invoices'
 
 export const GET = apiRoute({ auth: 'company', capability: 'invoice:read' }, async ({ request, params }) => {
   const row = await getInvoice(params.id)
@@ -28,3 +29,10 @@ export const PATCH = apiRoute(
     return saved(await invoiceDetailFor(params.id))
   },
 )
+
+/** Draft invoices only (anything else is 409). */
+export const DELETE = apiRoute({ auth: 'company', capability: 'invoice:delete' }, async ({ params, user }) => {
+  must(await deleteInvoice(actorOf(user), params.id))
+
+  return reply({ id: params.id, deleted: true })
+})

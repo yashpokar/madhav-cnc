@@ -2,6 +2,7 @@ import { apiRoute, reply } from '@/lib/api/handler'
 import { ApiError } from '@/lib/api/errors'
 import { createCompanyBody } from '@/lib/api/schemas'
 import { capabilitiesFor } from '@/lib/permissions'
+import { industryFields } from '@/lib/services/account'
 import { createOwnCompanyFor } from '@/lib/services/companies'
 
 /**
@@ -39,7 +40,7 @@ export const POST = apiRoute(
           name: result.companyName,
           role: 'ADMIN' as const,
           capabilities: capabilitiesFor('ADMIN'),
-          industry: result.industry,
+          ...industryFields(result.industry),
         },
       },
       { status: 201 },

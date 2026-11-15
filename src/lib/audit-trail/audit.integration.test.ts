@@ -400,6 +400,8 @@ describe.skipIf(!enabled)('audit trail against a real database', () => {
     it('refuses to delete a money record without a reason, then keeps the whole record when deleted with one', async () => {
       const { createAdjustment, deleteAdjustment } = await import('@/lib/services/adjustments')
 
+      process.env.AUDIT_REASON_REQUIRED = 'true'
+
       await inCompany(A, async () => {
         const channel = await build(byName.get('PaymentChannel')!, A)
         const made = await createAdjustment({ userId: 'it-admin', name: 'Integration Admin' }, adjustmentInput(channel.id))
@@ -421,6 +423,72 @@ describe.skipIf(!enabled)('audit trail against a real database', () => {
         expect(last).toMatchObject({ action: 'delete', reason: 'Counted twice', actor_name: 'Integration Admin' })
         expect(last.before).toMatchObject({ id, note: 'Cash found in the drawer', amount: 250 })
       })
+
+      delete process.env.AUDIT_REASON_REQUIRED
+    })
+
+    it('applies the lock and the reason rules to the services the API shares (notes, purchase bills)', async () => {
+      const { deleteNote } = await import('@/lib/services/notes')
+      const { deletePurchaseBill } = await import('@/lib/services/purchase-bills')
+
+      await inCompany(A, async () => {
+        const note = await build(byName.get('CreditDebitNote')!, A)
+        const bill = await build(byName.get('PurchaseBill')!, A)
+
+        await prisma.companySetting.update({ where: { id: A }, data: { lockDate: new Date('2026-03-31T00:00:00Z') } })
+
+        const asSales = { ...ACTOR, actorRole: 'SALES' }
+        const refused = await inCompany(A, () => withAuditNote({ reason: 'cleanup' }, () => deleteNote(note.id)), asSales)
+
+        expect(refused).toMatchObject({ ok: false, error: expect.stringContaining('closed up to') })
+        expect(await prisma.creditDebitNote.count({ where: { id: note.id } })).toBe(1)
+
+        const billRefused = await inCompany(A, () => withAuditNote({ reason: 'cleanup' }, () => deletePurchaseBill(bill.id)), asSales)
+
+        expect(billRefused).toMatchObject({ ok: false })
+
+        // An administrator with a reason may; the whole record and the reason are kept.
+        expect((await withAuditNote({ reason: 'Duplicate note' }, () => deleteNote(note.id))).ok).toBe(true)
+        expect((await withAuditNote({ reason: 'Wrong vendor' }, () => deletePurchaseBill(bill.id))).ok).toBe(true)
+
+        const gone = (await events('CreditDebitNote', note.id)).pop()!
+
+        expect(gone).toMatchObject({ action: 'delete', reason: 'Duplicate note' })
+        expect(gone.before).toMatchObject({ id: note.id })
+
+        await prisma.companySetting.update({ where: { id: A }, data: { lockDate: null } })
+      })
+    })
+
+    it('treats the reason as optional on API requests by default and mandatory on the web', async () => {
+      const { reasonRequired } = await import('@/lib/audit-trail/guards')
+
+      expect(reasonRequired(true, undefined)).toBe(false)
+      expect(reasonRequired(true, 'false')).toBe(false)
+      expect(reasonRequired(true, 'true')).toBe(true)
+      expect(reasonRequired(false, undefined)).toBe(true)
+      expect(reasonRequired(false, 'false')).toBe(true)
+    })
+
+    it('reverses an adjustment over the API', async () => {
+      const channel = await inCompany(A, async () => build(byName.get('PaymentChannel')!, A))
+      const { createAdjustment } = await import('@/lib/services/adjustments')
+      const made = (await inCompany(A, () => createAdjustment({ userId: 'it-admin' }, adjustmentInput(channel.id, '2026-05-05')))) as { id: string }
+      const { POST } = await import('@/app/api/v1/adjustments/[id]/reverse/route')
+      const response = await POST(
+        new Request('http://localhost/api/v1/adjustments/x/reverse', {
+          method: 'POST',
+          headers: { authorization: 'Bearer t', 'x-company-id': A, 'x-client': 'prodlys-mobile', 'x-audit-reason': 'Wrong mode' },
+        }),
+        { params: Promise.resolve({ id: made.id }) },
+      )
+
+      expect(response.status).toBe(201)
+
+      const counter = await prisma.balanceAdjustment.findFirst({ where: { reversesId: made.id } })
+
+      expect(counter?.amount.toNumber()).toBe(-250)
+      expect((await events('BalanceAdjustment', counter!.id))[0]).toMatchObject({ source: 'mobile', reason: 'Wrong mode' })
     })
 
     it('reverses an adjustment with a linked counter entry and leaves the original', async () => {
@@ -430,7 +498,9 @@ describe.skipIf(!enabled)('audit trail against a real database', () => {
         const channel = await build(byName.get('PaymentChannel')!, A)
         const made = (await createAdjustment({ userId: 'it-admin' }, adjustmentInput(channel.id))) as { id: string }
 
+        process.env.AUDIT_REASON_REQUIRED = 'true'
         expect(await reverseAdjustment({ userId: 'it-admin' }, made.id)).toMatchObject({ ok: false })
+        delete process.env.AUDIT_REASON_REQUIRED
 
         const reversed = await withAuditNote({ reason: 'Wrong mode' }, () => reverseAdjustment({ userId: 'it-admin' }, made.id))
 
@@ -560,10 +630,15 @@ describe.skipIf(!enabled)('audit trail against a real database', () => {
       const expense = await inCompany(A, async () => build(byName.get('Expense')!, A))
       const { DELETE } = await import('@/app/api/v1/expenses/[id]/route')
 
+      // Optional for the API by default; AUDIT_REASON_REQUIRED=true makes it mandatory there.
+      process.env.AUDIT_REASON_REQUIRED = 'true'
+
       const without = await call(DELETE, A, `/expenses/${expense.id}`, { method: 'DELETE', params: { id: expense.id } })
 
       expect(without.status).toBe(422)
       expect(await prisma.expense.count({ where: { id: expense.id } })).toBe(1)
+
+      delete process.env.AUDIT_REASON_REQUIRED
 
       const done = await call(DELETE, A, `/expenses/${expense.id}`, {
         method: 'DELETE',

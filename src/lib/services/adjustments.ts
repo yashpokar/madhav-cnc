@@ -228,9 +228,10 @@ export async function reverseAdjustment(
   now = new Date(),
 ): Promise<ServiceResult<{ id: string; number: string }>> {
   const reason = currentReason()
-  const given = reasonVerdict(reason, 'adjustment').ok
 
-  if (!given) return { ok: false, error: 'Say why you are reversing this adjustment (a few words are enough).' }
+  if (!reasonVerdict(reason, 'adjustment').ok) {
+    return { ok: false, error: 'Say why you are reversing this adjustment (a few words are enough).', fieldErrors: { reason: 'Required: say why' } }
+  }
 
   const original = await prisma.balanceAdjustment.findUnique({
     where: { id },
@@ -258,7 +259,7 @@ export async function reverseAdjustment(
       amount: -original.amount.toNumber(),
       adjustedOn: today,
       reason: original.reason,
-      note: `Reversal of ${original.number}: ${reason}`,
+      note: `Reversal of ${original.number}: ${reason ?? 'no reason given'}`,
       reversesId: id,
       createdById: actor.userId,
       updatedById: actor.userId,

@@ -1,11 +1,12 @@
 import { ApiError } from '@/lib/api/errors'
-import { apiRoute, replyWithEtag } from '@/lib/api/handler'
+import { apiRoute, reply, replyWithEtag } from '@/lib/api/handler'
 import { quotationDetailFor } from '@/lib/api/reads/detail'
 import { quotationDetailOut } from '@/lib/api/reads/mappers'
 import { quotationWriteBody } from '@/lib/api/schemas/writes'
 import { must, saved, userActorOf } from '@/lib/api/writes'
 import { getQuotation } from '@/lib/queries/quotations'
 import { updateQuotation } from '@/lib/services/quotations'
+import { deleteQuotation } from '@/lib/services/quotations'
 
 export const GET = apiRoute({ auth: 'company', capability: 'quotation:read' }, async ({ request, params }) => {
   const row = await getQuotation(params.id)
@@ -35,3 +36,10 @@ export const PATCH = apiRoute(
     return saved(await quotationDetailFor(params.id))
   },
 )
+
+/** Refused (409) while orders or later revisions point at it. */
+export const DELETE = apiRoute({ auth: 'company', capability: 'quotation:delete' }, async ({ params, user }) => {
+  must(await deleteQuotation(userActorOf(user), params.id))
+
+  return reply({ id: params.id, deleted: true })
+})

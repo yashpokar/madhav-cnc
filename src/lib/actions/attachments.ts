@@ -1,37 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { logActivity } from '@/lib/activity'
 import type { SimpleResult } from '@/lib/actions/quotations'
-import { invalidateApproval } from '@/lib/reapproval'
+import * as attachments from '@/lib/services/quotation-attachments'
 
 export type { SimpleResult }
 
-const commentSchema = z
-  .string()
-  .trim()
-  .max(1000, 'Comment is too long')
-  .transform((value) => (value ? value : null))
-
-async function assertEditable(quotationId: string) {
-  const quotation = await prisma.quotation.findUnique({
-    where: { id: quotationId },
-    select: { status: true },
-  })
-
-  if (!quotation) {
-    return 'Quotation not found'
-  }
-
-  if (quotation.status === 'CONVERTED') {
-    return 'This quotation is confirmed as an order and cannot be changed'
-  }
-
-  return null
-}
+// Thin adapters over src/lib/services/quotation-attachments.ts.
 
 export async function setAttachmentComment(
   attachmentId: string,
@@ -39,129 +15,37 @@ export async function setAttachmentComment(
 ): Promise<SimpleResult> {
   await requireCapability('quotation:update')
 
-  const attachment = await prisma.quotationAttachment.findUnique({
-    where: { id: attachmentId },
-    select: { id: true, quotationId: true },
-  })
+  const result = await attachments.setAttachmentComment(attachmentId, comment)
 
-  if (!attachment) {
-    return { ok: false, error: 'Image not found' }
-  }
+  if (!result.ok) return { ok: false, error: result.error }
 
-  const locked = await assertEditable(attachment.quotationId)
+  revalidatePath(`/quotations/${result.quotationId}`)
 
-  if (locked) {
-    return { ok: false, error: locked }
-  }
-
-  const parsed = commentSchema.safeParse(comment)
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
-  }
-
-  await prisma.quotationAttachment.update({
-    where: { id: attachmentId },
-    data: { comment: parsed.data },
-  })
-
-  revalidatePath(`/quotations/${attachment.quotationId}`)
-
-  return { ok: true, message: 'Comment saved' }
+  return { ok: true, message: result.message }
 }
 
 export async function removeAttachment(
   attachmentId: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await attachments.removeAttachment({ id: user.id, name: user.name }, attachmentId)
 
-  const attachment = await prisma.quotationAttachment.findUnique({
-    where: { id: attachmentId },
-    select: { id: true, quotationId: true, removedAt: true, fileName: true },
-  })
+  if (!result.ok) return { ok: false, error: result.error }
 
-  if (!attachment) {
-    return { ok: false, error: 'Image not found' }
-  }
+  revalidatePath(`/quotations/${result.quotationId}`)
 
-  if (attachment.removedAt) {
-    return { ok: false, error: 'Already removed' }
-  }
-
-  const locked = await assertEditable(attachment.quotationId)
-
-  if (locked) {
-    return { ok: false, error: locked }
-  }
-
-  await prisma.quotationAttachment.update({
-    where: { id: attachmentId },
-    data: { removedAt: new Date(), removedById: user.id },
-  })
-
-  const wasApproved = await invalidateApproval(
-    attachment.quotationId,
-    'Design reference removed',
-  )
-
-  await logActivity({
-    entity: 'quotation',
-    id: attachment.quotationId,
-    action: 'image',
-    summary: wasApproved
-      ? `removed the image ${attachment.fileName} (customer approval cleared)`
-      : `removed the image ${attachment.fileName}`,
-    actor: { id: user.id, name: user.name },
-  })
-
-  revalidatePath(`/quotations/${attachment.quotationId}`)
-
-  return {
-    ok: true,
-    message: wasApproved
-      ? `${attachment.fileName} removed. The customer approval was cleared.`
-      : `${attachment.fileName} removed from the current set`,
-  }
+  return { ok: true, message: result.message }
 }
 
 export async function restoreAttachment(
   attachmentId: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await attachments.restoreAttachment({ id: user.id, name: user.name }, attachmentId)
 
-  const attachment = await prisma.quotationAttachment.findUnique({
-    where: { id: attachmentId },
-    select: { id: true, quotationId: true, removedAt: true, fileName: true },
-  })
+  if (!result.ok) return { ok: false, error: result.error }
 
-  if (!attachment) {
-    return { ok: false, error: 'Image not found' }
-  }
+  revalidatePath(`/quotations/${result.quotationId}`)
 
-  if (!attachment.removedAt) {
-    return { ok: false, error: 'This image is already in the current set' }
-  }
-
-  const locked = await assertEditable(attachment.quotationId)
-
-  if (locked) {
-    return { ok: false, error: locked }
-  }
-
-  await prisma.quotationAttachment.update({
-    where: { id: attachmentId },
-    data: { removedAt: null, removedById: null },
-  })
-
-  await logActivity({
-    entity: 'quotation',
-    id: attachment.quotationId,
-    action: 'image',
-    summary: `restored the image ${attachment.fileName}`,
-    actor: { id: user.id, name: user.name },
-  })
-
-  revalidatePath(`/quotations/${attachment.quotationId}`)
-
-  return { ok: true, message: 'Image restored' }
+  return { ok: true, message: result.message }
 }

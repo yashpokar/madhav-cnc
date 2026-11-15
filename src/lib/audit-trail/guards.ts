@@ -1,5 +1,6 @@
 import { getActiveCompanyId } from '@/lib/active-company'
 import { currentActorRole, currentReason } from '@/lib/audit-trail/context'
+import { requestContext } from '@/lib/api/request-context'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -17,6 +18,9 @@ import { prisma } from '@/lib/prisma'
  */
 
 export const MIN_REASON = 3
+
+/** True while handling a mobile API request (source api or mobile). */
+export const isApiRequest = () => Boolean(requestContext.getStore()?.audit)
 
 export type Guard = { ok: true } | { ok: false; error: string; fieldErrors?: Record<string, string> }
 
@@ -62,10 +66,18 @@ export function lockVerdict(input: {
   }
 }
 
-export function reasonVerdict(reason: string | null, what: string): Guard {
-  // Escape hatch while older mobile app versions (which send no reason) are
-  // still in use: AUDIT_REASON_REQUIRED=false. The snapshot is kept regardless.
-  if (process.env.AUDIT_REASON_REQUIRED === 'false') return { ok: true }
+/**
+ * Whether a delete without a reason is refused. The web always requires one. API
+ * requests (including the mobile app) do not by default, so app builds already
+ * installed keep working; set AUDIT_REASON_REQUIRED=true to require one there too.
+ * The full copy of the record is kept either way.
+ */
+export function reasonRequired(fromApi: boolean, env = process.env.AUDIT_REASON_REQUIRED): boolean {
+  return fromApi ? env === 'true' : true
+}
+
+export function reasonVerdict(reason: string | null, what: string, fromApi = isApiRequest()): Guard {
+  if (!reasonRequired(fromApi)) return { ok: true }
 
   return (reason?.trim().length ?? 0) >= MIN_REASON
     ? { ok: true }

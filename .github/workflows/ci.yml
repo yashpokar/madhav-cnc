@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Prisma schema is valid
         run: pnpm exec prisma validate
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # Includes the OpenAPI stale-spec guard (kit.test.ts compares
       # openapi/prodlys-v1.json with the generated document).
@@ -71,7 +71,7 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       SHADOW_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_shadow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
@@ -130,7 +130,7 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3100
       PORT: '3100'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # A server component calling a client function fails here, not in production.
       - name: Production build

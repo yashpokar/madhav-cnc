@@ -1,19 +1,25 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { PartnerType } from '@/generated/prisma/enums'
 
 export async function listPartners({
   type,
   search,
   includeInactive = false,
+  page,
 }: {
   type?: PartnerType
   search?: string
   includeInactive?: boolean
+  /** Keyset page (the mobile API), ordered by (name, id); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   return prisma.partner.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'name', 'asc', 'string'),
       ...(type ? { type } : {}),
       ...(includeInactive ? {} : { isActive: true }),
       ...(term
@@ -30,7 +36,7 @@ export async function listPartners({
           }
         : {}),
     },
-    orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    orderBy: page ? [{ name: 'asc' }, { id: 'asc' }] : [{ isActive: 'desc' }, { name: 'asc' }],
     select: {
       id: true,
       code: true,
@@ -43,6 +49,7 @@ export async function listPartners({
       city: true,
       pincode: true,
       isActive: true,
+      updatedAt: true,
       _count: {
         select: { preferredByArchitect: true, preferredByCarpenter: true },
       },

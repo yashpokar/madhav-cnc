@@ -2,6 +2,10 @@ import { z } from 'zod'
 import { ERROR_STATUS, type ApiErrorCode } from '@/lib/api/errors'
 import { registeredRoutes, type RouteSpec } from '@/lib/api/openapi/registry'
 import '@/lib/api/openapi/routes'
+import '@/lib/api/openapi/routes-purchasing'
+import '@/lib/api/openapi/routes-master'
+import '@/lib/api/openapi/routes-sales'
+import '@/lib/api/openapi/routes-account'
 
 type Json = Record<string, unknown>
 

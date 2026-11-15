@@ -12,6 +12,7 @@ import {
   permissionsResponse,
 } from '@/lib/api/schemas'
 import * as a from '@/lib/api/schemas/audit'
+import * as c from '@/lib/api/schemas/compare'
 import * as r from '@/lib/api/schemas/reads'
 import * as w from '@/lib/api/schemas/writes'
 
@@ -148,6 +149,18 @@ registerRoute({
 
 registerRoute({
   method: 'get',
+  path: '/reports/compare',
+  tag: 'Reports',
+  summary: 'Week, month or year over year: this period so far against the previous period and a year ago, with a 12-period trend',
+  auth: 'company',
+  capability: 'invoice:read',
+  query: c.compareQuery,
+  response: c.compareResponse,
+  errors: ['FORBIDDEN'],
+})
+
+registerRoute({
+  method: 'get',
   path: '/calendar',
   tag: 'Calendar',
   summary: 'Bookings, deliveries, invoice due dates and receipts for a date range (layers need order:read, dispatch:read, invoice:read, payment:read)',
@@ -246,11 +259,11 @@ const writes: Write[] = [
   { method: 'post', path: '/invoices/{id}/share', tag: 'Invoices', summary: 'The customer link of an issued invoice (created on first use) with the WhatsApp message and link; a draft is 409', capability: 'invoice:update', response: w.shareLinkResponse, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
 
   { method: 'post', path: '/payments', tag: 'Payments', summary: 'Record a receipt; allocations and openingApplied say what it settles, with the web form auto-apply rules when neither is sent', capability: 'payment:create', body: w.paymentCreateBody, response: r.paymentDetail, status: 201, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
-  { method: 'delete', path: '/payments/{id}', tag: 'Payments', summary: 'Delete a receipt (its allocations go with it); an order advance is 409. A reason is required: send X-Audit-Reason (or ?reason=); it is kept with a full copy of the receipt in the audit trail. 422 without one; 409 when the books are locked for its date', capability: 'payment:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
+  { method: 'delete', path: '/payments/{id}', tag: 'Payments', summary: 'Delete a receipt (its allocations go with it); an order advance is 409. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the receipt in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date', capability: 'payment:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
 
   { method: 'post', path: '/expenses', tag: 'Expenses', summary: 'Record an expense, optionally with a receipt photo (receiptUploadId from POST /uploads)', capability: 'expense:create', body: w.expenseWriteBody, response: r.expenseDetail, status: 201, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
   { method: 'patch', path: '/expenses/{id}', tag: 'Expenses', summary: 'Replace an expense (send the whole record); receiptUploadId left out keeps the receipt, null removes it', capability: 'expense:update', body: w.expenseWriteBody, response: r.expenseDetail, errors: ['NOT_FOUND', 'CONFLICT'] },
-  { method: 'delete', path: '/expenses/{id}', tag: 'Expenses', summary: 'Delete an expense. A reason is required: send X-Audit-Reason (or ?reason=); it is kept with a full copy of the expense in the audit trail. 422 without one; 409 when the books are locked for its date', capability: 'expense:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
+  { method: 'delete', path: '/expenses/{id}', tag: 'Expenses', summary: 'Delete an expense. Send X-Audit-Reason (or ?reason=) with why; it is kept with a full copy of the expense in the audit trail (required, 422 without, when the server sets AUDIT_REASON_REQUIRED=true). 409 when the books are locked for its date', capability: 'expense:delete', response: w.deletedResponse, errors: ['NOT_FOUND', 'CONFLICT', 'VALIDATION_FAILED'] },
 
   { method: 'post', path: '/production/tasks/{id}/start', tag: 'Production', summary: 'Start or resume a stage (next in line, unless an administrator sends force)', capability: 'production:update', body: w.startTaskBody, response: r.productionTask, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },
   { method: 'post', path: '/production/tasks/{id}/complete', tag: 'Production', summary: 'Finish an in-progress stage; starts the next one unless startNext is false', capability: 'production:update', body: w.completeTaskBody, response: r.productionTask, idempotent: true, errors: ['NOT_FOUND', 'CONFLICT'] },

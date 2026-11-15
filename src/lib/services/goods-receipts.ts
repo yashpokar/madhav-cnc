@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { requireCompanyId } from '@/lib/active-company'
+import { logActivity } from '@/lib/activity'
 import { nextReceiptNumber } from '@/lib/codes'
 import {
   derivePoStatus,
@@ -579,4 +580,76 @@ export function cancelReceipt(
 /** The goods that could be received against a bill or an order, for the form. */
 export function getReceivable(source: ReceiveSource) {
   return prisma.$transaction((tx) => loadReceivable(tx, source))
+}
+
+// ---------------------------------------------------------------------------
+// The same two jobs with the activity-trail lines the web actions write, for
+// callers that have no server action around them (the mobile API).
+
+type ReceiptActor = { id: string; name: string }
+
+/** Posts a goods receipt and logs it on the receipt, its bill and its order. */
+export async function postReceiptLogged(
+  actor: ReceiptActor,
+  input: ReceiveInput,
+): Promise<ReceiveResult & { billId?: string | null; poId?: string | null }> {
+  const result = await receiveGoods(actor.id, input)
+
+  if (!result.ok || !result.receipt) return result
+
+  const receipt = await prisma.goodsReceipt.findUnique({
+    where: { id: result.receipt.id },
+    select: { id: true, billId: true, poId: true },
+  })
+
+  await logActivity({
+    entity: 'goods-receipt',
+    id: result.receipt.id,
+    action: 'created',
+    summary: `received goods (${result.receipt.lineCount} line${result.receipt.lineCount === 1 ? '' : 's'})`,
+    actor,
+  })
+
+  if (receipt?.billId) {
+    await logActivity({
+      entity: 'purchase-bill',
+      id: receipt.billId,
+      action: 'received',
+      summary: `received goods against this bill (${result.receipt.number})`,
+      actor,
+    })
+  }
+
+  if (receipt?.poId) {
+    await logActivity({
+      entity: 'purchase-order',
+      id: receipt.poId,
+      action: 'received',
+      summary: `received goods against this order (${result.receipt.number})`,
+      actor,
+    })
+  }
+
+  return { ...result, billId: receipt?.billId ?? null, poId: receipt?.poId ?? null }
+}
+
+/** Cancels a receipt (reversing its stock) and logs it. */
+export async function cancelReceiptLogged(
+  actor: ReceiptActor,
+  receiptId: string,
+  options: { allowNegative?: boolean } = {},
+): Promise<CancelResult> {
+  const result = await cancelReceipt(actor.id, receiptId, options)
+
+  if (!result.ok || result.alreadyCancelled) return result
+
+  await logActivity({
+    entity: 'goods-receipt',
+    id: receiptId,
+    action: 'cancelled',
+    summary: options.allowNegative ? 'cancelled the receipt (allowed negative stock)' : 'cancelled the receipt',
+    actor,
+  })
+
+  return result
 }

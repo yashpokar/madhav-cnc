@@ -156,15 +156,20 @@ export async function listNotes({
   search,
   kind,
   status,
+  page,
 }: {
   search?: string
   kind?: NoteKind
   status?: NoteStatus
+  /** Keyset page (the mobile API), ordered by (noteDate, id) newest first; omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const notes = await prisma.creditDebitNote.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'noteDate', 'desc', 'date'),
       ...(kind ? { kind } : {}),
       ...(status ? { status } : {}),
       ...(term
@@ -180,7 +185,7 @@ export async function listNotes({
           }
         : {}),
     },
-    orderBy: [{ noteDate: 'desc' }, { createdAt: 'desc' }],
+    orderBy: page ? [{ noteDate: 'desc' }, { id: 'desc' }] : [{ noteDate: 'desc' }, { createdAt: 'desc' }],
     select: {
       id: true,
       number: true,

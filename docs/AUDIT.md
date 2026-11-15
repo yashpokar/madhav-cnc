@@ -161,11 +161,11 @@ which role) is in the company's own chain.
 
 - **Reason on destructive actions**: deleting payments, expenses, adjustments,
   invoices (and their payments/write-offs), credit/debit notes, purchase bills
-  and vendor payments needs a reason of 3+ characters. Web: the delete dialog
-  has a Reason box. API: `X-Audit-Reason` header or `?reason=` (see
-  `docs/mobile-api.md`). The reason is stored on the event with the full
-  snapshot. Optional on edits and on any API write. `AUDIT_REASON_REQUIRED=false`
-  relaxes the requirement while older app versions are in use.
+  and vendor payments asks for a reason of 3+ characters. Web: the delete dialog
+  requires it. API: `X-Audit-Reason` header or `?reason=` (see
+  `docs/mobile-api.md`); optional by default so installed app builds keep
+  working, required when the server sets `AUDIT_REASON_REQUIRED=true`. The reason
+  is stored on the event with the full snapshot. Optional on edits.
 - **Lock date** (Settings > Audit log): nothing dated on or before it can be
   created, edited or deleted for payments, expenses, adjustments, opening
   balances, invoices (incl. issuing, payments, write-offs), credit/debit notes,

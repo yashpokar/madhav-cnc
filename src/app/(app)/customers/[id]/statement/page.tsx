@@ -29,7 +29,7 @@ import { customerAccount } from '@/lib/queries/payments'
 import { getCompanySetting } from '@/lib/queries/company'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
-import { NOTE_REASON_LABELS } from '@/lib/labels'
+import { ADJUSTMENT_REASON_LABELS, NOTE_REASON_LABELS } from '@/lib/labels'
 
 export const metadata: Metadata = {
   title: 'Customer statement',
@@ -126,6 +126,11 @@ export default async function CustomerStatementPage({
               + {currency.format(account.opening)} opening balance
             </div>
           ) : null}
+          {account.adjustmentDebit > 0 ? (
+            <div className="mt-0.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
+              + {currency.format(account.adjustmentDebit)} balance adjustments
+            </div>
+          ) : null}
         </div>
         <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">
@@ -137,11 +142,16 @@ export default async function CustomerStatementPage({
         </div>
         <div className="rounded-lg bg-zinc-50 p-4 ring-1 ring-zinc-950/5 dark:bg-white/5 dark:ring-white/10">
           <div className="text-sm/5 text-zinc-500 dark:text-zinc-400">
-            Credit notes
+            {account.adjustmentCredit > 0 ? 'Credits' : 'Credit notes'}
           </div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
             {currency.format(account.credit)}
           </div>
+          {account.adjustmentCredit > 0 ? (
+            <div className="mt-0.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
+              incl. {currency.format(account.adjustmentCredit)} balance adjustments
+            </div>
+          ) : null}
         </div>
         <div
           className={
@@ -166,7 +176,7 @@ export default async function CustomerStatementPage({
       <div>
         <Subheading level={2}>Open invoices</Subheading>
         <div className="mt-4">
-          {account.invoices.length === 0 && account.opening <= 0 ? (
+          {account.invoices.length === 0 && account.opening <= 0 && account.adjustmentDebit <= 0 ? (
             <EmptyState
               title="No open invoices"
               description="Everything billed to this customer is settled."
@@ -230,11 +240,65 @@ export default async function CustomerStatementPage({
                     </TableCell>
                   </TableRow>
                 ) : null}
+                {account.adjustmentDebit > 0 ? (
+                  <TableRow>
+                    <TableCell className="font-medium">Balance adjustments</TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">—</TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">—</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {currency.format(account.adjustmentDebit)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">—</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {currency.format(account.adjustmentDebit)}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           )}
         </div>
       </div>
+
+      {account.adjustments.length > 0 ? (
+        <div>
+          <Subheading level={2}>Balance adjustments</Subheading>
+          <div className="mt-4">
+            <Table dense grid striped>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>Entry</TableHeader>
+                  <TableHeader>Date</TableHeader>
+                  <TableHeader>Note</TableHeader>
+                  <TableHeader className="text-right">Effect on balance</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {account.adjustments.map((entry) => (
+                  <TableRow key={entry.id} href={`/adjustments?q=${entry.number}`}>
+                    <TableCell>
+                      <span className="font-mono text-xs">Adjustment {entry.number}</span>{' '}
+                      <span className="text-zinc-500 dark:text-zinc-400">
+                        ({ADJUSTMENT_REASON_LABELS[entry.reason]})
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">
+                      {dateFormat.format(entry.adjustedOn)}
+                    </TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">{entry.note}</TableCell>
+                    <TableCell
+                      className={`text-right font-medium tabular-nums ${entry.amount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-lime-700 dark:text-lime-400'}`}
+                    >
+                      {entry.amount > 0 ? '+' : '−'}
+                      {currency.format(Math.abs(entry.amount))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <Subheading level={2}>Receipts</Subheading>

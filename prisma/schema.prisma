@@ -55,6 +55,8 @@ model User {
   companiesCreated         CompanySetting[]      @relation("CompanySettingCreatedBy")
   expensesCreated          Expense[]             @relation("ExpenseCreatedBy")
   notesCreated             CreditDebitNote[]     @relation("NoteCreatedBy")
+  adjustmentsCreated       BalanceAdjustment[]   @relation("AdjustmentCreatedBy")
+  adjustmentsUpdated       BalanceAdjustment[]   @relation("AdjustmentUpdatedBy")
   notesUpdated             CreditDebitNote[]     @relation("NoteUpdatedBy")
   invoicesCreated          Invoice[]             @relation("InvoiceCreatedBy")
   invoicesUpdated          Invoice[]             @relation("InvoiceUpdatedBy")
@@ -244,6 +246,7 @@ model Customer {
   invoices         Invoice[]
   creditDebitNotes CreditDebitNote[]
   payments         Payment[]
+  adjustments      BalanceAdjustment[]
 
   @@unique([companyId, code])
   @@index([status])
@@ -809,6 +812,7 @@ model CompanySetting {
   stockMovements         StockMovement[]
   vendorPayments         VendorPayment[]
   channelOpeningBalances ChannelOpeningBalance[]
+  balanceAdjustments     BalanceAdjustment[]
 
   updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdBy User? @relation("CompanySettingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1163,6 +1167,7 @@ model PaymentChannel {
 
   vendorPayments  VendorPayment[]
   openingBalances ChannelOpeningBalance[]
+  adjustments     BalanceAdjustment[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -1836,4 +1841,59 @@ model ChannelOpeningBalance {
   @@unique([companyId, channelId])
   @@index([companyId])
   @@map("channel_opening_balances")
+}
+
+enum BalanceAdjustmentReason {
+  FORGOTTEN_ENTRY
+  BANK_CHARGES
+  INTEREST
+  CASH_SHORT_EXCESS
+  WRITE_OFF
+  CORRECTION
+  OTHER
+}
+
+enum BalanceAdjustmentKind {
+  CHANNEL
+  CUSTOMER
+}
+
+/// An auditable correction to a balance, never a silent edit. `amount` is
+/// signed. CHANNEL: positive adds money to the payment mode, negative removes
+/// it. CUSTOMER: positive means the customer owes more, negative owes less.
+/// The database also enforces that exactly the one id matching `kind` is set.
+model BalanceAdjustment {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+
+  kind BalanceAdjustmentKind
+
+  channelId String?         @map("channel_id")
+  channel   PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: Restrict)
+
+  customerId String?   @map("customer_id")
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  amount     Decimal                 @db.Decimal(12, 2)
+  adjustedOn DateTime                @map("adjusted_on") @db.Date
+  reason     BalanceAdjustmentReason
+  note       String
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("AdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("AdjustmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([channelId])
+  @@index([customerId])
+  @@index([adjustedOn])
+  @@map("balance_adjustments")
 }

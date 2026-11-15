@@ -1,9 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { modeText } from '@/lib/payment-modes'
+import { ADJUSTMENT_REASON_LABELS } from '@/lib/labels'
 
 export type MethodEntry = {
   id: string
   kind: 'in' | 'out'
+  /** Where the entry lives: a receipt, an expense or a balance adjustment. */
+  source: 'payment' | 'expense' | 'adjustment' | 'vendor-payment'
   date: Date
   number: string
   party: string
@@ -18,6 +21,9 @@ export type MethodGroup = {
   receivedCount: number
   spent: number
   spentCount: number
+  /** Signed total of balance adjustments in the period (kept out of net). */
+  adjusted: number
+  adjustedCount: number
   net: number
   entries: MethodEntry[]
 }
@@ -43,7 +49,7 @@ export async function paymentsByMethod(
 ) {
   const dates = bounds(range.from, range.to)
 
-  const [payments, expenses, vendorPayments] = await Promise.all([
+  const [payments, expenses, vendorPayments, adjustments] = await Promise.all([
     prisma.payment.findMany({
       where: { paidOn: dates },
       select: {
@@ -87,6 +93,18 @@ export async function paymentsByMethod(
           orderBy: [{ paidOn: 'desc' }, { number: 'desc' }],
         })
       : Promise.resolve([]),
+    prisma.balanceAdjustment.findMany({
+      where: { kind: 'CHANNEL', adjustedOn: dates },
+      select: {
+        id: true,
+        number: true,
+        adjustedOn: true,
+        amount: true,
+        reason: true,
+        channel: { select: { name: true } },
+      },
+      orderBy: [{ adjustedOn: 'desc' }, { number: 'desc' }],
+    }),
   ])
 
   const groups = new Map<string, MethodGroup>()
@@ -94,7 +112,7 @@ export async function paymentsByMethod(
     let found = groups.get(name)
 
     if (!found) {
-      found = { name, received: 0, receivedCount: 0, spent: 0, spentCount: 0, net: 0, entries: [] }
+      found = { name, received: 0, receivedCount: 0, spent: 0, spentCount: 0, adjusted: 0, adjustedCount: 0, net: 0, entries: [] }
       groups.set(name, found)
     }
 
@@ -107,7 +125,7 @@ export async function paymentsByMethod(
 
     g.received = round2(g.received + amount)
     g.receivedCount += 1
-    g.entries.push({ id: p.id, kind: 'in', date: p.paidOn, number: p.number, party: p.customer.name, amount })
+    g.entries.push({ id: p.id, kind: 'in', source: 'payment', date: p.paidOn, number: p.number, party: p.customer.name, amount })
   }
 
   for (const e of expenses) {
@@ -116,7 +134,26 @@ export async function paymentsByMethod(
 
     g.spent = round2(g.spent + amount)
     g.spentCount += 1
-    g.entries.push({ id: e.id, kind: 'out', date: e.expenseDate, number: e.number, party: e.payeeName, amount })
+    g.entries.push({ id: e.id, kind: 'out', source: 'expense', date: e.expenseDate, number: e.number, party: e.payeeName, amount })
+  }
+
+  // Adjustments are shown beside receipts and expenses but are not counted as
+  // either: "net" stays receipts less expenses, the balance card adds them.
+  for (const a of adjustments) {
+    const g = group(a.channel?.name ?? 'Unspecified')
+    const amount = a.amount.toNumber()
+
+    g.adjusted = round2(g.adjusted + amount)
+    g.adjustedCount += 1
+    g.entries.push({
+      id: a.id,
+      kind: amount >= 0 ? 'in' : 'out',
+      source: 'adjustment',
+      date: a.adjustedOn,
+      number: a.number,
+      party: `Adjustment (${ADJUSTMENT_REASON_LABELS[a.reason]})`,
+      amount: Math.abs(amount),
+    })
   }
 
   // Money paid to vendors leaves through the same modes as expenses.
@@ -129,6 +166,7 @@ export async function paymentsByMethod(
     g.entries.push({
       id: v.id,
       kind: 'out',
+      source: 'vendor-payment',
       date: v.paidOn,
       number: v.number,
       party: `${v.vendor.name} (vendor payment)`,

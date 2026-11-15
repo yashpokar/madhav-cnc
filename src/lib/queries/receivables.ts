@@ -298,11 +298,32 @@ export async function getReceivables(
     [...onAccountByCustomer.values()].reduce((sum, value) => sum + value, 0),
   )
 
+  const advanceByOrder = new Map<string, number>()
+
+  for (const receipt of allReceipts) {
+    if (!receipt.orderId) continue
+
+    advanceByOrder.set(
+      receipt.orderId,
+      round2((advanceByOrder.get(receipt.orderId) ?? 0) + num(receipt.amount)),
+    )
+  }
+
   const toBill = uninvoiced.map((order) => ({
     ...order,
     total: num(order.total),
     waitingDays: daysOverdue(order.orderDate, today),
   }))
+
+  // Delivered work that has no invoice yet is still money the customer owes,
+  // less whatever was already paid against that order as an advance.
+  const toBillDue = round2(
+    toBill.reduce(
+      (sum, order) =>
+        sum + Math.max(0, order.total - (advanceByOrder.get(order.id) ?? 0)),
+      0,
+    ),
+  )
 
   const thirtyDaysAgo = new Date(startOfDay(today).getTime() - 30 * 86_400_000)
 
@@ -319,6 +340,7 @@ export async function getReceivables(
     onAccountTotal,
     netReceivable: round2(outstanding - creditOutstanding - onAccountTotal),
     toBillTotal: round2(toBill.reduce((sum, order) => sum + order.total, 0)),
+    toBillDue,
     collected30: collected._sum.amount ? num(collected._sum.amount) : 0,
     collected30Count: collected._count._all,
     aging,

@@ -38,6 +38,8 @@ export const SCOPED = new Set([
   'ActivityLog',
   'IdempotencyKey',
   'Upload',
+  'CompanySubscription',
+  'BillingPayment',
 ])
 
 /** Child tables: the relation path from the child up to a scoped table. */

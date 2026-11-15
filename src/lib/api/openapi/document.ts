@@ -43,6 +43,7 @@ const ERROR_DESCRIPTIONS: Record<ApiErrorCode, string> = {
   IDEMPOTENCY_KEY_REUSED: 'The Idempotency-Key was used for a different request',
   RATE_LIMITED: 'Too many requests; see Retry-After',
   UPGRADE_REQUIRED: 'The app version is no longer supported',
+  PLAN_LIMIT_REACHED: 'The company has used its free invoices; a paid plan is needed to issue more',
   INTERNAL: 'Unexpected error',
 }
 

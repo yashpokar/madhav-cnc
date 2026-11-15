@@ -3,6 +3,7 @@ import { registerRoute } from '@/lib/api/openapi/registry'
 import {
   acceptInvitationBody,
   acceptInvitationResponse,
+  billingResponse,
   createCompanyBody,
   createCompanyResponse,
   deleteMeResponse,
@@ -192,4 +193,13 @@ registerRoute({
   summary: 'Indian states and union territories with GST codes and city suggestions (cached for a day; ETag)',
   auth: 'none',
   response: r.statesResponse,
+})
+
+registerRoute({
+  method: 'get',
+  path: '/billing',
+  tag: 'Billing',
+  summary: 'The company plan, entitlements and invoice usage (read-only: manage the plan on the web)',
+  auth: 'company',
+  response: billingResponse,
 })

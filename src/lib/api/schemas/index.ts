@@ -60,3 +60,25 @@ export const acceptInvitationResponse = z.object({
 })
 
 export const deleteMeResponse = z.object({ deleted: z.literal(true) })
+
+export const billingResponse = z.object({
+  plan: z.enum(['FREE', 'BUSINESS', 'BUSINESS_PRO']),
+  /** FREE, ACTIVE, EXPIRING, GRACE or EXPIRED. */
+  state: z.enum(['FREE', 'ACTIVE', 'EXPIRING', 'GRACE', 'EXPIRED']),
+  entitlements: z.object({
+    /** Issued invoices allowed over the company's lifetime; null = unlimited. */
+    invoiceQuota: z.number().int().nullable(),
+    aiPreview: z.boolean(),
+  }),
+  usage: z.object({
+    invoicesIssued: z.number().int(),
+    /** Invoices left on the free quota; null = unlimited. */
+    remaining: z.number().int().nullable(),
+  }),
+  /** When the current paid year ends (ISO 8601); null for no expiry or the free plan. */
+  renewsOn: z.string().nullable(),
+  /** Whether the limit is actually enforced (BILLING_ENFORCED). */
+  enforced: z.boolean(),
+  /** Where to manage the plan. The apps only show status and link here; plans are not sold in-app. */
+  manageUrl: z.string(),
+})

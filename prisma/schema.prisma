@@ -808,6 +808,8 @@ model CompanySetting {
   creditDebitNotes CreditDebitNote[]
   vendors          Vendor[]
   activityLogs     ActivityLog[]
+  subscription     CompanySubscription?
+  billingPayments  BillingPayment[]
   counters         DocumentCounter[]
   access           UserCompany[]
 
@@ -1071,11 +1073,17 @@ model Invoice {
   updatedById String? @map("updated_by_id")
   updatedBy   User?   @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
+  /// When the invoice was first issued (DRAFT -> ISSUED). Set once by a database
+  /// trigger (see the billing migration), never cleared, so cancelling an issued
+  /// invoice does not free a slot of the free quota.
+  issuedAt DateTime? @map("issued_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([companyId, number])
   @@index([status])
+  @@index([companyId, issuedAt])
   @@index([customerId])
   @@index([orderId])
   @@index([invoiceDate])
@@ -2036,4 +2044,83 @@ model Upload {
   @@index([companyId, createdAt])
   @@index([userId])
   @@map("uploads")
+}
+
+enum BillingPlan {
+  FREE
+  BUSINESS
+  BUSINESS_PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum SubscriptionSource {
+  SELF_SERVE
+  GRANDFATHERED
+  MANUAL
+}
+
+enum BillingPaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+/// What a company is on. One row per company; a company with no row is on FREE
+/// (the row is created on first read). currentPeriodEnd null means no expiry.
+model CompanySubscription {
+  id String @id @default(cuid())
+
+  companyId String         @unique @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  plan   BillingPlan         @default(FREE)
+  status SubscriptionStatus  @default(ACTIVE)
+  source SubscriptionSource  @default(SELF_SERVE)
+
+  currentPeriodStart DateTime  @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  graceUntil         DateTime? @map("grace_until")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("company_subscriptions")
+}
+
+/// One attempt to buy a plan (yearly, one-time). Only ids, amounts and status
+/// are kept: never card or UPI details, never raw gateway payloads.
+model BillingPayment {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  plan        BillingPlan
+  amountPaise Int                  @map("amount_paise")
+  currency    String               @default("INR")
+  taxPaise    Int                  @default(0) @map("tax_paise")
+  status      BillingPaymentStatus @default(CREATED)
+
+  /// Gateway name, e.g. PHONEPE or MOCK.
+  provider String
+  /// Our merchant order id (sent to the gateway); unique, and how webhooks find the company.
+  providerOrderId   String  @unique @map("provider_order_id")
+  /// The gateway's own order / transaction id, once known.
+  providerPaymentId String? @unique @map("provider_payment_id")
+
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  createdById String?   @map("created_by_id")
+  paidAt      DateTime? @map("paid_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId, createdAt])
+  @@map("billing_payments")
 }

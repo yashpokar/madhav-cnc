@@ -45,8 +45,7 @@ export default function AppError({
           </Button>
         )}
         <Button
-          color={stale ? 'dark/zinc' : undefined}
-          outline={!stale}
+          {...(stale ? { color: 'dark/zinc' as const } : { outline: true as const })}
           onClick={() => window.location.reload()}
         >
           Reload

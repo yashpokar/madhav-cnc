@@ -27,6 +27,7 @@ import {
 } from '@/components/catalyst/listbox'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
+import { LocationFields } from '@/components/location-fields'
 import { PartnerCombobox } from '@/components/partner-combobox'
 import { documentTotals } from '@/lib/pricing'
 import { checkScheduleConflicts, type ConflictResult, type FormState } from '@/lib/actions/orders'
@@ -236,8 +237,6 @@ export function OrderForm({
     <form ref={formRef} action={formAction} className="grid w-full max-w-6xl grid-cols-1 gap-6">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
-      <input type="hidden" name="siteCity" value={siteCity} />
-      <input type="hidden" name="sitePincode" value={sitePincode} />
       <input type="hidden" name="lines" value={serialisedLines} />
 
       {state.status === 'error' ? (
@@ -418,38 +417,27 @@ export function OrderForm({
       <Fieldset>
         <Legend>Site</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-12">
-            <Field className="sm:col-span-6">
-              <Label>Site address</Label>
-              <Textarea
-                rows={2}
-                value={siteAddress}
-                onChange={(event) => setSiteAddress(event.target.value)}
-              />
-              <Description>
-                Prefilled from the customer. Change it if the job is elsewhere.
-              </Description>
-            </Field>
-            <Field className="sm:col-span-3">
-              <Label>City</Label>
-              <Input
-                value={siteCity}
-                onChange={(event) => setSiteCity(event.target.value)}
-              />
-            </Field>
-            <Field className="sm:col-span-3">
-              <Label>Pincode</Label>
-              <Input
-                inputMode="numeric"
-                value={sitePincode}
-                onChange={(event) => setSitePincode(event.target.value)}
-                invalid={Boolean(errors.sitePincode)}
-              />
-              {errors.sitePincode ? (
-                <ErrorMessage>{errors.sitePincode}</ErrorMessage>
-              ) : null}
-            </Field>
-          </div>
+          <Field>
+            <Label>Site address</Label>
+            <Textarea
+              rows={2}
+              value={siteAddress}
+              onChange={(event) => setSiteAddress(event.target.value)}
+            />
+            <Description>
+              Prefilled from the customer. Change it if the job is elsewhere.
+            </Description>
+          </Field>
+          <LocationFields
+            names={{ state: null, city: 'siteCity', pincode: 'sitePincode' }}
+            city={siteCity}
+            pincode={sitePincode}
+            onCityChange={setSiteCity}
+            onPincodeChange={setSitePincode}
+            errors={{ pincode: errors.sitePincode }}
+            gstinFieldName={null}
+            className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-4 sm:[&>*:first-child]:col-span-2"
+          />
         </FieldGroup>
       </Fieldset>
 

@@ -1,3 +1,4 @@
+import { normaliseState } from '@/lib/india-geo'
 import type { DimensionUnit } from '@/generated/prisma/enums'
 
 export type LineInput = {
@@ -155,6 +156,14 @@ export function splitGst(
 export function sameState(a: string | null, b: string | null): boolean {
   if (!a || !b) {
     return false
+  }
+
+  // Spellings of the same state (Orissa / Odisha, GJ / Gujarat) count as equal.
+  const known = normaliseState(a)
+  const other = normaliseState(b)
+
+  if (known && other) {
+    return known.name === other.name
   }
 
   return a.trim().toLowerCase() === b.trim().toLowerCase()

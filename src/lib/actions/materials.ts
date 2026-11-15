@@ -174,3 +174,26 @@ export async function deleteMaterial(id: string) {
 
   return { ok: true as const, message: `${material.name} deleted` }
 }
+
+/** Turns stock tracking on or off for a material, and sets its reorder level. */
+export async function setMaterialStock(
+  id: string,
+  stockTracked: boolean,
+  reorderLevel: number | null,
+): Promise<SimpleResult> {
+  await requireCapability('item:update')
+
+  if (reorderLevel !== null && (!Number.isFinite(reorderLevel) || reorderLevel < 0)) {
+    return { ok: false, error: 'Reorder level cannot be negative' }
+  }
+
+  await prisma.material.update({
+    where: { id },
+    data: { stockTracked, reorderLevel: stockTracked ? reorderLevel : null },
+  })
+
+  revalidatePath('/items/materials')
+  revalidatePath('/stock')
+
+  return { ok: true, message: stockTracked ? 'Stock tracking on' : 'Stock tracking off' }
+}

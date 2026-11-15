@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
+import { Checkbox, CheckboxField } from '@/components/catalyst/checkbox'
+import { Label } from '@/components/catalyst/fieldset'
 import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import {
@@ -18,16 +20,20 @@ export function BillActions({
   hasPayments,
   canUpdate,
   canCreate,
+  canReceive = false,
 }: {
   id: string
   status: PurchaseBillStatus
   hasPayments: boolean
   canUpdate: boolean
   canCreate: boolean
+  /** May receive goods, and the bill has goods lines to receive. */
+  canReceive?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState<SimpleResult | null>(null)
+  const [receiveNow, setReceiveNow] = useState(false)
 
   function run(task: () => Promise<SimpleResult>, then?: (result: SimpleResult) => void) {
     startTransition(async () => {
@@ -56,9 +62,22 @@ export function BillActions({
 
       <div className="flex flex-wrap gap-2">
         {canUpdate && status === 'DRAFT' ? (
-          <Button type="button" disabled={pending} onClick={() => run(() => setBillStatus(id, 'POSTED'))}>
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              run(() => setBillStatus(id, 'POSTED', { receiveNow: canReceive && receiveNow }))
+            }
+          >
             {pending ? 'Working…' : 'Post bill'}
           </Button>
+        ) : null}
+
+        {canUpdate && status === 'DRAFT' && canReceive ? (
+          <CheckboxField className="self-center">
+            <Checkbox checked={receiveNow} onChange={setReceiveNow} />
+            <Label>Mark goods as received now</Label>
+          </CheckboxField>
         ) : null}
 
         {canUpdate && status === 'POSTED' ? (

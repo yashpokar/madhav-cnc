@@ -67,6 +67,8 @@ export default async function EditItemPage({ params }: PageProps<'/items/[id]'>)
           taxRatePercent: item.taxRatePercent,
           isActive: item.isActive,
           notes: item.notes,
+          stockTracked: item.stockTracked,
+          reorderLevel: item.reorderLevel,
         }}
       />
 

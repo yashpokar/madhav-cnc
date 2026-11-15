@@ -96,7 +96,7 @@ export async function getBill(id: string) {
         orderBy: { id: 'desc' },
         include: { vendorPayment: true },
       },
-      receipts: { select: { id: true, number: true } },
+      receipts: { select: { id: true, number: true, status: true, receivedOn: true } },
     },
   })
 

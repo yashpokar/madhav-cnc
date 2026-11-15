@@ -50,6 +50,7 @@ export type ItemFormValues = {
   materialId: string | null
   unit: UnitOfMeasure
   rate: number
+  /** The rate last paid, from the latest goods receipt. Shown, never edited. */
   purchaseRate: number | null
   brand: string | null
   shade: string | null
@@ -61,6 +62,8 @@ export type ItemFormValues = {
   taxRatePercent: number
   isActive: boolean
   notes: string | null
+  stockTracked: boolean
+  reorderLevel: number | null
 }
 
 export function ItemForm({
@@ -232,16 +235,17 @@ export function ItemForm({
               {errors.rate ? <ErrorMessage>{errors.rate}</ErrorMessage> : null}
             </Field>
             <Field>
-              <Label>Purchase rate</Label>
+              <Label>Last purchase rate</Label>
               <Input
-                name="purchaseRate"
                 type="number"
-                step="0.01"
-                min={0}
-                defaultValue={keep('purchaseRate', values.purchaseRate)}
-                invalid={Boolean(errors.purchaseRate)}
+                readOnly
+                tabIndex={-1}
+                value={values.purchaseRate ?? ''}
+                placeholder="—"
               />
-              <Description>Optional. Used for margin.</Description>
+              <Description>
+                Set by your latest goods receipt. Used for margin.
+              </Description>
             </Field>
             <Field>
               <Label>GST rate %</Label>
@@ -357,6 +361,48 @@ export function ItemForm({
                   />
                 </Field>
               </div>
+            </FieldGroup>
+          </Fieldset>
+        </>
+      )}
+
+      {isService ? null : (
+        <>
+          <Divider />
+
+          <Fieldset>
+            <Legend>Stock</Legend>
+            <FieldGroup>
+              <SwitchField>
+                <Label>Track stock</Label>
+                <Description>
+                  Goods received add to stock for this item. Set opening stock and
+                  adjust it from the Stock page.
+                </Description>
+                <Switch
+                  name="stockTracked"
+                  defaultChecked={values.stockTracked}
+                  value="true"
+                />
+              </SwitchField>
+              <Field className="sm:max-w-xs">
+                <Label>Reorder level</Label>
+                <Input
+                  name="reorderLevel"
+                  type="number"
+                  step="0.001"
+                  min={0}
+                  defaultValue={keep('reorderLevel', values.reorderLevel)}
+                  invalid={Boolean(errors.reorderLevel)}
+                />
+                {errors.reorderLevel ? (
+                  <ErrorMessage>{errors.reorderLevel}</ErrorMessage>
+                ) : (
+                  <Description>
+                    Optional. The Stock page flags the item as Low at or below this.
+                  </Description>
+                )}
+              </Field>
             </FieldGroup>
           </Fieldset>
         </>

@@ -7,7 +7,7 @@ export function ExportButton({
   search,
   status,
 }: {
-  kind: 'customers' | 'quotations' | 'orders' | 'invoices' | 'payments' | 'expenses' | 'purchase-bills' | 'purchase-orders'
+  kind: 'customers' | 'quotations' | 'orders' | 'invoices' | 'payments' | 'expenses' | 'purchase-bills' | 'purchase-orders' | 'stock'
   search?: string
   status?: string
 }) {

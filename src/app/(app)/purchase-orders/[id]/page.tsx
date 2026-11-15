@@ -21,6 +21,8 @@ import { DocumentLetterhead } from '@/components/document-letterhead'
 import { deleteOrder } from '@/lib/actions/purchase-orders'
 import { getCompanySetting } from '@/lib/queries/company'
 import { getPurchaseOrder } from '@/lib/queries/purchases'
+import { receiptsFor } from '@/lib/queries/goods-receipts'
+import { RECEIPT_STATUS_COLORS, RECEIPT_STATUS_LABELS } from '@/lib/receipt-labels'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 import { canEditOrder, orderMessage } from '@/lib/purchase-rules'
@@ -48,6 +50,12 @@ export default async function OrderDetailPage({
   const [order, company] = await Promise.all([getPurchaseOrder(id), getCompanySetting()])
 
   if (!order) notFound()
+
+  const receipts = await receiptsFor({ poId: order.id })
+  const canReceive =
+    can(user.role, 'stock:create') &&
+    (order.status === 'SENT' || order.status === 'PARTIAL') &&
+    order.lines.some((line) => line.itemId || line.materialId)
 
   const canUpdate = can(user.role, 'purchase:update')
   const canCreate = can(user.role, 'purchase:create')
@@ -224,10 +232,34 @@ export default async function OrderDetailPage({
         </div>
         <div>
           <Subheading level={2}>Goods received</Subheading>
-          <Text className="mt-2">
-            Receiving goods against this order, which moves it to part received and received,
-            comes in a later release.
-          </Text>
+          {receipts.length === 0 ? (
+            <Text className="mt-2">
+              {order.status === 'DRAFT'
+                ? 'Send the order before receiving goods against it.'
+                : 'No goods have been received against this order yet.'}
+            </Text>
+          ) : (
+            <ul className="mt-2 grid gap-1 text-sm/6">
+              {receipts.map((receipt) => (
+                <li key={receipt.id} className="flex items-center gap-3">
+                  <TextLink href={`/goods-receipts/${receipt.id}`}>{receipt.number}</TextLink>
+                  <Badge color={RECEIPT_STATUS_COLORS[receipt.status]}>
+                    {RECEIPT_STATUS_LABELS[receipt.status]}
+                  </Badge>
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {dateFormat.format(receipt.receivedOn)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canReceive ? (
+            <div className="mt-3">
+              <Button outline href={`/goods-receipts/new?po=${order.id}`}>
+                Receive goods
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
 

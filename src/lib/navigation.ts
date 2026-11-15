@@ -1,4 +1,5 @@
 import { FEATURES } from '@/lib/features'
+import type { IndustryModules, IndustryTemplate } from '@/lib/industry'
 import type { Action, Resource } from '@/lib/permissions'
 
 export type NavGroup = 'Overview' | 'Sell' | 'Money' | 'People' | 'Catalogue' | 'Administration' | 'Settings'
@@ -44,3 +45,24 @@ export const ADMIN_ENTRIES: readonly NavEntry[] = [
   { href: '/settings/company', label: 'Company details', capability: 'settings:update', group: 'Settings' },
   { href: '/settings/payment-modes', label: 'Payment modes', capability: 'settings:update', group: 'Settings' },
 ]
+
+const MODULE_BY_HREF: Record<string, keyof IndustryModules> = {
+  '/production': 'production',
+  '/dispatch': 'dispatch',
+  '/partners': 'partners',
+}
+
+/**
+ * Presentation only: hides entries for modules the company's industry marks
+ * irrelevant and applies the industry's word for orders. Permissions, data and
+ * URLs are untouched, so a hidden page still opens if someone goes to it.
+ */
+export function applyIndustry(entries: readonly NavEntry[], industry: IndustryTemplate): NavEntry[] {
+  return entries
+    .filter((entry) => {
+      const area = MODULE_BY_HREF[entry.href]
+
+      return !area || industry.modules[area]
+    })
+    .map((entry) => (entry.href === '/orders' ? { ...entry, label: industry.terms.orders } : entry))
+}

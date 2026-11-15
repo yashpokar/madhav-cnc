@@ -25,6 +25,7 @@ import {
 import { listReadyToInvoice } from '@/lib/queries/invoices'
 import { getCustomerLedger, getReceivables } from '@/lib/queries/receivables'
 import { countPendingUsers } from '@/lib/queries/users'
+import { getActiveIndustry } from '@/lib/queries/company'
 import { requireUser } from '@/lib/session'
 
 function greeting() {
@@ -83,12 +84,14 @@ export default async function DashboardPage({
 
   const user = await requireUser()
   const role = user.role
+  const industry = await getActiveIndustry()
+  const { orders: ordersWord } = industry.terms
   const range = readDashboardRange(query)
 
   const canQuotes = can(role, 'quotation:read')
   const canOrders = can(role, 'order:read')
-  const canProduction = can(role, 'production:read')
-  const canDispatch = can(role, 'dispatch:read')
+  const canProduction = can(role, 'production:read') && industry.modules.production
+  const canDispatch = can(role, 'dispatch:read') && industry.modules.dispatch
   const canMoney = can(role, 'invoice:read')
   const canExpenses = can(role, 'expense:read')
   // Approving accounts is for platform super-admins only, not company admins.
@@ -183,7 +186,7 @@ export default async function DashboardPage({
 
   const nowItems = [
     orders
-      ? { href: '/orders', label: 'Open orders', value: orders.openCount, hint: `${orders.readyToDispatch} ready to dispatch` }
+      ? { href: '/orders', label: `Open ${ordersWord.toLowerCase()}`, value: orders.openCount, hint: `${orders.readyToDispatch} ready to dispatch` }
       : null,
     production
       ? {
@@ -235,7 +238,7 @@ export default async function DashboardPage({
     orders ? (
       <Panel
         key="orders"
-        title="Orders by due date"
+        title={`${ordersWord} by due date`}
         href="/orders"
         linkLabel={orders.openCount > orders.list.length ? `View all ${orders.openCount}` : 'View all'}
         empty={

@@ -35,7 +35,7 @@ export default async function OnboardingPage() {
 
   return (
     <AuthLayout>
-      <div className="grid w-full max-w-sm grid-cols-1 gap-6">
+      <div className="grid w-full max-w-xl grid-cols-1 gap-6">
         <BrandMark />
         <Heading>Create your company</Heading>
         <Text>

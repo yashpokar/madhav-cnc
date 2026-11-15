@@ -285,6 +285,13 @@ enum UnitOfMeasure {
   KG
   LTR
   HOUR
+  PLATE
+  GUEST
+  NIGHT
+  SESSION
+  DAY
+  EVENT
+  PACKAGE
 }
 
 model Material {
@@ -737,6 +744,9 @@ model CompanySetting {
   email       String?
   gstin       String?
   pan         String?
+
+  /// Industry template key chosen at setup (src/lib/industry.ts). Seeding and presentation only.
+  industry String @default("MANUFACTURING")
 
   bankAccountName String? @map("bank_account_name")
   bankName        String? @map("bank_name")

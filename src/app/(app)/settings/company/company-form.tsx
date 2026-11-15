@@ -23,6 +23,7 @@ import { ImageSlot } from './image-slot'
 import { updateCompanySetting } from '@/lib/actions/company'
 import type { FormState, SimpleResult } from '@/lib/actions/company'
 import type { CompanySetting } from '@/lib/queries/company'
+import { getIndustry } from '@/lib/industry'
 
 export function CompanyForm({ setting }: { setting: CompanySetting }) {
   const router = useRouter()
@@ -96,6 +97,12 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
                 <Input name="phone" defaultValue={keep('phone', setting.phone)} />
               </Field>
             </div>
+
+            <p className="text-sm/6 text-zinc-500 dark:text-zinc-400">
+              Industry: <strong className="font-medium text-zinc-950 dark:text-white">{getIndustry(setting.industry).label}</strong>.
+              Chosen at setup and fixed in this version, because it decides the units, stages and
+              categories your company started with. You can still edit all of those directly.
+            </p>
 
             <Field>
               <Label>Address</Label>

@@ -10,6 +10,7 @@ import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { Select } from '@/components/catalyst/select'
 import { createCompany, setCompanyAccess, setCompanyRole } from '@/lib/actions/companies'
+import { DEFAULT_INDUSTRY, INDUSTRY_LIST, type IndustryKey } from '@/lib/industry'
 import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
 
@@ -31,6 +32,7 @@ export function CompaniesManager({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [name, setName] = useState('')
+  const [industry, setIndustry] = useState<IndustryKey>(DEFAULT_INDUSTRY)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   // key "userId:companyId" -> the role there (null = default). Present = has access.
   const [allowed, setAllowed] = useState(
@@ -39,7 +41,7 @@ export function CompaniesManager({
 
   function add() {
     startTransition(async () => {
-      const result = await createCompany(name)
+      const result = await createCompany(name, industry)
 
       setMessage(result.ok ? { ok: true, text: result.message } : { ok: false, text: result.error })
 
@@ -98,6 +100,18 @@ export function CompaniesManager({
               if (event.key === 'Enter' && name.trim()) add()
             }}
           />
+          <Select
+            className="max-w-48 shrink-0"
+            value={industry}
+            aria-label="Industry"
+            onChange={(event) => setIndustry(event.target.value as IndustryKey)}
+          >
+            {INDUSTRY_LIST.map((template) => (
+              <option key={template.key} value={template.key}>
+                {template.label}
+              </option>
+            ))}
+          </Select>
           <Button className="shrink-0 whitespace-nowrap" disabled={pending || !name.trim()} onClick={add}>
             Add company
           </Button>

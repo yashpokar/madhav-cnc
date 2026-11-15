@@ -5,11 +5,14 @@ import { Button } from '@/components/catalyst/button'
 import { Description, Field, FieldGroup, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import { FormBanner } from '@/components/form-banner'
+import { IndustryPicker } from '@/components/industry-picker'
 import { createOwnCompany } from '@/lib/actions/companies'
+import type { IndustryKey } from '@/lib/industry'
 
 export function OnboardingForm() {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [industry, setIndustry] = useState<IndustryKey | null>(null)
   const [values, setValues] = useState({ companyName: '', gstin: '', phone: '', city: '' })
 
   function set(key: keyof typeof values) {
@@ -22,7 +25,7 @@ export function OnboardingForm() {
     setError(null)
     startTransition(async () => {
       // On success the action redirects to the dashboard.
-      const result = await createOwnCompany(values)
+      const result = await createOwnCompany({ ...values, industry: industry ?? undefined })
 
       if (result && !result.ok) setError(result.error)
     })
@@ -31,6 +34,7 @@ export function OnboardingForm() {
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-1 gap-6">
       {error ? <FormBanner tone="error">{error}</FormBanner> : null}
+      <IndustryPicker value={industry} onChange={setIndustry} />
       <FieldGroup>
         <Field>
           <Label>Company name</Label>
@@ -52,7 +56,7 @@ export function OnboardingForm() {
           <Description>Optional.</Description>
         </Field>
       </FieldGroup>
-      <Button type="submit" className="w-full" disabled={pending || !values.companyName.trim()}>
+      <Button type="submit" className="w-full" disabled={pending || !industry || !values.companyName.trim()}>
         {pending ? 'Creating…' : 'Create company'}
       </Button>
     </form>

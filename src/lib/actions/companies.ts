@@ -10,7 +10,8 @@ import { ROLE_LABELS } from '@/lib/permissions'
 import { UserRole } from '@/generated/prisma/enums'
 import { COMPANY_COOKIE, listAccessibleCompanies } from '@/lib/active-company'
 import { getBaseUser, requireSuperAdmin, requireUser } from '@/lib/session'
-import { createCompanyWithSeed, DEFAULT_SEED, readSeedFromActiveCompany } from '@/lib/company-setup'
+import { createCompanyWithSeed, readSeedFromActiveCompany, seedForIndustry } from '@/lib/company-setup'
+import { DEFAULT_INDUSTRY, isIndustryKey } from '@/lib/industry'
 import { canCreateAnotherCompany } from '@/lib/team-rules'
 import { companySettingSchema } from '@/lib/validation/company'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -44,7 +45,7 @@ export async function switchCompany(companyId: string): Promise<SimpleResult> {
  * categories and payment modes as the company it is created from, so it can be
  * used straight away; customers, items and everything else start empty.
  */
-export async function createCompany(name: string): Promise<SimpleResult> {
+export async function createCompany(name: string, industry: string = DEFAULT_INDUSTRY): Promise<SimpleResult> {
   const admin = await requireSuperAdmin()
   const companyName = name.trim().replace(/\s+/g, ' ')
 
@@ -65,9 +66,13 @@ export async function createCompany(name: string): Promise<SimpleResult> {
     return { ok: false, error: 'A company with that name already exists' }
   }
 
+  if (!isIndustryKey(industry)) {
+    return { ok: false, error: 'Choose an industry from the list' }
+  }
+
   // Read from the company being worked in, before the new one exists.
   const company = await createCompanyWithSeed({
-    details: { companyName },
+    details: { companyName, industry },
     seed: await readSeedFromActiveCompany(),
     actorId: admin.id,
   })
@@ -201,6 +206,7 @@ export async function createOwnCompany(input: {
   gstin?: string
   phone?: string
   city?: string
+  industry?: string
 }): Promise<SimpleResult> {
   const base = await getBaseUser()
 
@@ -218,6 +224,12 @@ export async function createOwnCompany(input: {
   if (parsed.data.companyName.length < 2) {
     return { ok: false, error: 'Enter the company name' }
   }
+
+  if (!isIndustryKey(input.industry)) {
+    return { ok: false, error: 'Choose the industry your company is in' }
+  }
+
+  const industry = input.industry
 
   const account = await prisma.user.findUnique({
     where: { id: base.id },
@@ -248,8 +260,8 @@ export async function createOwnCompany(input: {
   }
 
   const company = await createCompanyWithSeed({
-    details: parsed.data,
-    seed: DEFAULT_SEED,
+    details: { ...parsed.data, industry },
+    seed: seedForIndustry(industry),
     actorId: base.id,
     createdById: base.id,
   })

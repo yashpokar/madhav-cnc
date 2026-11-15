@@ -552,6 +552,12 @@ model Order {
   dueDate          DateTime? @map("due_date") @db.Date
   customerPoNumber String?   @map("customer_po_number")
 
+  /// When the booking/event/job happens (optional). Instants; shown in India time.
+  startsAt  DateTime? @map("starts_at")
+  endsAt    DateTime? @map("ends_at")
+  venue     String?
+  headcount Int?
+
   siteAddress String? @map("site_address")
   siteCity    String? @map("site_city")
   sitePincode String? @map("site_pincode")
@@ -595,6 +601,7 @@ model Order {
   @@index([customerId])
   @@index([quotationId])
   @@index([orderDate])
+  @@index([companyId, startsAt])
   @@index([dueDate])
   @@index([companyId])
   @@map("orders")

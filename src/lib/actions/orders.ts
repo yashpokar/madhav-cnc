@@ -15,6 +15,8 @@ import { ensureTasksForOrder } from '@/lib/actions/production'
 import { logActivity } from '@/lib/activity'
 import { describeOrderDelete } from '@/lib/order-delete'
 import { getOrderImpact } from '@/lib/queries/orders'
+import { isDayKey, scheduleFromFields } from '@/lib/calendar'
+import { findScheduleConflicts } from '@/lib/queries/calendar'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { OrderStatus } from '@/generated/prisma/enums'
 
@@ -86,6 +88,12 @@ function parse(formData: FormData) {
     customerPoNumber: formData.get('customerPoNumber'),
     orderDate: formData.get('orderDate'),
     dueDate: formData.get('dueDate'),
+    startDate: formData.get('startDate'),
+    startTime: formData.get('startTime'),
+    endDate: formData.get('endDate'),
+    endTime: formData.get('endTime'),
+    venue: formData.get('venue'),
+    headcount: formData.get('headcount'),
     siteAddress: formData.get('siteAddress'),
     siteCity: formData.get('siteCity'),
     sitePincode: formData.get('sitePincode'),
@@ -220,6 +228,10 @@ export async function createOrder(
       customerPoNumber: parsed.data.customerPoNumber,
       orderDate: parsed.data.orderDate,
       dueDate: parsed.data.dueDate,
+      startsAt: parsed.data.startsAt,
+      endsAt: parsed.data.endsAt,
+      venue: parsed.data.venue,
+      headcount: parsed.data.headcount,
       siteAddress: parsed.data.siteAddress,
       siteCity: parsed.data.siteCity,
       sitePincode: parsed.data.sitePincode,
@@ -312,6 +324,10 @@ export async function updateOrder(
         customerPoNumber: parsed.data.customerPoNumber,
         orderDate: parsed.data.orderDate,
         dueDate: parsed.data.dueDate,
+        startsAt: parsed.data.startsAt,
+        endsAt: parsed.data.endsAt,
+        venue: parsed.data.venue,
+        headcount: parsed.data.headcount,
         siteAddress: parsed.data.siteAddress,
         siteCity: parsed.data.siteCity,
         sitePincode: parsed.data.sitePincode,
@@ -578,4 +594,39 @@ export async function deleteOrder(id: string): Promise<SimpleResult> {
   })
 
   return { ok: true, message: `${order.number} deleted` }
+}
+
+export type ConflictResult = {
+  conflicts: { id: string; number: string; customerName: string }[]
+}
+
+/**
+ * A heads-up, never a block: other live orders overlapping the chosen time.
+ * Called from the order form as the dates change.
+ */
+export async function checkScheduleConflicts(input: {
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  excludeId?: string | null
+}): Promise<ConflictResult> {
+  await requireCapability('order:read')
+
+  if (!isDayKey(input.startDate) || (input.endDate && !isDayKey(input.endDate))) {
+    return { conflicts: [] }
+  }
+
+  const clock = /^([01]\d|2[0-3]):[0-5]\d$/
+  const { startsAt, endsAt } = scheduleFromFields({
+    ...input,
+    startTime: clock.test(input.startTime) ? input.startTime : '',
+    endTime: clock.test(input.endTime) ? input.endTime : '',
+  })
+
+  if (!startsAt || (endsAt && endsAt < startsAt)) {
+    return { conflicts: [] }
+  }
+
+  return { conflicts: await findScheduleConflicts({ startsAt, endsAt, excludeId: input.excludeId }) }
 }

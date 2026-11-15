@@ -2,6 +2,7 @@ import { date as dateFormat } from '@/lib/format'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { describeSchedule } from '@/lib/calendar'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import type {
   DispatchStatus,
@@ -48,6 +49,9 @@ export default async function TrackingPage({
       status: true,
       subject: true,
       dueDate: true,
+      startsAt: true,
+      endsAt: true,
+      venue: true,
       customer: { select: { name: true } },
       productionTasks: {
         orderBy: { position: 'asc' },
@@ -114,6 +118,28 @@ export default async function TrackingPage({
           </div>
         </div>
       </section>
+
+      {order.startsAt || order.venue ? (
+        <section
+          aria-label="When and where"
+          className="mt-4 grid gap-4 rounded-xl bg-white p-4 ring-1 ring-zinc-950/10"
+        >
+          {order.startsAt ? (
+            <div>
+              <div className="text-xs/5 text-zinc-600">When</div>
+              <div className="text-base/7 font-semibold">
+                {describeSchedule(order.startsAt, order.endsAt)}
+              </div>
+            </div>
+          ) : null}
+          {order.venue ? (
+            <div>
+              <div className="text-xs/5 text-zinc-600">Where</div>
+              <div className="text-base/7 font-semibold">{order.venue}</div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {steps.length > 0 ? (
         <section aria-labelledby="progress" className="mt-8">

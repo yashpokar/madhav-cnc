@@ -34,6 +34,7 @@ import {
   ORDER_STATUS_LABELS,
   UNIT_SHORT,
 } from '@/lib/labels'
+import { describeSchedule, istDayKey } from '@/lib/calendar'
 import { PrintButton } from '@/components/print-button'
 import { DocumentLetterhead } from '@/components/document-letterhead'
 import { getCompanySetting } from '@/lib/queries/company'
@@ -292,6 +293,28 @@ export default async function QuotationDetailPage({
           </div>
         </div>
       </div>
+
+      {order.startsAt || order.venue || order.headcount !== null ? (
+        <div>
+          <Subheading level={2}>When and where</Subheading>
+          <Text className="mt-2">
+            {[
+              order.startsAt ? describeSchedule(order.startsAt, order.endsAt) : null,
+              order.venue,
+              order.headcount !== null ? `${order.headcount} guests` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+          {order.startsAt ? (
+            <Text className="mt-1 print:hidden">
+              <TextLink href={`/calendar?date=${istDayKey(order.startsAt)}`}>
+                See it on the calendar
+              </TextLink>
+            </Text>
+          ) : null}
+        </div>
+      ) : null}
 
       {order.siteAddress || order.siteCity ? (
         <div>

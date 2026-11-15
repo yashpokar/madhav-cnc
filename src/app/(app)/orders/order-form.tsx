@@ -2,7 +2,8 @@
 
 import { PaymentModeSelect } from '@/components/payment-mode-select'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -25,7 +26,7 @@ import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
 import { PartnerCombobox } from '@/components/partner-combobox'
 import { documentTotals } from '@/lib/pricing'
-import type { FormState } from '@/lib/actions/orders'
+import { checkScheduleConflicts, type ConflictResult, type FormState } from '@/lib/actions/orders'
 import { CustomerCombobox } from '@/components/customer-combobox'
 import type { CustomerOption, ItemOption } from '@/lib/queries/quotations'
 import type { PartnerOption } from '@/lib/queries/partners'
@@ -39,6 +40,12 @@ export type OrderFormValues = {
   subject: string | null
   orderDate: string
   dueDate: string | null
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  venue: string | null
+  headcount: number | null
   customerPoNumber: string | null
   advanceAmount: number
   advanceChannelId: string | null
@@ -74,6 +81,8 @@ export function OrderForm({
   architects,
   carpenters,
   modes,
+  term = 'Order',
+  excludeId = null,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
   values: OrderFormValues
@@ -83,6 +92,10 @@ export function OrderForm({
   architects: PartnerOption[]
   modes: PaymentModeOption[]
   carpenters: PartnerOption[]
+  /** The industry's word for one order (Order, Booking, Event). */
+  term?: string
+  /** The order being edited, so it is not reported as clashing with itself. */
+  excludeId?: string | null
 }) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -99,6 +112,34 @@ export function OrderForm({
   const [siteAddress, setSiteAddress] = useState(values.siteAddress ?? '')
   const [siteCity, setSiteCity] = useState(values.siteCity ?? '')
   const [sitePincode, setSitePincode] = useState(values.sitePincode ?? '')
+
+  const [startDate, setStartDate] = useState(values.startDate)
+  const [startTime, setStartTime] = useState(values.startTime)
+  const [endDate, setEndDate] = useState(values.endDate)
+  const [endTime, setEndTime] = useState(values.endTime)
+  const [conflicts, setConflicts] = useState<ConflictResult['conflicts']>([])
+
+  useEffect(() => {
+    if (!startDate) return
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      checkScheduleConflicts({ startDate, startTime, endDate, endTime, excludeId })
+        .then((result) => {
+          if (!cancelled) setConflicts(result.conflicts)
+        })
+        .catch(() => {
+          if (!cancelled) setConflicts([])
+        })
+    }, 400)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [startDate, startTime, endDate, endTime, excludeId])
+
+  const shownConflicts = startDate ? conflicts : []
 
   const [discountType, setDiscountType] = useState<DiscountType>(
     values.discountType,
@@ -264,6 +305,98 @@ export function OrderForm({
                 placeholder="Search carpenters…"
                 noneLabel="No carpenter"
               />
+            </Field>
+          </div>
+        </FieldGroup>
+      </Fieldset>
+
+      <Divider />
+
+      <Fieldset>
+        <Legend>When and where</Legend>
+        <FieldGroup>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+            <Field>
+              <Label>Starts on</Label>
+              <Input
+                name="startDate"
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                invalid={Boolean(errors.startDate)}
+              />
+              {errors.startDate ? <ErrorMessage>{errors.startDate}</ErrorMessage> : null}
+            </Field>
+            <Field>
+              <Label>Start time</Label>
+              <Input
+                name="startTime"
+                type="time"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <Label>Ends on</Label>
+              <Input
+                name="endDate"
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                invalid={Boolean(errors.endDate)}
+              />
+              {errors.endDate ? <ErrorMessage>{errors.endDate}</ErrorMessage> : null}
+            </Field>
+            <Field>
+              <Label>End time</Label>
+              <Input
+                name="endTime"
+                type="time"
+                value={endTime}
+                onChange={(event) => setEndTime(event.target.value)}
+              />
+            </Field>
+          </div>
+          <Description>
+            Optional. Leave the times blank for an all-day {term.toLowerCase()}.
+            It then shows on the calendar. Times are India time.
+          </Description>
+
+          {shownConflicts.length > 0 ? (
+            <FormBanner tone="error">
+              This overlaps{' '}
+              {shownConflicts.map((conflict, index) => (
+                <span key={conflict.id}>
+                  {index > 0 ? ', ' : ''}
+                  <Link href={`/orders/${conflict.id}`} target="_blank" className="font-medium underline">
+                    {conflict.number}
+                  </Link>{' '}
+                  ({conflict.customerName})
+                </span>
+              ))}
+              . You can still save.
+            </FormBanner>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Field className="sm:col-span-2">
+              <Label>Venue or location</Label>
+              <Input
+                name="venue"
+                defaultValue={keep('venue', values.venue)}
+                placeholder="Where it takes place"
+              />
+            </Field>
+            <Field>
+              <Label>Guests or headcount</Label>
+              <Input
+                name="headcount"
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={keep('headcount', values.headcount)}
+              />
+              {errors.headcount ? <ErrorMessage>{errors.headcount}</ErrorMessage> : null}
             </Field>
           </div>
         </FieldGroup>

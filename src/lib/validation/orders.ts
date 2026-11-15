@@ -3,6 +3,7 @@ import {
   DiscountType,
   OrderStatus,
 } from '@/generated/prisma/enums'
+import { scheduleFromFields } from '@/lib/calendar'
 import { quotationLineSchema } from '@/lib/validation/quotations'
 
 const optionalText = (max: number) =>
@@ -28,6 +29,14 @@ const optionalDate = z
   .optional()
   .transform((value) => (value ? new Date(`${value}T00:00:00Z`) : null))
 
+const optionalDay = z
+  .union([z.literal(''), z.null(), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')])
+  .optional()
+
+const optionalTime = z
+  .union([z.literal(''), z.null(), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time')])
+  .optional()
+
 export const orderLineSchema = quotationLineSchema
 
 export const orderInputSchema = z.object({
@@ -44,6 +53,15 @@ export const orderInputSchema = z.object({
   customerPoNumber: optionalText(60),
   orderDate: requiredDate,
   dueDate: optionalDate,
+  startDate: optionalDay,
+  startTime: optionalTime,
+  endDate: optionalDay,
+  endTime: optionalTime,
+  venue: optionalText(200),
+  headcount: z
+    .union([z.literal(''), z.null(), z.coerce.number().int('Whole number').min(0).max(1_000_000)])
+    .optional()
+    .transform((value) => (value === '' || value === null || value === undefined ? null : value)),
   siteAddress: optionalText(300),
   siteCity: optionalText(100),
   sitePincode: z
@@ -65,5 +83,22 @@ export const orderInputSchema = z.object({
   terms: optionalText(2000),
   lines: z.array(orderLineSchema).min(1, 'Add at least one line'),
 })
+  .superRefine((value, context) => {
+    if (!value.startDate && (value.startTime || value.endDate || value.endTime)) {
+      context.addIssue({ code: 'custom', path: ['startDate'], message: 'Choose a start date' })
+
+      return
+    }
+
+    const { startsAt, endsAt } = scheduleFromFields(value)
+
+    if (startsAt && endsAt && endsAt < startsAt) {
+      context.addIssue({ code: 'custom', path: ['endDate'], message: 'Ends before it starts' })
+    }
+  })
+  .transform(({ startDate, startTime, endDate, endTime, ...rest }) => ({
+    ...rest,
+    ...scheduleFromFields({ startDate, startTime, endDate, endTime }),
+  }))
 
 export type OrderData = z.output<typeof orderInputSchema>

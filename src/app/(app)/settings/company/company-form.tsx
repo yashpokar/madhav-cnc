@@ -19,6 +19,7 @@ import { Subheading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { Link } from '@/components/catalyst/link'
 import { FormBanner } from '@/components/form-banner'
+import { LocationFields } from '@/components/location-fields'
 import { ImageSlot } from './image-slot'
 import { updateCompanySetting } from '@/lib/actions/company'
 import type { FormState, SimpleResult } from '@/lib/actions/company'
@@ -113,27 +114,14 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               />
             </Field>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-              <Field>
-                <Label>City</Label>
-                <Input name="city" defaultValue={keep('city', setting.city)} />
-              </Field>
-              <Field>
-                <Label>State</Label>
-                <Input name="state" defaultValue={keep('state', setting.state)} />
-              </Field>
-              <Field>
-                <Label>Pincode</Label>
-                <Input
-                  name="pincode"
-                  inputMode="numeric"
-                  defaultValue={keep('pincode', setting.pincode)}
-                  invalid={Boolean(errors.pincode)}
-                />
-                {errors.pincode ? (
-                  <ErrorMessage>{errors.pincode}</ErrorMessage>
-                ) : null}
-              </Field>
+            <LocationFields
+              defaultState={keep('state', setting.state)}
+              defaultCity={keep('city', setting.city)}
+              defaultPincode={keep('pincode', setting.pincode)}
+              errors={{ pincode: errors.pincode }}
+            />
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
               <Field>
                 <Label>Email</Label>
                 <Input

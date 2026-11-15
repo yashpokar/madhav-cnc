@@ -22,6 +22,7 @@ import {
 } from '@/components/catalyst/listbox'
 import { Textarea } from '@/components/catalyst/textarea'
 import { FormBanner } from '@/components/form-banner'
+import { LocationFields } from '@/components/location-fields'
 import { PartnerCombobox } from '@/components/partner-combobox'
 import { documentTotals } from '@/lib/pricing'
 import type { FormState } from '@/lib/actions/quotations'
@@ -166,8 +167,6 @@ export function QuotationForm({
     <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
-      <input type="hidden" name="siteCity" value={siteCity} />
-      <input type="hidden" name="sitePincode" value={sitePincode} />
       <input type="hidden" name="lines" value={serialisedLines} />
 
       {state.status === 'error' ? (
@@ -270,27 +269,15 @@ export function QuotationForm({
               Prefilled from the customer. Change it if the job is elsewhere.
             </Description>
           </Field>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <Field>
-              <Label>City</Label>
-              <Input
-                value={siteCity}
-                onChange={(event) => setSiteCity(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <Label>Pincode</Label>
-              <Input
-                inputMode="numeric"
-                value={sitePincode}
-                onChange={(event) => setSitePincode(event.target.value)}
-                invalid={Boolean(errors.sitePincode)}
-              />
-              {errors.sitePincode ? (
-                <ErrorMessage>{errors.sitePincode}</ErrorMessage>
-              ) : null}
-            </Field>
-          </div>
+          <LocationFields
+            names={{ state: null, city: 'siteCity', pincode: 'sitePincode' }}
+            city={siteCity}
+            pincode={sitePincode}
+            onCityChange={setSiteCity}
+            onPincodeChange={setSitePincode}
+            errors={{ pincode: errors.sitePincode }}
+            gstinFieldName={null}
+          />
         </FieldGroup>
       </Fieldset>
 

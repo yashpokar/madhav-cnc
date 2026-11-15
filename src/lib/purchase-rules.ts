@@ -1,3 +1,4 @@
+import { gstinStateCode } from '@/lib/india-geo'
 import { documentTotals, round2, splitGst } from '@/lib/pricing'
 import type { BillData } from '@/lib/validation/purchases'
 
@@ -256,9 +257,7 @@ export function defaultDueDate(
 
 /** The state is the first two digits of a GSTIN. */
 export function gstinState(gstin: string | null | undefined): string | null {
-  const code = (gstin ?? '').trim().slice(0, 2)
-
-  return /^\d{2}$/.test(code) ? code : null
+  return gstinStateCode(gstin)
 }
 
 /**

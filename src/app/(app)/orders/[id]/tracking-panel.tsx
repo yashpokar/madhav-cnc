@@ -11,9 +11,11 @@ import { ConfirmButton } from '@/components/confirm-button'
 import { FormBanner } from '@/components/form-banner'
 import {
   createTrackingLink,
+  replaceTrackingLink,
   revokeTrackingLink,
 } from '@/lib/actions/tracking'
 import { whatsappLink } from '@/lib/whatsapp'
+import { isWhatsAppSafeToken } from '@/lib/share-token'
 
 export function TrackingPanel({
   orderId,
@@ -43,6 +45,20 @@ export function TrackingPanel({
   function create() {
     startTransition(async () => {
       const outcome = await createTrackingLink(orderId)
+
+      if (outcome.ok && outcome.id) {
+        setToken(outcome.id)
+        setError(null)
+        router.refresh()
+      } else if (!outcome.ok) {
+        setError(outcome.error)
+      }
+    })
+  }
+
+  function replace() {
+    startTransition(async () => {
+      const outcome = await replaceTrackingLink(orderId)
 
       if (outcome.ok && outcome.id) {
         setToken(outcome.id)
@@ -85,6 +101,15 @@ export function TrackingPanel({
         </div>
       ) : null}
 
+      {url && token && !isWhatsAppSafeToken(token) ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm/6 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          <span>This older link can break when sent on WhatsApp. Create a new link.</span>
+          <Button outline disabled={pending} onClick={replace}>
+            Replace link
+          </Button>
+        </div>
+      ) : null}
+
       {url ? (
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -103,7 +128,7 @@ export function TrackingPanel({
             rel="noopener noreferrer"
             href={whatsappLink(
               customerPhone,
-              `Hello ${customerName}, you can follow the progress of your order ${orderNumber} here: ${url}`,
+              `Hello ${customerName}, you can follow the progress of your order ${orderNumber} here:\n\n${url}`,
             )}
           >
             WhatsApp

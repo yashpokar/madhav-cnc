@@ -1,19 +1,15 @@
 'use server'
 
-import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { logActivity } from '@/lib/activity'
+import { newShareToken } from '@/lib/share-token'
 import { findShareByToken, shareIsUsable } from '@/lib/queries/share'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
 export type { SimpleResult }
-
-function newToken() {
-  return randomBytes(24).toString('base64url')
-}
 
 export async function createShareLink(
   quotationId: string,
@@ -41,7 +37,7 @@ export async function createShareLink(
   const share = await prisma.quotationShare.create({
     data: {
       quotationId,
-      token: newToken(),
+      token: newShareToken(),
       createdById: user.id,
     },
     select: { token: true },

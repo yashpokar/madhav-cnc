@@ -5,5 +5,6 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  test: { environment: 'node' },
+  // Agent worktrees under .claude hold copies of the tests; run only this tree's.
+  test: { environment: 'node', exclude: ['**/node_modules/**', '.claude/**'] },
 })

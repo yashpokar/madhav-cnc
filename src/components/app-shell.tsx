@@ -28,6 +28,7 @@ import {
   TruckIcon,
   UserGroupIcon,
   UsersIcon,
+  ScaleIcon,
   WalletIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/react/20/solid'
@@ -87,6 +88,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/admin/activity': ClockIcon,
   '/settings/company': BuildingStorefrontIcon,
   '/settings/payment-modes': WalletIcon,
+  '/settings/opening-balances': ScaleIcon,
 }
 
 function isCurrent(pathname: string, href: string) {

@@ -64,6 +64,10 @@ model User {
   sharesCreated            QuotationShare[]      @relation("ShareCreatedBy")
   commentsAuthored         QuotationComment[]    @relation("CommentAuthor")
   activities               ActivityLog[]         @relation("ActivityUser")
+  purchaseBillsCreated     PurchaseBill[]        @relation("PurchaseBillCreatedBy")
+  purchaseBillsUpdated     PurchaseBill[]        @relation("PurchaseBillUpdatedBy")
+  stockMovementsCreated    StockMovement[]       @relation("StockMovementCreatedBy")
+  vendorPaymentsRecorded   VendorPayment[]       @relation("VendorPaymentRecordedBy")
 
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
@@ -222,6 +226,10 @@ model Customer {
   paymentTermsDays Int?    @map("payment_terms_days")
   notes            String?
 
+  /// What the customer already owed when books were opened here.
+  openingDue  Decimal   @default(0) @map("opening_due") @db.Decimal(12, 2)
+  openingAsOf DateTime? @map("opening_as_of") @db.Date
+
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedById String? @map("updated_by_id")
@@ -289,6 +297,14 @@ model Material {
 
   items Item[]
 
+  stockTracked Boolean  @default(false) @map("stock_tracked")
+  reorderLevel Decimal? @map("reorder_level") @db.Decimal(14, 3)
+
+  stockMovements     StockMovement[]
+  purchaseOrderLines PurchaseOrderLine[]
+  purchaseBillLines  PurchaseBillLine[]
+  goodsReceiptLines  GoodsReceiptLine[]
+
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("MaterialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
@@ -334,6 +350,14 @@ model Item {
 
   isActive Boolean @default(true) @map("is_active")
   notes    String?
+
+  stockTracked Boolean  @default(false) @map("stock_tracked")
+  reorderLevel Decimal? @map("reorder_level") @db.Decimal(14, 3)
+
+  stockMovements     StockMovement[]
+  purchaseOrderLines PurchaseOrderLine[]
+  purchaseBillLines  PurchaseBillLine[]
+  goodsReceiptLines  GoodsReceiptLine[]
 
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("ItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -758,6 +782,13 @@ model CompanySetting {
   counters         DocumentCounter[]
   access           UserCompany[]
 
+  purchaseOrders         PurchaseOrder[]
+  purchaseBills          PurchaseBill[]
+  goodsReceipts          GoodsReceipt[]
+  stockMovements         StockMovement[]
+  vendorPayments         VendorPayment[]
+  channelOpeningBalances ChannelOpeningBalance[]
+
   updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1104,6 +1135,9 @@ model PaymentChannel {
   expenses Expense[]
   payments Payment[]
 
+  vendorPayments  VendorPayment[]
+  openingBalances ChannelOpeningBalance[]
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([companyId, name])
@@ -1132,6 +1166,10 @@ model Payment {
   reference String?
   paidOn    DateTime        @map("paid_on") @db.Date
   notes     String?
+
+  /// Part of this receipt that settled the customer's opening balance rather
+  /// than an invoice.
+  openingApplied Decimal @default(0) @map("opening_applied") @db.Decimal(12, 2)
 
   /// Set when this receipt is the advance taken on an order. It is edited on
   /// the order and is never applied to invoices (the invoice deducts it as
@@ -1394,7 +1432,16 @@ model Vendor {
   description String?
   isActive    Boolean        @default(true) @map("is_active")
 
+  /// What we already owed this vendor when books were opened here.
+  openingPayable Decimal   @default(0) @map("opening_payable") @db.Decimal(12, 2)
+  openingAsOf    DateTime? @map("opening_as_of") @db.Date
+
   expenses Expense[]
+
+  purchaseOrders PurchaseOrder[]
+  purchaseBills  PurchaseBill[]
+  goodsReceipts  GoodsReceipt[]
+  payments       VendorPayment[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1428,4 +1475,337 @@ model DocumentCounter {
 
   @@id([companyId, key])
   @@map("document_counters")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+enum PurchaseBillStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum StockMovementType {
+  OPENING
+  PURCHASE
+  PURCHASE_RETURN
+  ADJUSTMENT
+  ISSUE
+}
+
+enum GoodsReceiptStatus {
+  POSTED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id String @id @default(cuid())
+
+  companyId String              @default("") @map("company_id")
+  company   CompanySetting      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  status    PurchaseOrderStatus @default(DRAFT)
+
+  vendorId String @map("vendor_id")
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  orderDate    DateTime  @map("order_date") @db.Date
+  expectedDate DateTime? @map("expected_date") @db.Date
+  notes        String?
+
+  lines    PurchaseOrderLine[]
+  bills    PurchaseBill[]
+  receipts GoodsReceipt[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, number])
+  @@index([vendorId])
+  @@index([status])
+  @@index([companyId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id String @id @default(cuid())
+
+  poId String        @map("po_id")
+  po   PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  itemId     String?   @map("item_id")
+  item       Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  materialId String?   @map("material_id")
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  description    String
+  qty            Decimal       @db.Decimal(14, 3)
+  receivedQty    Decimal       @default(0) @map("received_qty") @db.Decimal(14, 3)
+  unit           UnitOfMeasure @default(NOS)
+  rate           Decimal       @db.Decimal(12, 2)
+  taxRatePercent Decimal       @default(0) @map("tax_rate_percent") @db.Decimal(5, 2)
+  lineTotal      Decimal       @default(0) @map("line_total") @db.Decimal(14, 2)
+  sortOrder      Int           @default(0) @map("sort_order")
+
+  billLines    PurchaseBillLine[]
+  receiptLines GoodsReceiptLine[]
+
+  @@index([poId])
+  @@index([itemId])
+  @@index([materialId])
+  @@map("purchase_order_lines")
+}
+
+model PurchaseBill {
+  id String @id @default(cuid())
+
+  companyId        String             @default("") @map("company_id")
+  company          CompanySetting     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number           String
+  /// The number printed on the vendor's own bill.
+  vendorBillNumber String?            @map("vendor_bill_number")
+  status           PurchaseBillStatus @default(DRAFT)
+
+  vendorId String @map("vendor_id")
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  poId String?        @map("po_id")
+  po   PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
+
+  billDate     DateTime  @map("bill_date") @db.Date
+  dueDate      DateTime? @map("due_date") @db.Date
+  isInterState Boolean   @default(false) @map("is_inter_state")
+
+  subtotal      Decimal @default(0) @db.Decimal(14, 2)
+  discount      Decimal @default(0) @db.Decimal(14, 2)
+  taxableAmount Decimal @default(0) @map("taxable_amount") @db.Decimal(14, 2)
+  cgst          Decimal @default(0) @db.Decimal(14, 2)
+  sgst          Decimal @default(0) @db.Decimal(14, 2)
+  igst          Decimal @default(0) @db.Decimal(14, 2)
+  taxAmount     Decimal @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  roundOff      Decimal @default(0) @map("round_off") @db.Decimal(6, 2)
+  total         Decimal @default(0) @db.Decimal(14, 2)
+
+  notes String?
+
+  lines       PurchaseBillLine[]
+  allocations VendorPaymentAllocation[]
+  receipts    GoodsReceipt[]
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("PurchaseBillCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String? @map("updated_by_id")
+  updatedBy   User?   @relation("PurchaseBillUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, number])
+  @@index([vendorId])
+  @@index([status])
+  @@index([billDate])
+  @@index([companyId])
+  @@map("purchase_bills")
+}
+
+model PurchaseBillLine {
+  id String @id @default(cuid())
+
+  billId String       @map("bill_id")
+  bill   PurchaseBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  poLineId String?            @map("po_line_id")
+  poLine   PurchaseOrderLine? @relation(fields: [poLineId], references: [id], onDelete: SetNull)
+
+  itemId     String?   @map("item_id")
+  item       Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  materialId String?   @map("material_id")
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  description    String
+  hsnCode        String?       @map("hsn_code")
+  qty            Decimal       @db.Decimal(14, 3)
+  unit           UnitOfMeasure @default(NOS)
+  rate           Decimal       @db.Decimal(12, 2)
+  discount       Decimal       @default(0) @db.Decimal(12, 2)
+  taxRatePercent Decimal       @default(0) @map("tax_rate_percent") @db.Decimal(5, 2)
+  taxable        Decimal       @default(0) @db.Decimal(14, 2)
+  taxAmount      Decimal       @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  lineTotal      Decimal       @default(0) @map("line_total") @db.Decimal(14, 2)
+
+  receiptLines GoodsReceiptLine[]
+
+  @@index([billId])
+  @@index([itemId])
+  @@index([materialId])
+  @@map("purchase_bill_lines")
+}
+
+model GoodsReceipt {
+  id String @id @default(cuid())
+
+  companyId String             @default("") @map("company_id")
+  company   CompanySetting     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+  status    GoodsReceiptStatus @default(POSTED)
+
+  vendorId String @map("vendor_id")
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  billId String?        @map("bill_id")
+  bill   PurchaseBill?  @relation(fields: [billId], references: [id], onDelete: SetNull)
+  poId   String?        @map("po_id")
+  po     PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
+
+  receivedOn DateTime @map("received_on") @db.Date
+  notes      String?
+
+  lines GoodsReceiptLine[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, number])
+  @@index([vendorId])
+  @@index([billId])
+  @@index([poId])
+  @@index([companyId])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id String @id @default(cuid())
+
+  receiptId String       @map("receipt_id")
+  receipt   GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  billLineId String?            @map("bill_line_id")
+  billLine   PurchaseBillLine?  @relation(fields: [billLineId], references: [id], onDelete: SetNull)
+  poLineId   String?            @map("po_line_id")
+  poLine     PurchaseOrderLine? @relation(fields: [poLineId], references: [id], onDelete: SetNull)
+
+  itemId     String?   @map("item_id")
+  item       Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  materialId String?   @map("material_id")
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  qty      Decimal @db.Decimal(14, 3)
+  unitCost Decimal @default(0) @map("unit_cost") @db.Decimal(12, 4)
+
+  movement StockMovement?
+
+  @@index([receiptId])
+  @@map("goods_receipt_lines")
+}
+
+/// One signed change to stock of an item or a material (exactly one of the two,
+/// enforced by a CHECK in the database). Stock on hand is the sum of qty.
+model StockMovement {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  itemId     String?   @map("item_id")
+  item       Item?     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  materialId String?   @map("material_id")
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: Restrict)
+
+  type     StockMovementType
+  qty      Decimal           @db.Decimal(14, 3)
+  unitCost Decimal           @default(0) @map("unit_cost") @db.Decimal(12, 4)
+  date     DateTime          @db.Date
+
+  receiptLineId String?           @unique @map("receipt_line_id")
+  receiptLine   GoodsReceiptLine? @relation(fields: [receiptLineId], references: [id], onDelete: SetNull)
+
+  reference String?
+  note      String?
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("StockMovementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, itemId])
+  @@index([companyId, materialId])
+  @@index([date])
+  @@map("stock_movements")
+}
+
+model VendorPayment {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  number    String
+
+  vendorId String @map("vendor_id")
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  amount    Decimal         @db.Decimal(14, 2)
+  mode      PaymentMode     @default(UPI)
+  channelId String?         @map("channel_id")
+  channel   PaymentChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  /// The mode's name as it was when this was recorded.
+  modeName  String?         @map("mode_name")
+  reference String?
+  paidOn    DateTime        @map("paid_on") @db.Date
+  notes     String?
+
+  /// Part of this payment that settled the vendor's opening payable.
+  openingApplied Decimal @default(0) @map("opening_applied") @db.Decimal(12, 2)
+
+  recordedById String? @map("recorded_by_id")
+  recordedBy   User?   @relation("VendorPaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  allocations VendorPaymentAllocation[]
+
+  @@unique([companyId, number])
+  @@index([vendorId])
+  @@index([paidOn])
+  @@index([companyId])
+  @@map("vendor_payments")
+}
+
+model VendorPaymentAllocation {
+  id String @id @default(cuid())
+
+  vendorPaymentId String        @map("vendor_payment_id")
+  vendorPayment   VendorPayment @relation(fields: [vendorPaymentId], references: [id], onDelete: Cascade)
+
+  billId String       @map("bill_id")
+  bill   PurchaseBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(14, 2)
+
+  @@unique([vendorPaymentId, billId])
+  @@index([billId])
+  @@map("vendor_payment_allocations")
+}
+
+/// What a payment mode already held when books were opened here (can be
+/// negative for an overdraft).
+model ChannelOpeningBalance {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  channelId String         @map("channel_id")
+  channel   PaymentChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  amount Decimal  @db.Decimal(14, 2)
+  asOf   DateTime @map("as_of") @db.Date
+
+  @@unique([companyId, channelId])
+  @@index([companyId])
+  @@map("channel_opening_balances")
 }

@@ -21,6 +21,12 @@ const SCOPED = new Set([
   'Expense',
   'CreditDebitNote',
   'Vendor',
+  'PurchaseOrder',
+  'PurchaseBill',
+  'GoodsReceipt',
+  'StockMovement',
+  'VendorPayment',
+  'ChannelOpeningBalance',
   'ActivityLog',
 ])
 

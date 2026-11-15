@@ -29,7 +29,7 @@ export default async function PendingPage() {
   return (
     <AuthLayout>
       <div className="grid w-full max-w-sm grid-cols-1 gap-6">
-        <BrandMark />
+        <BrandMark className="lg:hidden" />
         {deactivated ? (
           <>
             <Heading>Account deactivated</Heading>

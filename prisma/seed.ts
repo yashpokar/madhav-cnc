@@ -44,7 +44,7 @@ async function main() {
   })
   await seedExpenseCategories()
 
-  const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@madhavcnc.local'
+  const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@prodlys.local'
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!'
   const name = process.env.SEED_ADMIN_NAME ?? 'Administrator'
 

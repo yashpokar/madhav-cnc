@@ -27,7 +27,7 @@ const trustedOrigins = allowAllOrigins
   : configuredOrigins
 
 export const auth = betterAuth({
-  appName: 'Madhav CNC',
+  appName: 'Prodlys',
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,

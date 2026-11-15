@@ -1,5 +1,6 @@
 'use client'
 
+import { BrandMark, Wordmark } from '@/components/brand-mark'
 import { usePathname } from 'next/navigation'
 import {
   ArrowRightStartOnRectangleIcon,
@@ -190,6 +191,10 @@ function AppShellFrame({
       sidebar={
         <Sidebar>
           <SidebarHeader>
+            <div className="mb-4 flex items-center gap-2.5 px-0.5 max-lg:hidden">
+              <BrandMark className="size-7" />
+              <Wordmark className="text-base/6" />
+            </div>
             <div data-tour="company-switcher">
               <CompanySwitcher
                 companies={companies}
@@ -201,7 +206,7 @@ function AppShellFrame({
               type="button"
               data-tour="search"
               onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-              className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm/6 text-zinc-500 ring-1 ring-zinc-950/10 hover:bg-zinc-950/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/5"
+              className="mt-3 flex w-full items-center gap-2 rounded-lg bg-zinc-50 px-2.5 py-2 text-sm/6 text-zinc-500 ring-1 ring-zinc-950/8 transition-colors hover:bg-zinc-100 dark:bg-white/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/10"
             >
               <MagnifyingGlassIcon className="size-4" aria-hidden="true" />
               <span className="flex-1 text-left">Search…</span>
@@ -338,7 +343,7 @@ function BottomNav({
       <div aria-hidden="true" className="h-14 lg:hidden print:hidden" />
       <nav
         aria-label="Quick navigation"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-zinc-950/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden dark:border-white/10 dark:bg-zinc-900/95"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-zinc-950/8 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden print:hidden dark:border-white/10 dark:bg-zinc-900/95"
       >
         {entries.map((entry) => {
           const Icon = ICONS[entry.href]
@@ -349,9 +354,9 @@ function BottomNav({
               key={entry.href}
               href={entry.href}
               aria-current={current ? 'page' : undefined}
-              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]/4 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
+              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px]/4 font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500 ${
                 current
-                  ? 'text-zinc-950 dark:text-accent-300'
+                  ? 'text-accent-700 dark:text-accent-300'
                   : 'text-zinc-500 dark:text-zinc-400'
               }`}
             >

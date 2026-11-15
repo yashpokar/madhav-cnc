@@ -3,16 +3,24 @@ import clsx from 'clsx'
 import React, { forwardRef } from 'react'
 import { Link } from './link'
 
+const sizes = {
+  sm: 'min-h-8 px-[calc(--spacing(2.5)-1px)] py-[calc(--spacing(1)-1px)] text-sm/5 *:data-[slot=icon]:size-4',
+  md: 'min-h-10 px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(2)-1px)] sm:min-h-10',
+  lg: 'min-h-12 px-[calc(--spacing(5)-1px)] py-[calc(--spacing(2.5)-1px)] text-base/6',
+}
+
 const styles = {
   base: [
     // Base
-    'relative isolate inline-flex items-baseline justify-center gap-x-2 rounded-lg border text-sm/6 font-semibold',
-    // Sizing
-    'px-[calc(--spacing(3)-1px)] py-[calc(--spacing(1.5)-1px)] sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(1.5)-1px)] sm:text-sm/6',
+    'relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-sm/6 font-semibold whitespace-nowrap',
+    // Calm motion: colour eases, a press nudges the button down a hair
+    'transition-[background-color,box-shadow,transform] duration-150 data-active:scale-[0.985] motion-reduce:transition-none motion-reduce:data-active:scale-100',
     // Focus
-    'focus:not-data-focus:outline-hidden data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-blue-500',
+    'focus:not-data-focus:outline-hidden data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-accent-500',
     // Disabled
-    'data-disabled:opacity-50',
+    'data-disabled:opacity-50 data-disabled:pointer-events-none',
+    // Loading keeps the label's width and shows a spinner on top
+    'data-loading:pointer-events-none data-loading:cursor-progress data-loading:text-transparent data-loading:*:data-[slot=icon]:invisible',
     // Icon
     '*:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-5 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) sm:*:data-[slot=icon]:my-1 sm:*:data-[slot=icon]:size-4 forced-colors:[--btn-icon:ButtonText] forced-colors:data-hover:[--btn-icon:ButtonText]',
   ],
@@ -57,10 +65,11 @@ const styles = {
     '[--btn-icon:var(--color-zinc-500)] data-active:[--btn-icon:var(--color-zinc-700)] data-hover:[--btn-icon:var(--color-zinc-700)] dark:[--btn-icon:var(--color-zinc-500)] dark:data-active:[--btn-icon:var(--color-zinc-400)] dark:data-hover:[--btn-icon:var(--color-zinc-400)]',
   ],
   colors: {
+    // The primary action: the accent colour, in both themes.
     'dark/zinc': [
-      'text-white [--btn-bg:var(--color-zinc-900)] [--btn-border:var(--color-zinc-950)]/90 [--btn-hover-overlay:var(--color-white)]/10',
-      'dark:text-zinc-950 dark:[--btn-bg:var(--color-accent-400)] dark:[--btn-hover-overlay:var(--color-white)]/20',
-      '[--btn-icon:var(--color-accent-300)] data-active:[--btn-icon:var(--color-accent-200)] data-hover:[--btn-icon:var(--color-accent-200)] dark:[--btn-icon:var(--color-zinc-900)]',
+      'text-white [--btn-bg:var(--color-accent-600)] [--btn-border:var(--color-accent-700)]/90 [--btn-hover-overlay:var(--color-white)]/10',
+      'dark:[--btn-hover-overlay:var(--color-white)]/10',
+      '[--btn-icon:var(--color-accent-200)] data-active:[--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)]',
     ],
     light: [
       'text-zinc-950 [--btn-bg:white] [--btn-border:var(--color-zinc-950)]/10 [--btn-hover-overlay:var(--color-zinc-950)]/2.5 data-active:[--btn-border:var(--color-zinc-950)]/15 data-hover:[--btn-border:var(--color-zinc-950)]/15',
@@ -88,12 +97,17 @@ const styles = {
       '[--btn-icon:var(--color-zinc-400)] data-active:[--btn-icon:var(--color-zinc-300)] data-hover:[--btn-icon:var(--color-zinc-300)]',
     ],
     indigo: [
-      'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-indigo-500)] [--btn-border:var(--color-indigo-600)]/90',
+      'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-accent-600)] [--btn-border:var(--color-accent-700)]/90',
       '[--btn-icon:var(--color-indigo-300)] data-active:[--btn-icon:var(--color-indigo-200)] data-hover:[--btn-icon:var(--color-indigo-200)]',
     ],
     cyan: [
       'text-cyan-950 [--btn-bg:var(--color-cyan-300)] [--btn-border:var(--color-cyan-400)]/80 [--btn-hover-overlay:var(--color-white)]/25',
       '[--btn-icon:var(--color-cyan-500)]',
+    ],
+    // Destructive: alias of red with a clearer name for new code.
+    destructive: [
+      'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-red-600)] [--btn-border:var(--color-red-700)]/90',
+      '[--btn-icon:var(--color-red-200)] data-active:[--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)]',
     ],
     red: [
       'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-red-600)] [--btn-border:var(--color-red-700)]/90',
@@ -132,7 +146,7 @@ const styles = {
       '[--btn-icon:var(--color-white)]/60 data-active:[--btn-icon:var(--color-white)]/80 data-hover:[--btn-icon:var(--color-white)]/80',
     ],
     blue: [
-      'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-blue-600)] [--btn-border:var(--color-blue-700)]/90',
+      'text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-accent-600)] [--btn-border:var(--color-accent-700)]/90',
       '[--btn-icon:var(--color-blue-400)] data-active:[--btn-icon:var(--color-blue-300)] data-hover:[--btn-icon:var(--color-blue-300)]',
     ],
     violet: [
@@ -162,18 +176,26 @@ type ButtonProps = (
   | { color?: keyof typeof styles.colors; outline?: never; plain?: never }
   | { color?: never; outline: true; plain?: never }
   | { color?: never; outline?: never; plain: true }
-) & { className?: string; children: React.ReactNode } & (
+) & {
+  className?: string
+  children: React.ReactNode
+  /** Control height: sm 32px, md 40px (default), lg 48px. */
+  size?: keyof typeof sizes
+  /** Shows a spinner, keeps the label's width and ignores clicks. */
+  loading?: boolean
+} & (
     | ({ href?: never } & Omit<Headless.ButtonProps, 'as' | 'className'>)
     | ({ href: string } & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'className'>)
   )
 
 export const Button = forwardRef(function Button(
-  { color, outline, plain, className, children, ...props }: ButtonProps,
+  { color, outline, plain, className, children, size = 'md', loading = false, ...props }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>
 ) {
   const classes = clsx(
     className,
     styles.base,
+    sizes[size],
     outline ? styles.outline : plain ? styles.plain : clsx(styles.solid, styles.colors[color ?? 'dark/zinc'])
   )
 
@@ -182,7 +204,29 @@ export const Button = forwardRef(function Button(
       <TouchTarget>{children}</TouchTarget>
     </Link>
   ) : (
-    <Headless.Button {...props} className={clsx(classes, 'cursor-pointer')} ref={ref}>
+    <Headless.Button
+      {...props}
+      disabled={props.disabled || loading}
+      data-loading={loading ? '' : undefined}
+      aria-busy={loading || undefined}
+      className={clsx(classes, 'cursor-pointer')}
+      ref={ref}
+    >
+      {loading ? (
+        <span
+          className={clsx(
+            'absolute inset-0 flex items-center justify-center',
+            outline || plain
+              ? 'text-zinc-500 dark:text-zinc-300'
+              : color === 'light' || color === 'white'
+                ? 'text-zinc-700'
+                : 'text-white'
+          )}
+          aria-hidden="true"
+        >
+          <Spinner />
+        </span>
+      ) : null}
       <TouchTarget>{children}</TouchTarget>
     </Headless.Button>
   )
@@ -200,5 +244,20 @@ export function TouchTarget({ children }: { children: React.ReactNode }) {
       />
       {children}
     </>
+  )
+}
+
+/** A small spinner that inherits the text colour. */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={clsx('size-4 animate-spin motion-reduce:animate-none', className)}
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   )
 }

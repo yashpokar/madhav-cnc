@@ -28,7 +28,7 @@ export function SharePanel({
   contact,
 }: {
   quotationId: string
-  contact: { name: string; phone: string | null; number: string }
+  contact: { name: string; phone: string | null; number: string; company?: string }
   baseUrl: string | null
   share: {
     token: string
@@ -140,7 +140,7 @@ export function SharePanel({
               outline
               href={whatsappLink(
                 contact.phone,
-                `Hello ${contact.name}, here is your quotation ${contact.number} from Madhav CNC. You can view it and approve it here:\n\n${url}`,
+                `Hello ${contact.name}, here is your quotation ${contact.number} from ${contact.company || 'us'}. You can view it and approve it here:\n\n${url}`,
               )}
               target="_blank"
               rel="noopener noreferrer"

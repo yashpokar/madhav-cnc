@@ -73,8 +73,8 @@ const base = [
 
 const colors = {
   'dark/zinc': [
-    '[--checkbox-check:var(--color-white)] [--checkbox-checked-bg:var(--color-zinc-900)] [--checkbox-checked-border:var(--color-zinc-950)]/90',
-    'dark:[--checkbox-checked-bg:var(--color-zinc-600)]',
+    '[--checkbox-check:var(--color-white)] [--checkbox-checked-bg:var(--color-accent-600)] [--checkbox-checked-border:var(--color-accent-700)]/90',
+    'dark:[--checkbox-checked-bg:var(--color-accent-600)]',
   ],
   'dark/white': [
     '[--checkbox-check:var(--color-white)] [--checkbox-checked-bg:var(--color-zinc-900)] [--checkbox-checked-border:var(--color-zinc-950)]/90',

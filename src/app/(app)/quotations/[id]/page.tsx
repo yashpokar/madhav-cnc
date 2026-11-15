@@ -220,6 +220,7 @@ export default async function QuotationDetailPage({
           name: quotation.customer.name,
           phone: quotation.customer.phone,
           number: quotation.number,
+          company: company.companyName,
         }}
         share={quotation.shares[0] ?? null}
         canManage={canUpdate}

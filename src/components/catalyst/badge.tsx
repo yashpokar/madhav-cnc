@@ -36,16 +36,28 @@ const colors = {
 
 type BadgeProps = { color?: keyof typeof colors }
 
-export function Badge({ color = 'zinc', className, ...props }: BadgeProps & React.ComponentPropsWithoutRef<'span'>) {
+/**
+ * A soft tinted pill. Pass `dot` for a status dot in the badge's own colour.
+ */
+export function Badge({
+  color = 'zinc',
+  dot = false,
+  className,
+  children,
+  ...props
+}: BadgeProps & { dot?: boolean } & React.ComponentPropsWithoutRef<'span'>) {
   return (
     <span
       {...props}
       className={clsx(
         className,
-        'inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline',
+        'inline-flex items-center gap-x-1.5 rounded-full px-2 py-0.5 text-sm/5 font-medium sm:text-xs/5 forced-colors:outline',
         colors[color]
       )}
-    />
+    >
+      {dot ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current opacity-80" /> : null}
+      {children}
+    </span>
   )
 }
 
@@ -63,7 +75,7 @@ export const BadgeButton = forwardRef(function BadgeButton(
 ) {
   const classes = clsx(
     className,
-    'group relative inline-flex rounded-md focus:not-data-focus:outline-hidden data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-blue-500'
+    'group relative inline-flex rounded-full focus:not-data-focus:outline-hidden data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-blue-500'
   )
 
   return typeof props.href === 'string' ? (

@@ -1,4 +1,4 @@
-import { ApiError, type ApiErrorCode } from '@/lib/api/errors'
+import { ApiError, ERROR_STATUS, type ApiErrorCode } from '@/lib/api/errors'
 import type { ApiUser } from '@/lib/api/auth'
 import { reply } from '@/lib/api/handler'
 import { etagOf } from '@/lib/api/etag'
@@ -28,7 +28,8 @@ const BAD_REFERENCE_TEXT =
 
 /** Which API error a service refusal is. Services that name a code win; the rest are read from the message. */
 export function refusalCode(result: Refusal): ApiErrorCode {
-  if (result.code) return result.code
+  // A service-specific code that is not an API code (e.g. NEGATIVE_STOCK) is a state conflict.
+  if (result.code) return result.code in ERROR_STATUS ? result.code : 'CONFLICT'
 
   if (NOT_FOUND_TEXT.test(result.error)) return 'NOT_FOUND'
 

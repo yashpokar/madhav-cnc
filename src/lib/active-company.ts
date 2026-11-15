@@ -21,16 +21,19 @@ export type CompanyScope =
  * Loaded lazily by the database layer, so it must not import the database
  * client at the top: session -> auth -> prisma would be a cycle.
  */
-export const getCompanyScope = cache(async (): Promise<CompanyScope> => {
+const resolveScope = cache(async (apiCompany: string | undefined): Promise<CompanyScope> => {
   // Mobile API requests (see src/lib/api/handler.ts) run inside a request
   // context. The company they named in X-Company-Id is used INSTEAD of the
   // cookie, and is still checked against what the person may open. A request
   // that named no company sees no company data: it never falls back to the
   // first one.
-  const api = requestContext.getStore()
-
-  if (api) {
-    if (!api.companyId) return { kind: 'none' }
+  //
+  // `apiCompany` is an ARGUMENT (undefined for the web) because cache() keeps one
+  // answer per request: the first caller outside the API context (the company
+  // check that runs before the handler) must not decide the scope for the
+  // queries that run inside it.
+  if (apiCompany !== undefined) {
+    if (!apiCompany) return { kind: 'none' }
 
     const { getBaseUser } = await import('@/lib/session')
     const person = await getBaseUser()
@@ -40,8 +43,8 @@ export const getCompanyScope = cache(async (): Promise<CompanyScope> => {
     const { prisma } = await import('@/lib/prisma')
     const allowed = await listAccessibleCompanies(person, prisma)
 
-    return allowed.some((c) => c.id === api.companyId)
-      ? { kind: 'company', companyId: api.companyId }
+    return allowed.some((c) => c.id === apiCompany)
+      ? { kind: 'company', companyId: apiCompany }
       : { kind: 'none' }
   }
 
@@ -76,17 +79,23 @@ export const getCompanyScope = cache(async (): Promise<CompanyScope> => {
   return { kind: 'company', companyId: id }
 })
 
+export const getCompanyScope = (): Promise<CompanyScope> => {
+  const api = requestContext.getStore()
+
+  return resolveScope(api ? (api.companyId ?? '') : undefined)
+}
+
 /**
  * The company this request works in: the one chosen in the switcher if the
  * signed-in person may open it, otherwise the first they may open. Null when
  * nobody is signed in (public quotation links), outside a request (seed
  * scripts), or the person has no company.
  */
-export const getActiveCompanyId = cache(async (): Promise<string | null> => {
+export async function getActiveCompanyId(): Promise<string | null> {
   const scope = await getCompanyScope()
 
   return scope.kind === 'company' ? scope.companyId : null
-})
+}
 
 type Who = { id: string; isSuperAdmin: boolean }
 type Db = {

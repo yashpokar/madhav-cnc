@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { ItemType } from '@/generated/prisma/enums'
 
 type DecimalLike = { toNumber: () => number }
@@ -11,15 +12,21 @@ export async function listItems({
   search,
   type,
   includeInactive = false,
+  page,
 }: {
   search?: string
   type?: ItemType
   includeInactive?: boolean
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const items = await prisma.item.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      // Keyset paging orders by (name, id) and is for active items only.
+      AND: keysetClause(page, 'name', 'asc', 'string'),
       ...(type ? { type } : {}),
       ...(includeInactive ? {} : { isActive: true }),
       ...(term
@@ -35,7 +42,9 @@ export async function listItems({
           }
         : {}),
     },
-    orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    orderBy: page
+      ? [{ name: 'asc' }, { id: 'asc' }]
+      : [{ isActive: 'desc' }, { name: 'asc' }],
     select: {
       id: true,
       code: true,
@@ -50,6 +59,7 @@ export async function listItems({
       dimensionUnit: true,
       thickness: true,
       isActive: true,
+      updatedAt: true,
       material: { select: { id: true, name: true } },
     },
   })

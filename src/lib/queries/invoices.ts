@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { InvoiceStatus } from '@/generated/prisma/enums'
 
 type DecimalLike = { toNumber: () => number }
@@ -30,14 +31,19 @@ export function countInvoices() {
 export async function listInvoices({
   search,
   status,
+  page,
 }: {
   search?: string
   status?: InvoiceStatus
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const invoices = await prisma.invoice.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'createdAt', 'desc', 'date'),
       ...(status ? { status } : {}),
       ...(term
         ? {
@@ -55,7 +61,7 @@ export async function listInvoices({
           }
         : {}),
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       number: true,
@@ -65,6 +71,8 @@ export async function listInvoices({
       total: true,
       advanceAdjusted: true,
       isInterState: true,
+      updatedAt: true,
+      createdAt: true,
       customer: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },
       paymentAllocations: { select: { amount: true } },

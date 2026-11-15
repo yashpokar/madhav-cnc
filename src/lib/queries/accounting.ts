@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { NoteKind, NoteStatus } from '@/generated/prisma/enums'
 
 type DecimalLike = { toNumber: () => number }
@@ -26,16 +27,21 @@ export async function listExpenses({
   categoryId,
   from,
   to,
+  page,
 }: {
   search?: string
   categoryId?: string
   from?: Date
   to?: Date
+  /** Keyset page (the mobile API); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   const expenses = await prisma.expense.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'expenseDate', 'desc', 'date'),
       ...(categoryId ? { categoryId } : {}),
       ...(from || to
         ? {
@@ -57,7 +63,9 @@ export async function listExpenses({
           }
         : {}),
     },
-    orderBy: [{ expenseDate: 'desc' }, { createdAt: 'desc' }],
+    orderBy: page
+      ? [{ expenseDate: 'desc' }, { id: 'desc' }]
+      : [{ expenseDate: 'desc' }, { createdAt: 'desc' }],
     select: {
       id: true,
       number: true,
@@ -73,6 +81,7 @@ export async function listExpenses({
       reference: true,
       paymentDetails: true,
       billNumber: true,
+      updatedAt: true,
       category: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },
     },

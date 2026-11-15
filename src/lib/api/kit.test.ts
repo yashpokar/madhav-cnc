@@ -324,7 +324,7 @@ describe('openapi', () => {
     const paths = Object.keys(buildOpenApiDocument().paths as object)
 
     for (const file of files) {
-      const path = `/${file.slice(root.length + 1, -'/route.ts'.length)}`
+      const path = `/${file.slice(root.length + 1, -'/route.ts'.length)}`.replace(/\[(\w+)\]/g, '{$1}')
 
       expect(paths, `${file} has no OpenAPI entry`).toContain(path)
     }

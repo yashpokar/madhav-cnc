@@ -135,7 +135,11 @@ async function activityFor(span: Span, scope: { money: boolean; expenses: boolea
 
   const [receipts, spent, billed, orders, quotes] = await Promise.all([
     scope.money
-      ? prisma.payment.aggregate({ where: { paidOn: between }, _sum: { amount: true } })
+      ? prisma.payment.aggregate({
+          where: { paidOn: between },
+          _sum: { amount: true },
+          _count: { _all: true },
+        })
       : null,
     scope.expenses
       ? prisma.expense.aggregate({ where: { expenseDate: between }, _sum: { total: true } })
@@ -165,6 +169,7 @@ async function activityFor(span: Span, scope: { money: boolean; expenses: boolea
 
   return {
     received: sum(receipts?._sum.amount),
+    receivedCount: receipts?._count._all ?? 0,
     spent: sum(spent?._sum.total),
     billed: sum(billed?._sum.total),
     billedCount: billed?._count._all ?? 0,

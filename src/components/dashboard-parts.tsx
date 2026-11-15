@@ -131,14 +131,18 @@ export function PeriodTile({
   href?: string
   label: string
   value: string
-  current: number
-  previous: number
+  current?: number
+  /** Leave out for a figure that is a position today, not a period total. */
+  previous?: number
   goodWhenUp?: boolean
-  versus: string
+  versus?: string
   note?: string
   tone?: 'default' | 'good' | 'bad'
 }) {
-  const change = delta(current, previous, goodWhenUp, versus)
+  const change =
+    current === undefined || previous === undefined || !versus
+      ? null
+      : delta(current, previous, goodWhenUp, versus)
   const accent =
     tone === 'good'
       ? 'text-lime-700 dark:text-lime-400'
@@ -146,9 +150,9 @@ export function PeriodTile({
         ? 'text-red-600 dark:text-red-400'
         : 'text-zinc-950 dark:text-white'
   const changeColor =
-    change.tone === 'good'
+    change?.tone === 'good'
       ? 'text-lime-700 dark:text-lime-400'
-      : change.tone === 'bad'
+      : change?.tone === 'bad'
         ? 'text-red-600 dark:text-red-400'
         : 'text-zinc-500 dark:text-zinc-400'
   const body = (
@@ -157,7 +161,7 @@ export function PeriodTile({
       <div className={`mt-1 text-[1.65rem]/8 font-semibold tracking-tight tabular-nums ${accent}`}>
         {value}
       </div>
-      <div className={`mt-0.5 text-xs/5 ${changeColor}`}>{change.text}</div>
+      {change ? <div className={`mt-0.5 text-xs/5 ${changeColor}`}>{change.text}</div> : null}
       {note ? <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{note}</div> : null}
     </>
   )

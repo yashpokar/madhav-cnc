@@ -1013,6 +1013,9 @@ model Invoice {
 
   advanceAdjusted Decimal @default(0) @map("advance_adjusted") @db.Decimal(14, 2)
 
+  /// Unguessable token behind the customer's read-only invoice link (/i/<token>). Null until first shared.
+  shareToken String? @unique @map("share_token")
+
   notes String?
   terms String?
 

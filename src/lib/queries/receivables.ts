@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { customerAdjustmentSplit } from '@/lib/adjustments-math'
 import {
   AGING_BUCKETS,
   bucketFor,
@@ -32,8 +33,15 @@ export async function getReceivables(
       }
     : undefined
 
-  const [invoices, notes, uninvoiced, recentPayments, allReceipts, openingCustomers] =
-    await Promise.all([
+  const [
+    invoices,
+    notes,
+    uninvoiced,
+    recentPayments,
+    allReceipts,
+    openingCustomers,
+    customerAdjustments,
+  ] = await Promise.all([
     prisma.invoice.findMany({
       where: { status: 'ISSUED' },
       orderBy: { invoiceDate: 'asc' },
@@ -116,6 +124,15 @@ export async function getReceivables(
         openingAsOf: true,
       },
     }),
+    prisma.balanceAdjustment.findMany({
+      where: { kind: 'CUSTOMER', customerId: { not: null } },
+      select: {
+        customerId: true,
+        amount: true,
+        adjustedOn: true,
+        customer: { select: { id: true, name: true, phone: true } },
+      },
+    }),
   ])
 
   // What receipts have already settled of each customer's opening balance.
@@ -158,6 +175,49 @@ export async function getReceivables(
     })
     .filter((row) => row.due > 0)
 
+  // Balance adjustments, netted per customer: a net increase is one more
+  // amount owed (aged from the oldest increase, like the opening balance); a
+  // net decrease is a credit, added to the credit notes below. Each adjustment
+  // is counted in exactly one of those two places.
+  const adjustmentsByCustomer = new Map<
+    string,
+    { customer: { id: string; name: string; phone: string }; rows: { amount: number; adjustedOn: Date }[] }
+  >()
+
+  for (const row of customerAdjustments) {
+    if (!row.customerId || !row.customer) continue
+
+    const entry = adjustmentsByCustomer.get(row.customerId) ?? {
+      customer: row.customer,
+      rows: [],
+    }
+
+    entry.rows.push({ amount: num(row.amount), adjustedOn: row.adjustedOn })
+    adjustmentsByCustomer.set(row.customerId, entry)
+  }
+
+  const adjustmentDueRows: typeof openingRows = []
+  const adjustmentCreditByCustomer = new Map<string, number>()
+
+  for (const [customerId, entry] of adjustmentsByCustomer) {
+    const split = customerAdjustmentSplit(entry.rows)
+
+    if (split.debit > 0) {
+      const overdueBy = split.agingFrom ? daysOverdue(split.agingFrom, today) : 0
+
+      adjustmentDueRows.push({
+        customer: entry.customer,
+        asOf: split.agingFrom,
+        openingDue: split.debit,
+        due: split.debit,
+        overdueBy,
+        bucket: bucketFor(overdueBy),
+      })
+    }
+
+    if (split.credit > 0) adjustmentCreditByCustomer.set(customerId, split.credit)
+  }
+
   const open = invoices
     .map((invoice) => {
       const paid = invoice.paymentAllocations.reduce(
@@ -193,19 +253,21 @@ export async function getReceivables(
     })
     .filter((invoice) => invoice.due > 0)
 
-  // Open invoices plus what is left of the opening balances.
+  // Open invoices plus what is left of the opening balances plus net
+  // adjustments that increase what is owed.
   const outstanding = round2(
     open.reduce((sum, row) => sum + row.due, 0) +
-      openingRows.reduce((sum, row) => sum + row.due, 0),
+      openingRows.reduce((sum, row) => sum + row.due, 0) +
+      adjustmentDueRows.reduce((sum, row) => sum + row.due, 0),
   )
   const overdue = round2(
-    [...open, ...openingRows]
+    [...open, ...openingRows, ...adjustmentDueRows]
       .filter((row) => row.overdueBy > 0)
       .reduce((sum, row) => sum + row.due, 0),
   )
 
   const aging = AGING_BUCKETS.map((bucket) => {
-    const rows = [...open, ...openingRows].filter(
+    const rows = [...open, ...openingRows, ...adjustmentDueRows].filter(
       (row) => row.bucket === bucket.key,
     )
 
@@ -283,7 +345,7 @@ export async function getReceivables(
     byCustomerMap.set(row.customer.id, existing)
   }
 
-  for (const row of openingRows) {
+  for (const row of [...openingRows, ...adjustmentDueRows]) {
     const existing = byCustomerMap.get(row.customer.id) ?? {
       id: row.customer.id,
       name: row.customer.name,
@@ -303,12 +365,19 @@ export async function getReceivables(
     byCustomerMap.set(row.customer.id, existing)
   }
 
+  for (const [customerId, credit] of adjustmentCreditByCustomer) {
+    creditByCustomer.set(
+      customerId,
+      round2((creditByCustomer.get(customerId) ?? 0) + credit),
+    )
+  }
+
   for (const customerId of creditByCustomer.keys()) {
     if (byCustomerMap.has(customerId)) continue
 
-    const customer = notes.find(
-      (entry) => entry.customerId === customerId,
-    )?.customer
+    const customer =
+      notes.find((entry) => entry.customerId === customerId)?.customer ??
+      adjustmentsByCustomer.get(customerId)?.customer
 
     if (!customer) continue
 
@@ -409,6 +478,8 @@ export async function getReceivables(
     aging,
     invoices: [...open].sort((a, b) => b.overdueBy - a.overdueBy),
     openingBalances: openingRows,
+    /** Customers whose net adjustments increase what they owe (in outstanding). */
+    adjustmentBalances: adjustmentDueRows,
     byCustomer,
     toBill,
     payments: recentPayments.map((payment) => {
@@ -449,7 +520,7 @@ export type Receivables = Awaited<ReturnType<typeof getReceivables>>
  * what was written off as not recoverable ("defaulted").
  */
 export async function getCustomerLedger(today = new Date()) {
-  const [invoices, payments, openingCustomers, openingApplied] = await Promise.all([
+  const [invoices, payments, openingCustomers, openingApplied, adjustmentRows] = await Promise.all([
     prisma.invoice.findMany({
       where: { status: 'ISSUED' },
       select: {
@@ -481,6 +552,15 @@ export async function getCustomerLedger(today = new Date()) {
       where: { openingApplied: { gt: 0 } },
       _sum: { openingApplied: true },
     }),
+    prisma.balanceAdjustment.findMany({
+      where: { kind: 'CUSTOMER', customerId: { not: null } },
+      select: {
+        customerId: true,
+        amount: true,
+        adjustedOn: true,
+        customer: { select: { id: true, name: true, phone: true } },
+      },
+    }),
   ])
 
   type Row = {
@@ -495,6 +575,8 @@ export async function getCustomerLedger(today = new Date()) {
     oldestDays: number
     /** Part of `due` that is the balance carried from before the system. */
     opening: number
+    /** Part of `due` that is a net balance adjustment that increases it. */
+    adjustment: number
   }
 
   const rows = new Map<string, Row>()
@@ -511,6 +593,7 @@ export async function getCustomerLedger(today = new Date()) {
       defaulted: 0,
       oldestDays: 0,
       opening: 0,
+      adjustment: 0,
     }
 
     const paid = invoice.paymentAllocations.reduce(
@@ -566,6 +649,7 @@ export async function getCustomerLedger(today = new Date()) {
         defaulted: 0,
         oldestDays: 0,
         opening: 0,
+        adjustment: 0,
       })
     }
   }
@@ -597,6 +681,7 @@ export async function getCustomerLedger(today = new Date()) {
       defaulted: 0,
       oldestDays: 0,
       opening: 0,
+      adjustment: 0,
     }
     const late = customer.openingAsOf
       ? daysOverdue(customer.openingAsOf, today)
@@ -607,6 +692,50 @@ export async function getCustomerLedger(today = new Date()) {
 
     if (late > 0) {
       row.overdue = round2(row.overdue + left)
+      row.oldestDays = Math.max(row.oldestDays, late)
+    }
+
+    rows.set(row.id, row)
+  }
+
+  // Net adjustments that increase what a customer owes, aged from the oldest.
+  const adjustedBy = new Map<
+    string,
+    { customer: { id: string; name: string; phone: string }; rows: { amount: number; adjustedOn: Date }[] }
+  >()
+
+  for (const row of adjustmentRows) {
+    if (!row.customerId || !row.customer) continue
+
+    const entry = adjustedBy.get(row.customerId) ?? { customer: row.customer, rows: [] }
+
+    entry.rows.push({ amount: num(row.amount), adjustedOn: row.adjustedOn })
+    adjustedBy.set(row.customerId, entry)
+  }
+
+  for (const [customerId, entry] of adjustedBy) {
+    const split = customerAdjustmentSplit(entry.rows)
+
+    if (split.debit <= 0) continue
+
+    const row = rows.get(customerId) ?? {
+      ...entry.customer,
+      billed: 0,
+      received: 0,
+      due: 0,
+      overdue: 0,
+      defaulted: 0,
+      oldestDays: 0,
+      opening: 0,
+      adjustment: 0,
+    }
+    const late = split.agingFrom ? daysOverdue(split.agingFrom, today) : 0
+
+    row.adjustment = split.debit
+    row.due = round2(row.due + split.debit)
+
+    if (late > 0) {
+      row.overdue = round2(row.overdue + split.debit)
       row.oldestDays = Math.max(row.oldestDays, late)
     }
 

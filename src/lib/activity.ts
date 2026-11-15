@@ -22,6 +22,7 @@ export type ActivityEntity =
   | 'goods-receipt'
   | 'vendor-payment'
   | 'stock'
+  | 'adjustment'
 
 type Actor = { id: string; name: string } | null
 

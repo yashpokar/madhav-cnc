@@ -1,4 +1,5 @@
 import type {
+  BalanceAdjustmentReason,
   DimensionUnit,
   DispatchStatus,
   InvoiceStatus,
@@ -210,6 +211,16 @@ export const WRITE_OFF_REASON_LABELS: Record<WriteOffReason, string> = {
   BUSINESS_CLOSED: 'Customer closed or insolvent',
   SETTLED_FOR_LESS: 'Settled for a lower amount',
   LEGAL_ACTION: 'Under legal action',
+  OTHER: 'Other',
+}
+
+export const ADJUSTMENT_REASON_LABELS: Record<BalanceAdjustmentReason, string> = {
+  FORGOTTEN_ENTRY: 'Forgotten entry',
+  BANK_CHARGES: 'Bank charges',
+  INTEREST: 'Interest',
+  CASH_SHORT_EXCESS: 'Cash short or excess',
+  WRITE_OFF: 'Write-off',
+  CORRECTION: 'Correction',
   OTHER: 'Other',
 }
 

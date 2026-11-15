@@ -287,3 +287,30 @@ describe('writtenData', () => {
     ])
   })
 })
+
+describe('balance adjustments', () => {
+  it('are scoped to a company, stamped on create and filtered on read', () => {
+    expect(SCOPED.has('BalanceAdjustment')).toBe(true)
+    expect(ownedBy('BalanceAdjustment', 'c1')).toEqual({ companyId: 'c1' })
+    expect(scopeWhere('BalanceAdjustment', 'findMany', { kind: 'CUSTOMER' }, 'c1')).toEqual({
+      kind: 'CUSTOMER',
+      companyId: 'c1',
+    })
+    expect(stampCreate('create', { data: { number: 'ADJ-0001' } }, 'c1').data).toEqual({
+      companyId: 'c1',
+      number: 'ADJ-0001',
+    })
+  })
+
+  it('must point at a payment mode and a customer of the same company', () => {
+    expect(foreignKeys('BalanceAdjustment')).toEqual({
+      channelId: 'PaymentChannel',
+      customerId: 'Customer',
+    })
+    expect(
+      groupRefs(collectRefs('BalanceAdjustment', { channelId: 'ch1', customerId: null })).get(
+        'PaymentChannel',
+      ),
+    ).toEqual(['ch1'])
+  })
+})

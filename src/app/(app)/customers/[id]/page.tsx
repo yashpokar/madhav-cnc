@@ -9,6 +9,8 @@ import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { updateCustomer } from '@/lib/actions/customers'
 import { getCustomer } from '@/lib/queries/customers'
+import { customerAccount } from '@/lib/queries/payments'
+import { AdjustBalanceButton } from '@/components/adjust-balance-dialog'
 import { listPartnerOptions } from '@/lib/queries/partners'
 import { ConfirmButton } from '@/components/confirm-button'
 import { DangerZone } from '@/components/danger-zone'
@@ -42,6 +44,8 @@ export default async function EditCustomerPage({
   }
 
   const action = updateCustomer.bind(null, customer.id)
+  const canAdjust = can(user.role, 'settings:update')
+  const account = canAdjust ? await customerAccount(customer.id) : null
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
@@ -56,6 +60,17 @@ export default async function EditCustomerPage({
             <Button outline href={`/customers/${customer.id}/statement`}>
               Statement
             </Button>
+          ) : null}
+          {canAdjust ? (
+            <>
+              <AdjustBalanceButton
+                plain={false}
+                target={{ kind: 'CUSTOMER', id: customer.id, name: customer.name, current: account?.net ?? 0 }}
+              />
+              <Button outline href={`/adjustments?q=${encodeURIComponent(customer.name)}`}>
+                Adjustments
+              </Button>
+            </>
           ) : null}
           {can(user.role, 'quotation:read') ? (
             <Button outline href={`/quotations?q=${encodeURIComponent(customer.name)}`}>

@@ -16,6 +16,7 @@ const KINDS = {
   purchaseBill: 'PB',
   receipt: 'GRN',
   vendorPayment: 'VPAY',
+  adjustment: 'ADJ',
   CREDIT: 'CN',
   DEBIT: 'DN',
   ARCHITECT: 'ARC',
@@ -60,5 +61,6 @@ export const nextPurchaseOrderNumber = () => next('purchaseOrder')
 export const nextPurchaseBillNumber = () => next('purchaseBill')
 export const nextReceiptNumber = () => next('receipt')
 export const nextVendorPaymentNumber = () => next('vendorPayment')
+export const nextAdjustmentNumber = () => next('adjustment')
 export const nextNoteNumber = (kind: NoteKind) => next(kind)
 export const nextPartnerCode = (type: PartnerType) => next(type)

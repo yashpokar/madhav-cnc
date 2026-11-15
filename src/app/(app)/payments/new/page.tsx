@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { openInvoiceBalances } from '@/lib/queries/payments'
@@ -23,6 +24,8 @@ export default async function NewReceiptPage({
     preset ? openInvoiceBalances(preset) : Promise.resolve([]),
   ])
 
+  const modes = await listPaymentModeOptions()
+
   return (
     <div className="grid grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
@@ -34,6 +37,7 @@ export default async function NewReceiptPage({
       </div>
 
       <ReceiptForm
+        modes={modes}
         customers={customers.map((customer) => ({
           id: customer.id,
           name: customer.name,

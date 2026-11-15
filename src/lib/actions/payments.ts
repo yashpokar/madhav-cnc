@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { resolvePaymentMode } from '@/lib/payment-modes'
 import { logActivity } from '@/lib/activity'
 import { requireCapability } from '@/lib/session'
 import { nextPaymentNumber } from '@/lib/codes'
@@ -26,7 +27,7 @@ function parse(formData: FormData) {
   return receiptInputSchema.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount') || 0,
-    mode: formData.get('mode') ?? undefined,
+    channelId: formData.get('channelId'),
     reference: formData.get('reference'),
     paidOn: formData.get('paidOn'),
     notes: formData.get('notes'),
@@ -117,6 +118,17 @@ export async function createReceipt(
     }
   }
 
+  const method = await resolvePaymentMode(parsed.data.channelId)
+
+  if (!method) {
+    return {
+      status: 'error',
+      message: 'Choose a payment mode',
+      fieldErrors: { channelId: 'Choose a payment mode' },
+      values: rawValues(formData),
+    }
+  }
+
   const number = await nextPaymentNumber()
 
   const payment = await prisma.payment.create({
@@ -124,7 +136,9 @@ export async function createReceipt(
       number,
       customerId: parsed.data.customerId,
       amount: parsed.data.amount,
-      mode: parsed.data.mode,
+      mode: method.mode,
+      channelId: method.channelId,
+      modeName: method.modeName,
       reference: parsed.data.reference,
       paidOn: parsed.data.paidOn,
       notes: parsed.data.notes,

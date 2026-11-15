@@ -1,4 +1,5 @@
 import { date, money } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
@@ -17,7 +18,6 @@ import { ConfirmButton } from '@/components/confirm-button'
 import { DangerZone } from '@/components/danger-zone'
 import { FormBanner } from '@/components/form-banner'
 import { deleteVendor, updateVendor } from '@/lib/actions/vendors'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { can } from '@/lib/permissions'
 import { getVendor } from '@/lib/queries/vendors'
 import { requireCapability } from '@/lib/session'
@@ -90,7 +90,7 @@ export default async function VendorPage({
                       {expense.description ?? '—'}
                     </TableCell>
                     <TableCell>
-                      {expense.channel?.name ?? PAYMENT_MODE_LABELS[expense.paymentMode]}
+                      {modeText(expense)}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {money.format(expense.total)}

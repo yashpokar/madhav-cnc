@@ -10,6 +10,7 @@ import {
 } from '@/lib/queries/share'
 import { DIMENSION_UNIT_SHORT, UNIT_SHORT } from '@/lib/labels'
 import { PaymentTerms } from '@/components/payment-terms'
+import { listDocumentPaymentModes } from '@/lib/queries/payment-modes'
 import { CommentBox, RespondPanel } from './respond'
 import { PrintButton } from './print-button'
 
@@ -48,6 +49,7 @@ export default async function SharedQuotationPage({
     getSharedQuotation(share.quotationId),
     getPublicCompany(share.quotationId),
   ])
+  const documentModes = await listDocumentPaymentModes(company?.id)
 
   if (!quotation) {
     notFound()
@@ -341,8 +343,8 @@ export default async function SharedQuotationPage({
         <PaymentTerms
           total={quotation.total}
           advancePercent={quotation.advancePercent}
-          company={company}
-          qrSrc={company?.upiQrStoredName ? `/q/${token}/qr` : null}
+          modes={documentModes}
+          qrSrc={(modeId) => `/q/${token}/qr/${modeId}`}
         />
       </div>
 

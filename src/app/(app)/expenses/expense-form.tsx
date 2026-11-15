@@ -1,5 +1,7 @@
 'use client'
 
+import { PaymentModeSelect } from '@/components/payment-mode-select'
+import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -35,7 +37,7 @@ export type ExpenseFormValues = {
   isInputCredit: boolean
   vendorGstin: string | null
   billNumber: string | null
-  paymentMode: PaymentMode
+  channelId: string | null
   reference: string | null
   notes: string | null
   orderId: string | null
@@ -47,6 +49,7 @@ export function ExpenseForm({
   categories: initialCategories,
   orders,
   vendors,
+  modes,
   submitLabel,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
@@ -54,6 +57,7 @@ export function ExpenseForm({
   categories: { id: string; name: string }[]
   orders: { id: string; number: string; customerName: string }[]
   vendors: VendorOption[]
+  modes: PaymentModeOption[]
   submitLabel: string
 }) {
   const router = useRouter()
@@ -258,16 +262,11 @@ export function ExpenseForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <Field>
               <Label>Mode</Label>
-              <Select
-                name="paymentMode"
-                defaultValue={keep('paymentMode', values.paymentMode)}
-              >
-                {Object.values(PaymentMode).map((mode) => (
-                  <option key={mode} value={mode}>
-                    {PAYMENT_MODE_LABELS[mode]}
-                  </option>
-                ))}
-              </Select>
+              <PaymentModeSelect
+                name="channelId"
+                modes={modes}
+                defaultValue={keep('channelId', values.channelId)}
+              />
             </Field>
             <Field>
               <Label>Reference</Label>

@@ -1,4 +1,5 @@
 import { date as dateFormat, moneyWhole as currency } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
 import type { Metadata } from 'next'
 import { FilterSelect } from '@/components/filter-select'
 import { Pagination } from '@/components/pagination'
@@ -101,7 +102,7 @@ export default async function ExpensesPage({
     date: (row) => row.expenseDate,
     payee: (row) => row.payeeName,
     category: (row) => row.category?.name,
-    mode: (row) => PAYMENT_MODE_LABELS[row.paymentMode],
+    mode: (row) => modeText(row),
     tax: (row) => row.taxAmount,
     total: (row) => row.total,
   })
@@ -244,7 +245,7 @@ export default async function ExpensesPage({
                   )}
                 </TableCell>
                 <TableCell className="text-zinc-500 dark:text-zinc-400">
-                  {PAYMENT_MODE_LABELS[expense.paymentMode]}
+                  {modeText(expense)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {currency.format(expense.taxAmount)}

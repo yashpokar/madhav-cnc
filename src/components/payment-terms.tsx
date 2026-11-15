@@ -1,30 +1,25 @@
 import { money as currency } from '@/lib/format'
 import { paymentSplit } from '@/lib/pricing'
+import type { DocumentPaymentMode } from '@/lib/queries/payment-modes'
 
-export type PaymentCompany = {
-  bankAccountName: string | null
-  bankName: string | null
-  bankBranch: string | null
-  accountNumber: string | null
-  ifscCode: string | null
-  upiId: string | null
-} | null
-
+/**
+ * The advance and balance, and the ways to pay: every payment mode the company
+ * has chosen to show, each with whatever details the owner added (bank, account
+ * number, IFSC, UPI ID, anything) and its QR code if it has one.
+ */
 export function PaymentTerms({
   total,
   advancePercent,
-  company,
+  modes,
   qrSrc,
 }: {
   total: number
   advancePercent: number
-  company: PaymentCompany
-  qrSrc?: string | null
+  modes: DocumentPaymentMode[]
+  /** Where a mode's QR code is served from; differs for public pages. */
+  qrSrc: (modeId: string) => string
 }) {
   const { advance, balance } = paymentSplit(total, advancePercent)
-
-  const hasBank = Boolean(company?.accountNumber && company?.ifscCode)
-  const hasUpi = Boolean(company?.upiId) || Boolean(qrSrc)
 
   return (
     <section className="grid grid-cols-1 gap-5">
@@ -58,53 +53,38 @@ export function PaymentTerms({
         </div>
       </div>
 
-      {hasBank || hasUpi ? (
-        <div className="grid grid-cols-1 gap-6 rounded-lg p-4 ring-1 ring-zinc-950/10 sm:grid-cols-2 dark:ring-white/10">
-          {hasBank ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm/6">
-              <dt className="text-zinc-500 dark:text-zinc-400">Account</dt>
-              <dd className="font-medium text-zinc-950 dark:text-white">
-                {company?.bankAccountName ?? '—'}
-              </dd>
-              <dt className="text-zinc-500 dark:text-zinc-400">Bank</dt>
-              <dd>
-                {[company?.bankName, company?.bankBranch]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </dd>
-              <dt className="text-zinc-500 dark:text-zinc-400">A/C no.</dt>
-              <dd className="font-mono tabular-nums">{company?.accountNumber}</dd>
-              <dt className="text-zinc-500 dark:text-zinc-400">IFSC</dt>
-              <dd className="font-mono">{company?.ifscCode}</dd>
-            </dl>
-          ) : null}
-
-          {hasUpi ? (
-            <div className="flex items-start gap-4">
-              {qrSrc ? (
-                <img
-                  src={qrSrc}
-                  alt="UPI QR code"
-                  className="size-28 shrink-0 rounded-md bg-white object-contain p-1 ring-1 ring-zinc-950/10"
-                />
-              ) : null}
-              <div className="text-sm/6">
-                <div className="text-zinc-500 dark:text-zinc-400">
-                  Pay by UPI
-                </div>
-                {company?.upiId ? (
-                  <div className="font-mono font-medium text-zinc-950 dark:text-white">
-                    {company.upiId}
-                  </div>
-                ) : null}
-                {qrSrc ? (
-                  <div className="mt-1 text-zinc-600 dark:text-zinc-400">
-                    Scan the code with any UPI app
-                  </div>
+      {modes.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {modes.map((mode) => (
+            <div
+              key={mode.id}
+              className="flex items-start justify-between gap-4 break-inside-avoid rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10"
+            >
+              <div className="min-w-0 text-sm/6">
+                <div className="font-medium text-zinc-950 dark:text-white">{mode.name}</div>
+                {mode.details.length > 0 ? (
+                  <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+                    {mode.details.map((detail, index) => (
+                      <div key={index} className="contents">
+                        <dt className="text-zinc-500 dark:text-zinc-400">{detail.label}</dt>
+                        <dd className="min-w-0 break-words font-medium text-zinc-950 dark:text-white">
+                          {detail.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 ) : null}
               </div>
+              {mode.hasQr ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrSrc(mode.id)}
+                  alt={`${mode.name} QR code`}
+                  className="size-24 shrink-0 rounded-md bg-white object-contain p-1 ring-1 ring-zinc-950/10"
+                />
+              ) : null}
             </div>
-          ) : null}
+          ))}
         </div>
       ) : null}
     </section>

@@ -1,4 +1,6 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
+import { listDocumentPaymentModes, listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -31,7 +33,6 @@ import { requireCapability } from '@/lib/session'
 import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
-  PAYMENT_MODE_LABELS,
   PAYMENT_STATE_COLORS,
   PAYMENT_STATE_LABELS,
   WRITE_OFF_REASON_LABELS,
@@ -56,9 +57,11 @@ export default async function InvoiceDetailPage({
   const query = await searchParams
   const justCreated = query.created === '1'
 
-  const [invoice, company] = await Promise.all([
+  const [invoice, company, modes, documentModes] = await Promise.all([
     getInvoice(id),
     getCompanySetting(),
+    listPaymentModeOptions(),
+    listDocumentPaymentModes(),
   ])
 
   if (!invoice) {
@@ -119,6 +122,7 @@ export default async function InvoiceDetailPage({
 
       <div className="print:hidden">
         <InvoiceActions
+          modes={modes}
           id={invoice.id}
           status={invoice.status}
           due={invoice.due}
@@ -386,7 +390,7 @@ export default async function InvoiceDetailPage({
                       <TableCell className="text-zinc-500 dark:text-zinc-400">
                         {dateFormat.format(payment.paidOn)}
                       </TableCell>
-                      <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
+                      <TableCell>{modeText(payment)}</TableCell>
                       <TableCell className="text-zinc-500 dark:text-zinc-400">
                         {payment.reference ?? '—'}
                       </TableCell>
@@ -467,8 +471,8 @@ export default async function InvoiceDetailPage({
           <PaymentTerms
             total={invoice.due}
             advancePercent={100}
-            company={company}
-            qrSrc={company.upiQrStoredName ? '/api/company/qr' : null}
+            modes={documentModes}
+            qrSrc={(modeId) => `/api/payment-modes/${modeId}/qr`}
           />
         </>
       ) : null}

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { resolvePaymentMode } from '@/lib/payment-modes'
 import { requireCapability } from '@/lib/session'
 import { nextOrderNumber } from '@/lib/codes'
 import { applySizeRule, documentTotals, lineTotals } from '@/lib/pricing'
@@ -40,10 +41,14 @@ async function syncAdvancePayment(
     return
   }
 
+  const method = await resolvePaymentMode(data.advanceChannelId)
+
   const fields = {
     customerId: data.customerId,
     amount: data.advanceAmount,
-    mode: data.advanceMode,
+    ...(method
+      ? { mode: method.mode, channelId: method.channelId, modeName: method.modeName }
+      : {}),
     paidOn: data.orderDate,
     notes: `Advance for order ${order.number}`,
   }
@@ -88,7 +93,7 @@ function parse(formData: FormData) {
     discountType: formData.get('discountType') ?? undefined,
     discountValue: formData.get('discountValue') || 0,
     advanceAmount: formData.get('advanceAmount') || 0,
-    advanceMode: formData.get('advanceMode') ?? undefined,
+    advanceChannelId: formData.get('advanceChannelId') ?? undefined,
     transportCharge: formData.get('transportCharge') || 0,
     transportTaxRatePercent: formData.get('transportTaxRatePercent') || 0,
     notes: formData.get('notes'),
@@ -105,6 +110,10 @@ async function assertReferences(data: OrderData) {
 
   if (!customer) {
     return 'Selected customer no longer exists'
+  }
+
+  if (data.advanceAmount > 0 && !(await resolvePaymentMode(data.advanceChannelId))) {
+    return 'Choose how the advance was paid'
   }
 
   const partnerIds = [data.architectId, data.carpenterId].filter(

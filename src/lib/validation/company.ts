@@ -51,43 +51,6 @@ export const companySettingSchema = z.object({
     ])
     .optional()
     .transform((value) => (value ? value : null)),
-  bankAccountName: optionalText(150),
-  bankName: optionalText(150),
-  bankBranch: optionalText(150),
-  accountNumber: z
-    .union([
-      z.literal(''),
-      z.null(),
-      z
-        .string()
-        .trim()
-        .regex(/^\d{6,20}$/, 'Account number must be 6 to 20 digits'),
-    ])
-    .optional()
-    .transform((value) => (value ? value : null)),
-  ifscCode: z
-    .union([
-      z.literal(''),
-      z.null(),
-      z
-        .string()
-        .trim()
-        .toUpperCase()
-        .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid IFSC code'),
-    ])
-    .optional()
-    .transform((value) => (value ? value : null)),
-  upiId: z
-    .union([
-      z.literal(''),
-      z.null(),
-      z
-        .string()
-        .trim()
-        .regex(/^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/, 'Enter a valid UPI ID, like name@bank'),
-    ])
-    .optional()
-    .transform((value) => (value ? value : null)),
   defaultAdvancePercent: z.coerce
     .number()
     .min(0, 'Advance cannot be negative')

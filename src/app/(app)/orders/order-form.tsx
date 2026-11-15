@@ -1,5 +1,7 @@
 'use client'
 
+import { PaymentModeSelect } from '@/components/payment-mode-select'
+import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { useActionState, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
@@ -40,7 +42,7 @@ export type OrderFormValues = {
   dueDate: string | null
   customerPoNumber: string | null
   advanceAmount: number
-  advanceMode: PaymentMode
+  advanceChannelId: string | null
   transportCharge: number
   transportTaxRatePercent: number
   siteAddress: string | null
@@ -72,6 +74,7 @@ export function OrderForm({
   items,
   architects,
   carpenters,
+  modes,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>
   values: OrderFormValues
@@ -79,6 +82,7 @@ export function OrderForm({
   customers: CustomerOption[]
   items: ItemOption[]
   architects: PartnerOption[]
+  modes: PaymentModeOption[]
   carpenters: PartnerOption[]
 }) {
   const router = useRouter()
@@ -100,8 +104,8 @@ export function OrderForm({
   const [discountType, setDiscountType] = useState<DiscountType>(
     values.discountType,
   )
-  const [advanceMode, setAdvanceMode] = useState<PaymentMode>(
-    values.advanceMode,
+  const [advanceChannelId, setAdvanceChannelId] = useState(
+    values.advanceChannelId ?? modes[0]?.id ?? '',
   )
   const [discountValue, setDiscountValue] = useState(String(values.discountValue))
   const [transportCharge, setTransportCharge] = useState(
@@ -396,17 +400,12 @@ export function OrderForm({
               </Field>
               <Field>
                 <Label>Advance paid by</Label>
-                <Listbox
-                  name="advanceMode"
-                  value={advanceMode}
-                  onChange={setAdvanceMode}
-                >
-                  {Object.values(PaymentMode).map((value) => (
-                    <ListboxOption key={value} value={value}>
-                      <ListboxLabel>{PAYMENT_MODE_LABELS[value]}</ListboxLabel>
-                    </ListboxOption>
-                  ))}
-                </Listbox>
+                <PaymentModeSelect
+                  name="advanceChannelId"
+                  modes={modes}
+                  value={advanceChannelId}
+                  onChange={setAdvanceChannelId}
+                />
               </Field>
               <Field>
                 <Label>Customer PO number</Label>

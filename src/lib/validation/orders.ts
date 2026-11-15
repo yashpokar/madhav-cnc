@@ -60,7 +60,7 @@ export const orderInputSchema = z.object({
   discountType: z.enum(DiscountType).default('NONE'),
   discountValue: z.coerce.number().min(0).max(99_999_999).default(0),
   advanceAmount: z.coerce.number().min(0).max(99_999_999).default(0),
-  advanceMode: z.enum(PaymentMode).default('CASH'),
+  advanceChannelId: z.string().trim().default(''),
   transportCharge: z.coerce.number().min(0).max(9_999_999).default(0),
   transportTaxRatePercent: z.coerce.number().min(0).max(100).default(0),
   notes: optionalText(2000),

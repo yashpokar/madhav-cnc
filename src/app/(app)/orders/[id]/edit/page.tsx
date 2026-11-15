@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { notFound } from 'next/navigation'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
@@ -37,6 +38,8 @@ export default async function EditOrderPage({
 
   const action = updateOrder.bind(null, order.id)
 
+  const modes = await listPaymentModeOptions(order.advancePayment?.channelId)
+
   return (
     <div className="grid grid-cols-1 gap-8">
       <div className="grid grid-cols-1 gap-2">
@@ -45,6 +48,7 @@ export default async function EditOrderPage({
       </div>
 
       <OrderForm
+        modes={modes}
         action={action}
         submitLabel="Save changes"
         customers={customers}
@@ -65,7 +69,7 @@ export default async function EditOrderPage({
           discountType: order.discountType,
           discountValue: order.discountValue,
           advanceAmount: order.advanceAmount,
-          advanceMode: order.advancePayment?.mode ?? 'CASH',
+          advanceChannelId: order.advancePayment?.channelId ?? null,
           transportCharge: order.transportCharge,
           transportTaxRatePercent: order.transportTaxRatePercent,
           notes: order.notes,

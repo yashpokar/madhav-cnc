@@ -27,6 +27,7 @@ import {
   TruckIcon,
   UserGroupIcon,
   UsersIcon,
+  WalletIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/react/20/solid'
 import { Avatar } from '@/components/catalyst/avatar'
@@ -83,6 +84,7 @@ const ICONS: Record<string, typeof HomeIcon> = {
   '/admin/companies': BuildingOfficeIcon,
   '/admin/activity': ClockIcon,
   '/settings/company': BuildingStorefrontIcon,
+  '/settings/payment-modes': WalletIcon,
 }
 
 function isCurrent(pathname: string, href: string) {

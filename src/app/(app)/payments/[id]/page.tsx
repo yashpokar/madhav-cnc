@@ -1,4 +1,5 @@
 import { date as dateFormat, money as currency } from '@/lib/format'
+import { modeText } from '@/lib/payment-modes'
 import { ActivityTimeline } from '@/components/activity-timeline'
 import type { Metadata } from 'next'
 import { LocalTime } from '@/components/local-time'
@@ -20,7 +21,6 @@ import { FormBanner } from '@/components/form-banner'
 import { getReceipt, openInvoiceBalances } from '@/lib/queries/payments'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
 import { ApplyPanel } from './apply-panel'
 
 export const metadata: Metadata = {
@@ -71,7 +71,7 @@ export default async function ReceiptPage({
             {' · '}
             {dateFormat.format(receipt.paidOn)}
             {' · '}
-            {PAYMENT_MODE_LABELS[receipt.mode]}
+            {modeText(receipt)}
             {receipt.reference ? ` · ${receipt.reference}` : ''}
           </Text>
         </div>

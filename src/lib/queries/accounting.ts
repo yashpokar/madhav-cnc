@@ -68,6 +68,7 @@ export async function listExpenses({
       total: true,
       isInputCredit: true,
       paymentMode: true,
+      modeName: true,
       billNumber: true,
       category: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },

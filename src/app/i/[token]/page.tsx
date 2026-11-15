@@ -305,6 +305,38 @@ export default async function SharedInvoicePage({
           <p className="mt-2 whitespace-pre-line text-sm/6 text-zinc-700">{invoice.terms}</p>
         </section>
       ) : null}
+
+      {company && (company.signatureStoredName || company.stampStoredName || company.signatoryName) ? (
+        <section className="mt-12 flex break-inside-avoid justify-end">
+          <div className="w-64 text-sm/6">
+            <div className="text-right font-medium text-zinc-950">For {company.companyName}</div>
+            <div className="flex h-24 items-end justify-end gap-4">
+              {company.stampStoredName ? (
+                // eslint-disable-next-line @next/next/no-img-element -- stamp served by our token route; next/image cannot optimise it
+                <img
+                  src={`/i/${token}/asset/stamp`}
+                  alt="Company stamp"
+                  className="max-h-24 object-contain"
+                />
+              ) : null}
+              {company.signatureStoredName ? (
+                // eslint-disable-next-line @next/next/no-img-element -- signature served by our token route; next/image cannot optimise it
+                <img
+                  src={`/i/${token}/asset/signature`}
+                  alt="Authorised signature"
+                  className="max-h-16 max-w-48 object-contain"
+                />
+              ) : null}
+            </div>
+            <div className="border-t border-zinc-400 pt-1.5 text-right">
+              {company.signatoryName ? (
+                <div className="font-medium text-zinc-950">{company.signatoryName}</div>
+              ) : null}
+              <div className="text-zinc-600">{company.signatoryTitle || 'Authorised signatory'}</div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   )
 }

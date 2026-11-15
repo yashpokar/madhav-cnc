@@ -344,3 +344,86 @@ export function initials(name: string): string {
 
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
+
+// ---------------------------------------------------------------------------
+// How finished stages move the order's status (used by the production service).
+// ---------------------------------------------------------------------------
+
+export type OrderRankStatus =
+  | 'DRAFT'
+  | 'CONFIRMED'
+  | 'IN_PRODUCTION'
+  | 'READY'
+  | 'DISPATCHED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+
+const ORDER_STATUS_ORDER: OrderRankStatus[] = [
+  'DRAFT',
+  'CONFIRMED',
+  'IN_PRODUCTION',
+  'READY',
+  'DISPATCHED',
+  'COMPLETED',
+]
+
+export function orderRank(status: OrderRankStatus) {
+  return ORDER_STATUS_ORDER.indexOf(status)
+}
+
+export type StatusTask = {
+  status: TaskStatus
+  stage: { linkedStatus: OrderRankStatus | null }
+}
+
+/** The order statuses that finished (done or skipped) stages link to. */
+function reachedStatuses(tasks: readonly StatusTask[]): OrderRankStatus[] {
+  return tasks
+    .filter((task) => isFinished(task.status) && task.stage.linkedStatus)
+    .map((task) => task.stage.linkedStatus as OrderRankStatus)
+}
+
+/**
+ * The status the order should advance to given its finished stages, or null
+ * when it should stay as it is (no tasks, cancelled, nothing reached, or the
+ * order is already at or past the furthest reached status).
+ */
+export function advanceTarget(
+  current: OrderRankStatus,
+  tasks: readonly StatusTask[],
+): OrderRankStatus | null {
+  if (tasks.length === 0 || current === 'CANCELLED') return null
+
+  const reached = reachedStatuses(tasks)
+
+  if (reached.length === 0) return null
+
+  const furthest = reached.reduce((best, status) =>
+    orderRank(status) > orderRank(best) ? status : best,
+  )
+
+  return orderRank(furthest) <= orderRank(current) ? null : furthest
+}
+
+/**
+ * The opposite: after a finished stage is reopened, the order falls back to
+ * the furthest status still reached by a finished stage, never below
+ * IN_PRODUCTION. Null when the order is already at or below that.
+ */
+export function retreatTarget(
+  current: OrderRankStatus,
+  tasks: readonly StatusTask[],
+): OrderRankStatus | null {
+  let target: OrderRankStatus = 'IN_PRODUCTION'
+
+  for (const status of reachedStatuses(tasks)) {
+    if (orderRank(status) > orderRank(target)) target = status
+  }
+
+  return orderRank(current) <= orderRank(target) ? null : target
+}
+
+/** "IN_PRODUCTION" -> "in production" (first underscore only, as the UI always has). */
+export function prettyStatus(status: string) {
+  return status.toLowerCase().replace('_', ' ')
+}

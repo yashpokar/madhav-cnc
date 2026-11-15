@@ -2,27 +2,27 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { nextDispatchNumber } from '@/lib/codes'
-import { dispatchInputSchema } from '@/lib/validation/dispatches'
-import type { DispatchData } from '@/lib/validation/dispatches'
-import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
-import { logActivity } from '@/lib/activity'
+import type { DispatchInput } from '@/lib/validation/dispatches'
+import { rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { DispatchStatus } from '@/generated/prisma/enums'
+import * as dispatches from '@/lib/services/dispatches'
 
 export type { FormState, SimpleResult }
+
+/**
+ * Thin adapters over src/lib/services/dispatches.ts: capability check, FormData
+ * to the service's JSON input, then the redirect / cache refresh and the
+ * FormState the form shows.
+ */
 
 const actorOf = (user: { id: string; name: string }) => ({
   id: user.id,
   name: user.name,
 })
 
-const COUNTS_AS_SENT: DispatchStatus[] = ['DRAFT', 'DISPATCHED', 'DELIVERED']
-
-function parse(formData: FormData) {
+function parse(formData: FormData): DispatchInput {
   let lines: unknown = []
 
   try {
@@ -31,7 +31,7 @@ function parse(formData: FormData) {
     lines = []
   }
 
-  return dispatchInputSchema.safeParse({
+  return {
     orderId: formData.get('orderId'),
     dispatchDate: formData.get('dispatchDate'),
     status: formData.get('status') ?? undefined,
@@ -45,49 +45,23 @@ function parse(formData: FormData) {
     deliveryPincode: formData.get('deliveryPincode'),
     notes: formData.get('notes'),
     lines,
-  })
+  } as DispatchInput
 }
 
-async function assertQuantities(data: DispatchData, excludeDispatchId?: string) {
-  const orderLines = await prisma.orderLine.findMany({
-    where: { orderId: data.orderId },
-    select: {
-      id: true,
-      description: true,
-      quantity: true,
-      dispatchLines: {
-        where: {
-          dispatch: {
-            status: { in: COUNTS_AS_SENT },
-            ...(excludeDispatchId ? { id: { not: excludeDispatchId } } : {}),
-          },
-        },
-        select: { quantity: true },
-      },
-    },
-  })
-
-  const byId = new Map(orderLines.map((line) => [line.id, line]))
-
-  for (const line of data.lines) {
-    const orderLine = byId.get(line.orderLineId)
-
-    if (!orderLine) {
-      return 'A line does not belong to this order'
-    }
-
-    const already = orderLine.dispatchLines.reduce(
-      (sum, entry) => sum + entry.quantity.toNumber(),
-      0,
-    )
-    const remaining = orderLine.quantity.toNumber() - already
-
-    if (line.quantity > remaining + 0.0005) {
-      return `${orderLine.description}: only ${Math.round(remaining * 1000) / 1000} left to dispatch`
+function failure(
+  result: Extract<dispatches.DispatchSaveResult, { ok: false }>,
+  formData: FormData,
+): FormState {
+  if (result.fieldErrors) {
+    return {
+      status: 'error',
+      message: result.error,
+      fieldErrors: result.fieldErrors,
+      values: rawValues(formData),
     }
   }
 
-  return null
+  return { status: 'error', message: result.error }
 }
 
 export async function createDispatch(
@@ -95,88 +69,15 @@ export async function createDispatch(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireCapability('dispatch:create')
-  const parsed = parse(formData)
+  const result = await dispatches.createDispatch(actorOf(user), parse(formData))
 
-  if (!parsed.success) {
-    return {
-      status: 'error',
-      message: 'Please correct the highlighted fields',
-      fieldErrors: fieldErrorsFrom(parsed.error),
-      values: rawValues(formData),
-    }
+  if (!result.ok) {
+    return failure(result, formData)
   }
-
-  const order = await prisma.order.findUnique({
-    where: { id: parsed.data.orderId },
-    select: { id: true, status: true, number: true },
-  })
-
-  if (!order) {
-    return { status: 'error', message: 'Order not found' }
-  }
-
-  if (order.status === 'CANCELLED' || order.status === 'DRAFT') {
-    return {
-      status: 'error',
-      message: 'This order is not ready to dispatch',
-    }
-  }
-
-  const quantityError = await assertQuantities(parsed.data)
-
-  if (quantityError) {
-    return { status: 'error', message: quantityError }
-  }
-
-  const number = await nextDispatchNumber()
-
-  const dispatch = await prisma.dispatch.create({
-    data: {
-      number,
-      status: parsed.data.status,
-      orderId: parsed.data.orderId,
-      dispatchDate: parsed.data.dispatchDate,
-      vehicleNumber: parsed.data.vehicleNumber,
-      driverName: parsed.data.driverName,
-      driverPhone: parsed.data.driverPhone,
-      transporterName: parsed.data.transporterName,
-      lrNumber: parsed.data.lrNumber,
-      deliveryAddress: parsed.data.deliveryAddress,
-      deliveryCity: parsed.data.deliveryCity,
-      deliveryPincode: parsed.data.deliveryPincode,
-      notes: parsed.data.notes,
-      createdById: user.id,
-      updatedById: user.id,
-      lines: {
-        create: parsed.data.lines.map((line, index) => ({
-          position: index + 1,
-          orderLineId: line.orderLineId,
-          description: line.description,
-          unit: line.unit,
-          quantity: line.quantity,
-        })),
-      },
-    },
-  })
-
-  await logActivity({
-    entity: 'dispatch',
-    id: dispatch.id,
-    action: 'created',
-    summary: `created the challan for order ${order.number}`,
-    actor: actorOf(user),
-  })
-  await logActivity({
-    entity: 'order',
-    id: order.id,
-    action: 'dispatch',
-    summary: `created challan ${dispatch.number}`,
-    actor: actorOf(user),
-  })
 
   revalidatePath('/dispatch')
-  revalidatePath(`/orders/${parsed.data.orderId}`)
-  redirect(`/dispatch/${dispatch.id}?created=1`)
+  revalidatePath(`/orders/${result.orderId}`)
+  redirect(`/dispatch/${result.id}?created=1`)
 }
 
 export async function updateDispatch(
@@ -185,75 +86,11 @@ export async function updateDispatch(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireCapability('dispatch:update')
-  const parsed = parse(formData)
+  const result = await dispatches.updateDispatch(actorOf(user), id, parse(formData))
 
-  if (!parsed.success) {
-    return {
-      status: 'error',
-      message: 'Please correct the highlighted fields',
-      fieldErrors: fieldErrorsFrom(parsed.error),
-      values: rawValues(formData),
-    }
+  if (!result.ok) {
+    return failure(result, formData)
   }
-
-  const existing = await prisma.dispatch.findUnique({
-    where: { id },
-    select: { id: true, status: true, orderId: true, number: true },
-  })
-
-  if (!existing) {
-    return { status: 'error', message: 'Delivery challan not found' }
-  }
-
-  if (existing.status === 'DELIVERED' || existing.status === 'CANCELLED') {
-    return {
-      status: 'error',
-      message: `A ${existing.status.toLowerCase()} challan can no longer be edited`,
-    }
-  }
-
-  const quantityError = await assertQuantities(parsed.data, id)
-
-  if (quantityError) {
-    return { status: 'error', message: quantityError }
-  }
-
-  await prisma.$transaction([
-    prisma.dispatchLine.deleteMany({ where: { dispatchId: id } }),
-    prisma.dispatch.update({
-      where: { id },
-      data: {
-        dispatchDate: parsed.data.dispatchDate,
-        vehicleNumber: parsed.data.vehicleNumber,
-        driverName: parsed.data.driverName,
-        driverPhone: parsed.data.driverPhone,
-        transporterName: parsed.data.transporterName,
-        lrNumber: parsed.data.lrNumber,
-        deliveryAddress: parsed.data.deliveryAddress,
-        deliveryCity: parsed.data.deliveryCity,
-        deliveryPincode: parsed.data.deliveryPincode,
-        notes: parsed.data.notes,
-        updatedById: user.id,
-        lines: {
-          create: parsed.data.lines.map((line, index) => ({
-            position: index + 1,
-            orderLineId: line.orderLineId,
-            description: line.description,
-            unit: line.unit,
-            quantity: line.quantity,
-          })),
-        },
-      },
-    }),
-  ])
-
-  await logActivity({
-    entity: 'dispatch',
-    id,
-    action: 'updated',
-    summary: 'edited the challan',
-    actor: actorOf(user),
-  })
 
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
@@ -261,223 +98,51 @@ export async function updateDispatch(
   return { status: 'success', message: 'Delivery challan saved', id }
 }
 
-const ALLOWED_TRANSITIONS: Record<DispatchStatus, DispatchStatus[]> = {
-  DRAFT: ['DISPATCHED', 'CANCELLED'],
-  DISPATCHED: ['DELIVERED', 'DRAFT', 'CANCELLED'],
-  DELIVERED: ['DISPATCHED'],
-  CANCELLED: [],
-}
-
 export async function setDispatchStatus(
   id: string,
   status: DispatchStatus,
 ): Promise<SimpleResult> {
   const user = await requireCapability('dispatch:update')
+  const result = await dispatches.setDispatchStatus(actorOf(user), id, status)
 
-  const existing = await prisma.dispatch.findUnique({
-    where: { id },
-    select: { status: true, orderId: true, number: true },
-  })
-
-  if (!existing) {
-    return { ok: false, error: 'Delivery challan not found' }
-  }
-
-  if (!ALLOWED_TRANSITIONS[existing.status].includes(status)) {
-    return {
-      ok: false,
-      error: `A ${existing.status.toLowerCase()} challan cannot move to ${status.toLowerCase()}`,
-    }
-  }
-
-  await prisma.dispatch.update({
-    where: { id },
-    data: {
-      status,
-      deliveredAt: status === 'DELIVERED' ? new Date() : null,
-      updatedById: user.id,
-    },
-  })
-
-  if (status === 'DISPATCHED') {
-    const order = await prisma.order.findUnique({
-      where: { id: existing.orderId },
-      select: { status: true },
-    })
-
-    if (order && (order.status === 'READY' || order.status === 'IN_PRODUCTION')) {
-      await prisma.order.update({
-        where: { id: existing.orderId },
-        data: { status: 'DISPATCHED' },
-      })
-    }
-  }
-
-  const statusText =
-    status === 'DISPATCHED'
-      ? 'dispatched'
-      : status === 'DELIVERED'
-        ? 'delivered'
-        : status === 'CANCELLED'
-          ? 'cancelled'
-          : 'back to draft'
-
-  await logActivity({
-    entity: 'dispatch',
-    id,
-    action: 'status',
-    summary: `marked the challan as ${statusText}`,
-    actor: actorOf(user),
-  })
-
-  if (status === 'DISPATCHED' || status === 'DELIVERED') {
-    await logActivity({
-      entity: 'order',
-      id: existing.orderId,
-      action: 'dispatch',
-      summary: `challan ${existing.number} ${statusText}`,
-      actor: actorOf(user),
-    })
+  if (!result.ok) {
+    return result
   }
 
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
-  revalidatePath(`/orders/${existing.orderId}`)
+  revalidatePath(`/orders/${result.orderId}`)
 
-  return { ok: true, message: `${existing.number} marked ${status.toLowerCase()}` }
+  return { ok: true, message: result.message }
 }
-
-const receiptSchema = z.object({
-  receivedByName: z.string().trim().min(1, 'Enter who received it').max(120),
-})
 
 export async function recordReceipt(
   id: string,
   receivedByName: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('dispatch:update')
+  const result = await dispatches.recordReceipt(actorOf(user), id, receivedByName)
 
-  const parsed = receiptSchema.safeParse({ receivedByName })
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
+  if (!result.ok) {
+    return result
   }
-
-  const existing = await prisma.dispatch.findUnique({
-    where: { id },
-    select: { status: true, orderId: true, number: true },
-  })
-
-  if (!existing) {
-    return { ok: false, error: 'Delivery challan not found' }
-  }
-
-  if (existing.status === 'CANCELLED') {
-    return { ok: false, error: 'This challan was cancelled' }
-  }
-
-  await prisma.dispatch.update({
-    where: { id },
-    data: {
-      status: 'DELIVERED',
-      receivedByName: parsed.data.receivedByName,
-      receivedAt: new Date(),
-      deliveredAt: new Date(),
-      updatedById: user.id,
-    },
-  })
-
-  const remaining = await prisma.orderLine.findMany({
-    where: { orderId: existing.orderId },
-    select: {
-      quantity: true,
-      dispatchLines: {
-        where: { dispatch: { status: 'DELIVERED' } },
-        select: { quantity: true },
-      },
-    },
-  })
-
-  const fullyDelivered = remaining.every((line) => {
-    const delivered = line.dispatchLines.reduce(
-      (sum, entry) => sum + entry.quantity.toNumber(),
-      0,
-    )
-
-    return delivered >= line.quantity.toNumber() - 0.0005
-  })
-
-  if (fullyDelivered) {
-    const order = await prisma.order.findUnique({
-      where: { id: existing.orderId },
-      select: { status: true },
-    })
-
-    if (order && order.status === 'DISPATCHED') {
-      await prisma.order.update({
-        where: { id: existing.orderId },
-        data: { status: 'COMPLETED' },
-      })
-    }
-  }
-
-  await logActivity({
-    entity: 'dispatch',
-    id,
-    action: 'status',
-    summary: `recorded delivery (received by ${parsed.data.receivedByName})`,
-    actor: actorOf(user),
-  })
-  await logActivity({
-    entity: 'order',
-    id: existing.orderId,
-    action: 'dispatch',
-    summary: `challan ${existing.number} delivered`,
-    actor: actorOf(user),
-  })
 
   revalidatePath('/dispatch')
   revalidatePath(`/dispatch/${id}`)
-  revalidatePath(`/orders/${existing.orderId}`)
+  revalidatePath(`/orders/${result.orderId}`)
 
-  return {
-    ok: true,
-    message: fullyDelivered
-      ? 'Receipt recorded. The order is fully delivered.'
-      : 'Receipt recorded',
-  }
+  return { ok: true, message: result.message }
 }
 
 export async function deleteDispatch(id: string): Promise<SimpleResult> {
   const user = await requireCapability('dispatch:delete')
+  const result = await dispatches.deleteDispatch(actorOf(user), id)
 
-  const dispatch = await prisma.dispatch.findUnique({
-    where: { id },
-    select: { number: true, status: true, orderId: true },
-  })
-
-  if (!dispatch) {
-    return { ok: false, error: 'Dispatch not found' }
+  if (!result.ok) {
+    return result
   }
-
-  if (dispatch.status !== 'DRAFT' && dispatch.status !== 'CANCELLED') {
-    return {
-      ok: false,
-      error: 'Goods have already left. Cancel the dispatch before deleting it.',
-    }
-  }
-
-  await prisma.dispatch.delete({ where: { id } })
-
-  await logActivity({
-    entity: 'order',
-    id: dispatch.orderId,
-    action: 'dispatch',
-    summary: `deleted challan ${dispatch.number}`,
-    actor: actorOf(user),
-  })
 
   revalidatePath('/dispatch')
 
-  return { ok: true, message: `${dispatch.number} deleted` }
+  return { ok: true, message: result.message }
 }

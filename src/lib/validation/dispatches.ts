@@ -46,3 +46,12 @@ export const dispatchInputSchema = z.object({
 })
 
 export type DispatchData = z.output<typeof dispatchInputSchema>
+
+/** The JSON-native shape API callers send (before the schema's transforms). */
+export type DispatchInput = z.input<typeof dispatchInputSchema>
+
+export const dispatchReceiptSchema = z.object({
+  receivedByName: z.string().trim().min(1, 'Enter who received it').max(120),
+})
+
+export const dispatchStatusSchema = z.enum(DispatchStatus)

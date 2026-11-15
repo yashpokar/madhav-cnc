@@ -8,7 +8,7 @@ import {
 } from '@/lib/queries/purchases'
 import { requireCapability } from '@/lib/session'
 import { todayIso } from '@/lib/purchase-rules'
-import { emptyPurchaseLine } from '@/components/purchase-line-editor'
+import { emptyPurchaseLine } from '@/lib/purchase-lines'
 import { OrderForm } from '../order-form'
 
 export const metadata: Metadata = {

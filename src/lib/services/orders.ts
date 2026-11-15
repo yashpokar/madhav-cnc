@@ -139,9 +139,10 @@ function buildPersistable(input: OrderServiceInput) {
   return { totals, lines: rows }
 }
 
-function headerFields(data: OrderServiceInput) {
+/** Status is only set when an order is created; the edit form has no status field, so an update must not reset it. */
+function headerFields(data: OrderServiceInput, { withStatus }: { withStatus: boolean }) {
   return {
-    status: data.status,
+    ...(withStatus ? { status: data.status } : {}),
     customerId: data.customerId,
     architectId: data.architectId,
     carpenterId: data.carpenterId,
@@ -182,7 +183,7 @@ export async function createOrder(
   const order = await prisma.order.create({
     data: {
       number,
-      ...headerFields(input),
+      ...headerFields(input, { withStatus: true }),
       ...totals,
       createdById: who.id,
       updatedById: who.id,
@@ -239,7 +240,7 @@ export async function updateOrder(
     prisma.order.update({
       where: { id },
       data: {
-        ...headerFields(input),
+        ...headerFields(input, { withStatus: false }),
         ...totals,
         updatedById: who.id,
         lines: { create: lines },

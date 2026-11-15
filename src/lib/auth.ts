@@ -32,6 +32,15 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,
 
+  // Cloudflare sits in front of the app and sets a single-value client address
+  // header. Without naming it, Better Auth cannot tell visitors apart and every
+  // sign-in attempt from anyone counts against one shared rate-limit bucket.
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ['cf-connecting-ip', 'x-real-ip'],
+    },
+  },
+
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),

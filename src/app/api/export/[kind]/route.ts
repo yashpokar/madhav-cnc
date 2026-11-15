@@ -6,12 +6,15 @@ import { listCustomers } from '@/lib/queries/customers'
 import { listQuotations } from '@/lib/queries/quotations'
 import { listOrders } from '@/lib/queries/orders'
 import { listInvoices } from '@/lib/queries/invoices'
+import { listBills, listPurchaseOrders } from '@/lib/queries/purchases'
 import { listExpenses } from '@/lib/queries/accounting'
 import { listPaymentsForExport } from '@/lib/queries/reports'
 import {
   CustomerStatus,
   InvoiceStatus,
   OrderStatus,
+  PurchaseBillStatus,
+  PurchaseOrderStatus,
   QuotationStatus,
 } from '@/generated/prisma/enums'
 
@@ -22,6 +25,8 @@ const RESOURCE: Record<string, Resource> = {
   invoices: 'invoice',
   payments: 'payment',
   expenses: 'expense',
+  'purchase-bills': 'purchase',
+  'purchase-orders': 'purchase',
 }
 
 function pick<T extends string>(
@@ -114,6 +119,33 @@ async function build(
           e.number, e.expenseDate, e.payeeName, e.category?.name, e.description,
           e.billNumber, e.order?.number, e.amount, e.taxAmount, e.total,
           e.isInputCredit ? 'Yes' : 'No', e.modeName ?? e.paymentMode,
+        ]),
+      }
+    }
+    case 'purchase-bills': {
+      const rows = await listBills({
+        search,
+        status: pick(PurchaseBillStatus, status),
+      })
+
+      return {
+        headers: ['Number', 'Status', 'Vendor', 'Vendor bill no.', 'Order', 'Bill date', 'Due date', 'Total (INR)', 'Paid (INR)', 'Balance (INR)', 'Payment status'],
+        rows: rows.map((b) => [
+          b.number, b.status, b.vendor.name, b.vendorBillNumber, b.po?.number,
+          b.billDate, b.dueDate, b.total, b.paid, b.due, b.paymentStatus,
+        ]),
+      }
+    }
+    case 'purchase-orders': {
+      const rows = await listPurchaseOrders({
+        search,
+        status: pick(PurchaseOrderStatus, status),
+      })
+
+      return {
+        headers: ['Number', 'Status', 'Vendor', 'Order date', 'Expected', 'Lines', 'Total (INR)'],
+        rows: rows.map((o) => [
+          o.number, o.status, o.vendor.name, o.orderDate, o.expectedDate, o.lineCount, o.total,
         ]),
       }
     }

@@ -125,15 +125,6 @@ export function AppShell({
         <Cog6ToothIcon />
         <DropdownLabel>My account</DropdownLabel>
       </DropdownItem>
-      {adminNav.length > 0 ? (
-        <>
-          <DropdownDivider />
-          <DropdownItem href="/admin/users">
-            <UsersIcon />
-            <DropdownLabel>Manage users</DropdownLabel>
-          </DropdownItem>
-        </>
-      ) : null}
       <DropdownDivider />
       <DropdownItem onClick={() => setTheme('light')}>
         <SunIcon />
@@ -223,25 +214,31 @@ export function AppShell({
               )
             })}
 
-            {adminNav.length > 0 ? (
-              <SidebarSection className="mt-6">
-                <SidebarHeading>Administration</SidebarHeading>
-                {adminNav.map((entry) => {
-                  const Icon = ICONS[entry.href]
+            {(['Administration', 'Settings'] as const).map((group) => {
+              const entries = adminNav.filter((entry) => entry.group === group)
 
-                  return (
-                    <SidebarItem
-                      key={entry.href}
-                      href={entry.href}
-                      current={isCurrent(pathname, entry.href)}
-                    >
-                      {Icon ? <Icon /> : null}
-                      <SidebarLabel>{entry.label}</SidebarLabel>
-                    </SidebarItem>
-                  )
-                })}
-              </SidebarSection>
-            ) : null}
+              if (entries.length === 0) return null
+
+              return (
+                <SidebarSection key={group} className="mt-6">
+                  <SidebarHeading>{group}</SidebarHeading>
+                  {entries.map((entry) => {
+                    const Icon = ICONS[entry.href]
+
+                    return (
+                      <SidebarItem
+                        key={entry.href}
+                        href={entry.href}
+                        current={isCurrent(pathname, entry.href)}
+                      >
+                        {Icon ? <Icon /> : null}
+                        <SidebarLabel>{entry.label}</SidebarLabel>
+                      </SidebarItem>
+                    )
+                  })}
+                </SidebarSection>
+              )
+            })}
 
             <SidebarSpacer />
           </SidebarBody>
@@ -290,6 +287,8 @@ function initialsOf(name: string) {
     .join('')
 }
 
+const BOTTOM_LABELS: Record<string, string> = { '/': 'Home' }
+
 const BOTTOM_PRIORITY = ['/', '/orders', '/production', '/quotations', '/invoices', '/dispatch', '/customers']
 
 function BottomNav({
@@ -333,7 +332,7 @@ function BottomNav({
               }`}
             >
               {Icon ? <Icon className="size-5" aria-hidden="true" /> : null}
-              <span className="truncate">{entry.label.split(' ')[0]}</span>
+              <span className="truncate">{BOTTOM_LABELS[entry.href] ?? entry.label}</span>
             </Link>
           )
         })}

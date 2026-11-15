@@ -81,7 +81,7 @@ export function CommandPalette({ pages }: { pages: readonly NavEntry[] }) {
       id: `page-${page.href}`,
       group: 'Go to',
       title: page.label,
-      subtitle: '',
+      subtitle: page.group && page.group !== 'Overview' ? page.group : '',
       href: page.href,
     }))
 

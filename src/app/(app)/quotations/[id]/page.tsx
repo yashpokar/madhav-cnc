@@ -129,6 +129,9 @@ export default async function QuotationDetailPage({
         canUpdate={canUpdate}
         canCreate={canCreate}
         canCreateOrder={canCreateOrder}
+        convertedOrder={
+          can(user.role, 'order:read') ? (quotation.orders[0] ?? null) : null
+        }
       />
       </div>
 

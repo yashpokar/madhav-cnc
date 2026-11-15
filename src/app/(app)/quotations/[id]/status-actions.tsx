@@ -31,12 +31,15 @@ export function StatusActions({
   canUpdate,
   canCreate,
   canCreateOrder,
+  convertedOrder,
 }: {
   id: string
   status: QuotationStatus
   canUpdate: boolean
   canCreate: boolean
   canCreateOrder: boolean
+  /** The order this quotation was converted into, when the viewer may open it. */
+  convertedOrder?: { id: string; number: string } | null
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -91,8 +94,15 @@ export function StatusActions({
             ),
           )}
 
+        {status === 'CONVERTED' && convertedOrder ? (
+          <Button href={`/orders/${convertedOrder.id}`}>
+            View order {convertedOrder.number}
+          </Button>
+        ) : null}
+
         {canCreateOrder && (status === 'ACCEPTED' || status === 'CONVERTED') ? (
           <Button
+            outline={status === 'CONVERTED' && !!convertedOrder}
             disabled={pending}
             onClick={() =>
               run(

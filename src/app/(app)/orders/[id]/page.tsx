@@ -69,7 +69,8 @@ export default async function QuotationDetailPage({
   const tasks = await listTasksForOrder(order.id)
   const canInvoice = can(user.role, 'invoice:create')
   const activeInvoices =
-    order.status === 'COMPLETED' && can(user.role, 'invoice:read')
+    (order.status === 'COMPLETED' || order.status === 'DISPATCHED') &&
+    can(user.role, 'invoice:read')
       ? await activeInvoicesForOrder(order.id)
       : []
   const canUpdateProduction = can(user.role, 'production:update')
@@ -149,25 +150,33 @@ export default async function QuotationDetailPage({
         </FormBanner>
       ) : null}
 
-      {order.status === 'COMPLETED' && canInvoice && activeInvoices.length === 0 ? (
+      {(order.status === 'COMPLETED' || order.status === 'DISPATCHED') &&
+      canInvoice &&
+      activeInvoices.length === 0 ? (
         <section
           aria-label="Invoice"
           className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-lime-50 p-3 ring-1 ring-lime-950/10 print:hidden dark:bg-lime-400/10 dark:ring-lime-400/20"
         >
           <div className="min-w-0 flex-1 basis-64">
             <div className="text-sm/6 font-medium text-zinc-950 dark:text-white">
-              This order is completed and not invoiced yet
+              This order is {order.status === 'COMPLETED' ? 'completed' : 'dispatched'}{' '}
+              and not invoiced yet
             </div>
             <div className="text-sm/6 text-zinc-600 dark:text-zinc-300">
               Creates a draft from the order lines, material, sizes and the
               customer&apos;s billing details. You review it before issuing.
             </div>
           </div>
-          <QuickInvoiceButton orderId={order.id} />
+          {order.status === 'COMPLETED' ? (
+            <QuickInvoiceButton orderId={order.id} />
+          ) : (
+            <Button href={`/invoices/new?order=${order.id}`}>Create invoice</Button>
+          )}
         </section>
       ) : null}
 
-      {order.status === 'COMPLETED' && activeInvoices.length > 0 ? (
+      {(order.status === 'COMPLETED' || order.status === 'DISPATCHED') &&
+      activeInvoices.length > 0 ? (
         <p className="text-sm/6 text-zinc-600 print:hidden dark:text-zinc-300">
           Invoiced as{' '}
           {activeInvoices.map((invoice, index) => (

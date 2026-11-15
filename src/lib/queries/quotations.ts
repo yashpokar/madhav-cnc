@@ -90,6 +90,11 @@ export async function getQuotation(id: string) {
       createdBy: { select: { name: true } },
       updatedBy: { select: { name: true } },
       lines: { orderBy: { position: 'asc' } },
+      orders: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, number: true },
+      },
       shares: {
         where: { isRevoked: false },
         orderBy: { createdAt: 'desc' },

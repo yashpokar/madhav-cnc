@@ -19,37 +19,9 @@ import { money as currency } from '@/lib/format'
 import { billTotals } from '@/lib/purchase-rules'
 import type { PurchasableOptions } from '@/lib/queries/purchases'
 import { UnitOfMeasure } from '@/generated/prisma/enums'
+import { emptyPurchaseLine, type PurchaseLine } from '@/lib/purchase-lines'
 
-export type PurchaseLine = {
-  key: string
-  itemId: string | null
-  materialId: string | null
-  poLineId: string | null
-  description: string
-  hsnCode: string
-  unit: UnitOfMeasure
-  qty: string
-  rate: string
-  /** A flat amount off the line. */
-  discount: string
-  taxRatePercent: string
-}
-
-export function emptyPurchaseLine(): PurchaseLine {
-  return {
-    key: Math.random().toString(36).slice(2),
-    itemId: null,
-    materialId: null,
-    poLineId: null,
-    description: '',
-    hsnCode: '',
-    unit: 'NOS',
-    qty: '1',
-    rate: '0',
-    discount: '0',
-    taxRatePercent: '0',
-  }
-}
+export type { PurchaseLine }
 
 const num = (value: string) => {
   const parsed = Number(value)

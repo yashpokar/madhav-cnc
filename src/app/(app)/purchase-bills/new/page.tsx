@@ -10,7 +10,7 @@ import { requireCapability } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { requireCompanyId } from '@/lib/active-company'
 import { defaultDueDate, suggestInterState, todayIso } from '@/lib/purchase-rules'
-import { emptyPurchaseLine } from '@/components/purchase-line-editor'
+import { emptyPurchaseLine } from '@/lib/purchase-lines'
 import { BillForm } from '../bill-form'
 
 export const metadata: Metadata = {

@@ -151,6 +151,97 @@ the web). Only issuing is limited: drafts, edits, cancelling, payments, sharing 
 cancelling an invoice does not give its slot back. Business and grandfathered companies are never limited. While
 `BILLING_ENFORCED` is unset (the default) nothing is refused.
 
+## Full-parity endpoints (M4, planned contract)
+
+Everything the web does has an endpoint. Same conventions as above (bearer, `X-Company-Id`, `Idempotency-Key` on
+creates and actions, `ETag` on records, cursor lists, `403`/`404`/`409`/`422` meanings, writes limited to 30 a minute).
+Capabilities are the web's, per action. `PATCH` on a document replaces it; `PATCH` on a settings record is partial.
+Status: contract listed here first so apps can code against it; each row is marked as it lands in `openapi/prodlys-v1.json`.
+
+### Purchasing and stock
+
+| Endpoint | Capability |
+| --- | --- |
+| `GET /vendors`, `GET /vendors/{id}` | expense:read |
+| `POST /vendors` | expense:create (a duplicate name is `409`) |
+| `PATCH /vendors/{id}` | expense:update (whole record) |
+| `DELETE /vendors/{id}` | expense:delete (`409` while it has expenses) |
+| `GET /vendors/{id}/statement`, `GET /payables` | purchase:read |
+| `GET /purchase-orders`, `/purchase-orders/{id}` | purchase:read |
+| `POST /purchase-orders` | purchase:create |
+| `PATCH /purchase-orders/{id}` | purchase:update (whole document) |
+| `POST /purchase-orders/{id}/status` | purchase:update |
+| `POST /purchase-orders/{id}/create-bill` | purchase:create |
+| `DELETE /purchase-orders/{id}` | purchase:delete |
+| `GET /purchase-bills`, `/purchase-bills/{id}` | purchase:read |
+| `POST /purchase-bills` | purchase:create |
+| `PATCH /purchase-bills/{id}` | purchase:update (whole document) |
+| `POST /purchase-bills/{id}/status` | purchase:update (receiving stock also needs stock:create) |
+| `POST /purchase-bills/{id}/duplicate` | purchase:create |
+| `DELETE /purchase-bills/{id}` | purchase:delete |
+| `GET /goods-receipts`, `/goods-receipts/{id}` | purchase:read |
+| `GET /goods-receipts/receivable?billId=` or `?poId=` | purchase:read (what is still to receive) |
+| `POST /goods-receipts` | stock:create |
+| `POST /goods-receipts/{id}/cancel` | stock:update |
+| `GET /vendor-payments`, `/vendor-payments/{id}` | purchase:read |
+| `POST /vendor-payments` | purchase:update |
+| `PATCH /vendor-payments/{id}/allocations` | purchase:update |
+| `DELETE /vendor-payments/{id}` | purchase:delete |
+| `GET /stock`, `GET /stock/{kind}/{id}` (ledger; kind is `item` or `material`) | stock:read |
+| `POST /stock/adjustments`, `POST /stock/opening` | stock:create |
+| `PATCH /stock/{kind}/{id}/reorder-level` | item:update |
+
+### Master data and settings
+
+| Endpoint | Capability |
+| --- | --- |
+| `POST /items`, `PATCH /items/{id}`, `DELETE /items/{id}` | item:create, item:update, item:delete |
+| `GET /materials`, `POST /materials`, `PATCH /materials/{id}` (rename, active), `POST /materials/{id}/move`, `DELETE /materials/{id}` | item:read, item:create, item:update, item:update, item:delete |
+| `GET /partners`, `/partners/{id}` | partner:read |
+| `POST /partners`, `PATCH /partners/{id}`, `POST /partners/{id}/active`, `DELETE /partners/{id}` | partner:create, partner:update, partner:update, partner:delete |
+| `GET /settings/payment-modes` (with use counts), `POST`, `PATCH /{id}`, `POST /{id}/move`, `DELETE /{id}` | settings:update |
+| `POST /expense-categories`, `PATCH /expense-categories/{id}`, `DELETE /expense-categories/{id}` | expense:create, expense:update, expense:delete |
+| `GET /settings/company`, `PATCH /settings/company` | settings:update |
+| `POST /settings/company/{logo|signature|stamp}` (multipart `file`), `DELETE` the same | settings:update |
+| `GET /settings/stages`, `POST`, `PATCH /{id}`, `POST /{id}/move`, `DELETE /{id}` | settings:update |
+| `GET /adjustments`, `/adjustments/{id}` | payment:read |
+| `POST /adjustments`, `PATCH /adjustments/{id}`, `DELETE /adjustments/{id}` (balance adjustments, reversals) | settings:update |
+| `GET /settings/opening-balances`, `PUT /settings/opening-balances` | settings:update |
+| `GET /notes`, `/notes/{id}` (credit and debit notes) | note:read |
+| `POST /notes`, `PATCH /notes/{id}`, `POST /notes/{id}/status`, `DELETE /notes/{id}` | note:create, note:update, note:update, note:delete |
+| `GET /dispatches`, `/dispatches/{id}`, `GET /dispatches/dispatchable-orders` | dispatch:read |
+| `POST /dispatches`, `PATCH /dispatches/{id}`, `POST /dispatches/{id}/status`, `POST /dispatches/{id}/receipt`, `DELETE /dispatches/{id}` | dispatch:create, dispatch:update, dispatch:update, dispatch:update, dispatch:delete |
+
+### Sales gaps
+
+| Endpoint | Capability |
+| --- | --- |
+| `DELETE /customers/{id}` | customer:delete |
+| `DELETE /quotations/{id}`, `POST /quotations/{id}/revision` | quotation:delete, quotation:create |
+| `DELETE /quotations/{id}/share` (revoke the link) | quotation:update |
+| `POST /quotations/{id}/attachments` (`uploadId`), `DELETE /quotations/{id}/attachments/{attachmentId}` | quotation:update |
+| `DELETE /orders/{id}` | order:delete |
+| `POST /orders/{id}/tracking`, `DELETE /orders/{id}/tracking` (create or replace, revoke the link) | order:update |
+| `DELETE /invoices/{id}`, `POST /invoices/{id}/duplicate` | invoice:delete, invoice:create |
+| `POST /invoices/{id}/payments`, `DELETE /invoices/{id}/allocations/{allocationId}` | payment:create, payment:update |
+| `POST /invoices/{id}/write-off`, `DELETE /invoices/{id}/write-offs/{writeOffId}` | invoice:update |
+| `PATCH /payments/{id}/allocations` | payment:update |
+
+### Account, team, billing, search
+
+| Endpoint | Capability |
+| --- | --- |
+| `GET /me` (each company also has `industryName`, `terms`, `modules`) | signed in |
+| `GET /industries` | signed in (templates: terms, modules, stages, units) |
+| `GET /team/members` | user:read |
+| `PATCH /team/members/{userId}` (role), `DELETE /team/members/{userId}` (remove) | user:update |
+| `GET /invitations`, `POST /invitations`, `DELETE /invitations/{id}`, `POST /invitations/{id}/regenerate` | user:update (create returns the link and a WhatsApp text/link) |
+| `GET /invitations/preview?token=` | signed in |
+| `POST /invitations/accept` | signed in (already live) |
+| `GET /billing/payments`, `POST /billing/checkout` (returns `redirectUrl` to open in the browser) | settings:update |
+| `GET /search?q=` | per type: customer, partner, item, quotation, order, invoice read |
+| `GET /export/{kind}` (CSV: customers, quotations, orders, invoices, payments, expenses, purchase-bills, purchase-orders, vendor-payments, stock) | the kind's read capability |
+
 ## Tenancy
 
 Company endpoints need `X-Company-Id`. The person must be able to open that

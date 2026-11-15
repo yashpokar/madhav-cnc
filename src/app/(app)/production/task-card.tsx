@@ -6,8 +6,15 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Link } from '@/components/catalyst/link'
-import { setTaskStatus } from '@/lib/actions/production'
+import {
+  completeTask,
+  holdTask,
+  reopenTask,
+  skipTask,
+  startTask,
+} from '@/lib/actions/production'
 import type { SimpleResult } from '@/lib/actions/production'
+import { blockingTask, holdReason, reopenCheck } from '@/lib/production-rules'
 import type { BoardTask } from '@/lib/queries/production'
 import { ProductionTaskStatus } from '@/generated/prisma/enums'
 
@@ -42,9 +49,14 @@ export function TaskCard({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
-  function move(status: ProductionTaskStatus) {
+  const siblings = task.order.productionTasks
+  const blocker =
+    task.status === 'PENDING' ? blockingTask(siblings, task.id) : null
+  const reopenable = reopenCheck(siblings, task.id, task.order.status).ok
+
+  function move(action: () => Promise<SimpleResult>) {
     startTransition(async () => {
-      const outcome = await setTaskStatus(task.id, status)
+      const outcome = await action()
       onResult(outcome)
 
       if (outcome.ok) {
@@ -101,30 +113,44 @@ export function TaskCard({
         </div>
       ) : null}
 
+      {blocker ? (
+        <div className="mt-2 text-xs/5 text-zinc-500 dark:text-zinc-400">
+          Waiting for {blocker.stage.name}
+        </div>
+      ) : null}
+
+      {task.status === 'ON_HOLD' && holdReason(task.notes) ? (
+        <div className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs/5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-200">
+          On hold: {holdReason(task.notes)}
+        </div>
+      ) : null}
+
       {canUpdate ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          {task.status === 'PENDING' || task.status === 'ON_HOLD' ? (
-            <Button disabled={pending} onClick={() => move('IN_PROGRESS')}>
-              Start
+          {(task.status === 'PENDING' && !blocker) ||
+          (task.status === 'ON_HOLD' &&
+            !blockingTask(siblings, task.id)) ? (
+            <Button disabled={pending} onClick={() => move(() => startTask(task.id))}>
+              {task.status === 'ON_HOLD' ? 'Resume' : 'Start'}
             </Button>
           ) : null}
           {task.status === 'IN_PROGRESS' ? (
             <>
-              <Button disabled={pending} onClick={() => move('DONE')}>
+              <Button disabled={pending} onClick={() => move(() => completeTask(task.id))}>
                 Done
               </Button>
-              <Button outline disabled={pending} onClick={() => move('ON_HOLD')}>
+              <Button outline disabled={pending} onClick={() => move(() => holdTask(task.id))}>
                 Hold
               </Button>
             </>
           ) : null}
-          {task.status === 'DONE' ? (
-            <Button outline disabled={pending} onClick={() => move('IN_PROGRESS')}>
+          {task.status === 'DONE' && reopenable ? (
+            <Button outline disabled={pending} onClick={() => move(() => reopenTask(task.id))}>
               Reopen
             </Button>
           ) : null}
           {task.status === 'PENDING' ? (
-            <Button plain disabled={pending} onClick={() => move('SKIPPED')}>
+            <Button plain disabled={pending} onClick={() => move(() => skipTask(task.id))}>
               Skip
             </Button>
           ) : null}

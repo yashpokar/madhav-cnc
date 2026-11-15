@@ -44,10 +44,21 @@ export async function listBoardTasks({ search }: { search?: string } = {}) {
         select: {
           id: true,
           number: true,
+          status: true,
           subject: true,
           dueDate: true,
           lines: { select: { materialSupply: true } },
           customer: { select: { name: true } },
+          // Every stage of the order, so a card knows what it is waiting for.
+          productionTasks: {
+            orderBy: { position: 'asc' },
+            select: {
+              id: true,
+              position: true,
+              status: true,
+              stage: { select: { name: true } },
+            },
+          },
         },
       },
     },

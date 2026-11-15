@@ -20,7 +20,7 @@ import { getOrder, getOrderImpact } from '@/lib/queries/orders'
 import { DeleteImpact } from '@/components/delete-impact'
 import { describeOrderDelete } from '@/lib/order-delete'
 import { summariseMaterial } from '@/lib/queries/quotations'
-import { listTasksForOrder } from '@/lib/queries/production'
+import { listOperators, listStages, listTasksForOrder } from '@/lib/queries/production'
 import { OrderRelated } from '@/components/related-sections'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteOrder } from '@/lib/actions/orders'
@@ -66,7 +66,11 @@ export default async function QuotationDetailPage({
     notFound()
   }
 
-  const tasks = await listTasksForOrder(order.id)
+  const [tasks, operators, stages] = await Promise.all([
+    listTasksForOrder(order.id),
+    can(user.role, 'production:update') ? listOperators() : [],
+    order.status === 'CONFIRMED' ? listStages() : [],
+  ])
   const canInvoice = can(user.role, 'invoice:create')
   const activeInvoices =
     (order.status === 'COMPLETED' || order.status === 'DISPATCHED') &&
@@ -308,6 +312,10 @@ export default async function QuotationDetailPage({
         orderStatus={order.status}
         tasks={tasks}
         canUpdate={canUpdateProduction}
+        isAdmin={user.role === 'ADMIN'}
+        dueDate={order.dueDate}
+        operators={operators}
+        plannedStages={stages.map((stage) => stage.name)}
       />
       </div>
 

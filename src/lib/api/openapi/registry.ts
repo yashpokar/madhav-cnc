@@ -17,6 +17,8 @@ export type RouteSpec = {
   capability?: string
   idempotent?: boolean
   body?: z.ZodType
+  /** The body is multipart/form-data (a file upload) instead of JSON. */
+  multipart?: boolean
   query?: z.ZodType
   /** The shape inside `data`. Omit with `rawResponse` for non-enveloped bodies. */
   response?: z.ZodType

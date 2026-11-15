@@ -1356,6 +1356,9 @@ model Expense {
   orderId String? @map("order_id")
   order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
+  /// The photo of the bill the mobile app uploaded (an Upload row of this company). A plain id, not a relation.
+  receiptUploadId String? @map("receipt_upload_id")
+
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 

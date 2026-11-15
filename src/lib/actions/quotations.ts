@@ -107,7 +107,8 @@ export async function updateQuotation(
 
 export type SimpleResult =
   | { ok: true; message: string; id?: string }
-  | { ok: false; error: string }
+  /** `href`: a page that fixes the problem (the plan limit points at /settings/billing). */
+  | { ok: false; error: string; href?: string }
 
 export async function setQuotationStatus(
   id: string,

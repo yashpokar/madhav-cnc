@@ -112,7 +112,14 @@ export function InvoiceActions({
         ) : null}
 
         {canTakePayment && status === 'ISSUED' && due > 0 ? (
-          <Button disabled={pending} onClick={() => setPayOpen(true)}>
+          <Button
+            disabled={pending}
+            onClick={() => {
+              // Always start from what is actually due now, not a stale or earlier value.
+              setAmount(due > 0 ? String(due) : '')
+              setPayOpen(true)
+            }}
+          >
             Record payment
           </Button>
         ) : null}
@@ -122,7 +129,10 @@ export function InvoiceActions({
             outline
             className={DANGER_TRIGGER}
             disabled={pending}
-            onClick={() => setOffOpen(true)}
+            onClick={() => {
+              setOffAmount(due > 0 ? String(due) : '')
+              setOffOpen(true)
+            }}
           >
             Mark not recoverable
           </Button>

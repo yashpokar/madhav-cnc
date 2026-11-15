@@ -1,45 +1,29 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import type { SimpleResult } from '@/lib/actions/quotations'
+import * as stages from '@/lib/services/stages'
 
 export type { SimpleResult }
 
-const nameSchema = z.string().trim().min(1, 'Stage name is required').max(60)
+/**
+ * Thin adapters over src/lib/services/stages.ts: capability check, the service
+ * call, then a refresh of the production pages when something changed.
+ */
+function finish(result: SimpleResult): SimpleResult {
+  if (result.ok) {
+    revalidatePath('/production')
+    revalidatePath('/production/stages')
+  }
+
+  return result
+}
 
 export async function createStage(name: string): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const parsed = nameSchema.safeParse(name)
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
-  }
-
-  const clash = await prisma.productionStage.findFirst({
-    where: { name: { equals: parsed.data, mode: 'insensitive' } },
-  })
-
-  if (clash) {
-    return { ok: false, error: 'A stage with that name already exists' }
-  }
-
-  const last = await prisma.productionStage.findFirst({
-    orderBy: { sortOrder: 'desc' },
-    select: { sortOrder: true },
-  })
-
-  await prisma.productionStage.create({
-    data: { name: parsed.data, sortOrder: (last?.sortOrder ?? -1) + 1 },
-  })
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return { ok: true, message: `${parsed.data} added` }
+  return finish(await stages.createStage(name))
 }
 
 export async function renameStage(
@@ -48,29 +32,7 @@ export async function renameStage(
 ): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const parsed = nameSchema.safeParse(name)
-
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message }
-  }
-
-  const clash = await prisma.productionStage.findFirst({
-    where: { name: { equals: parsed.data, mode: 'insensitive' }, id: { not: id } },
-  })
-
-  if (clash) {
-    return { ok: false, error: 'A stage with that name already exists' }
-  }
-
-  await prisma.productionStage.update({
-    where: { id },
-    data: { name: parsed.data },
-  })
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return { ok: true, message: 'Stage renamed' }
+  return finish(await stages.renameStage(id, name))
 }
 
 export async function moveStage(
@@ -79,38 +41,7 @@ export async function moveStage(
 ): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const stages = await prisma.productionStage.findMany({
-    orderBy: { sortOrder: 'asc' },
-    select: { id: true, sortOrder: true },
-  })
-
-  const index = stages.findIndex((stage) => stage.id === id)
-
-  if (index === -1) {
-    return { ok: false, error: 'Stage not found' }
-  }
-
-  const swapWith = direction === 'up' ? index - 1 : index + 1
-
-  if (swapWith < 0 || swapWith >= stages.length) {
-    return { ok: false, error: 'Already at the end' }
-  }
-
-  await prisma.$transaction([
-    prisma.productionStage.update({
-      where: { id: stages[index].id },
-      data: { sortOrder: swapWith },
-    }),
-    prisma.productionStage.update({
-      where: { id: stages[swapWith].id },
-      data: { sortOrder: index },
-    }),
-  ])
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return { ok: true, message: 'Order updated' }
+  return finish(await stages.moveStage(id, direction))
 }
 
 export async function setStageStatus(
@@ -119,40 +50,7 @@ export async function setStageStatus(
 ): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const allowed = [
-    'CONFIRMED',
-    'IN_PRODUCTION',
-    'READY',
-    'DISPATCHED',
-    'COMPLETED',
-  ]
-
-  if (linkedStatus !== null && !allowed.includes(linkedStatus)) {
-    return { ok: false, error: 'Unknown status' }
-  }
-
-  await prisma.productionStage.update({
-    where: { id },
-    data: {
-      linkedStatus: linkedStatus as
-        | 'CONFIRMED'
-        | 'IN_PRODUCTION'
-        | 'READY'
-        | 'DISPATCHED'
-        | 'COMPLETED'
-        | null,
-    },
-  })
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return {
-    ok: true,
-    message: linkedStatus
-      ? 'Stage will move the order on completion'
-      : 'Stage no longer changes the order status',
-  }
+  return finish(await stages.setStageStatus(id, linkedStatus))
 }
 
 export async function setStageActive(
@@ -161,53 +59,11 @@ export async function setStageActive(
 ): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const inUse = await prisma.productionTask.count({
-    where: { stageId: id, status: { in: ['PENDING', 'IN_PROGRESS', 'ON_HOLD'] } },
-  })
-
-  if (!isActive && inUse > 0) {
-    return {
-      ok: false,
-      error: `${inUse} open task${inUse === 1 ? '' : 's'} still sit in this stage`,
-    }
-  }
-
-  await prisma.productionStage.update({
-    where: { id },
-    data: { isActive },
-  })
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return { ok: true, message: isActive ? 'Stage enabled' : 'Stage retired' }
+  return finish(await stages.setStageActive(id, isActive))
 }
 
 export async function deleteStage(id: string): Promise<SimpleResult> {
   await requireCapability('settings:update')
 
-  const stage = await prisma.productionStage.findUnique({
-    where: { id },
-    select: { name: true },
-  })
-
-  if (!stage) {
-    return { ok: false, error: 'Stage not found' }
-  }
-
-  const tasks = await prisma.productionTask.count({ where: { stageId: id } })
-
-  if (tasks > 0) {
-    return {
-      ok: false,
-      error: `${stage.name} has ${tasks} production task(s) on record. Retire it instead.`,
-    }
-  }
-
-  await prisma.productionStage.delete({ where: { id } })
-
-  revalidatePath('/production')
-  revalidatePath('/production/stages')
-
-  return { ok: true, message: `${stage.name} deleted` }
+  return finish(await stages.deleteStage(id))
 }

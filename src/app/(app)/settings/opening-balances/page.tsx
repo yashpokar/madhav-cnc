@@ -24,7 +24,7 @@ export default async function OpeningBalancesPage() {
           href="/settings/company"
           className="text-sm/5 text-zinc-500 hover:underline dark:text-zinc-400"
         >
-          ← Company details
+          ← Business profile
         </Link>
         <Heading>Opening balances</Heading>
         <Text className="max-w-2xl">

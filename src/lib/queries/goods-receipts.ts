@@ -27,6 +27,7 @@ export async function listReceipts({
       number: true,
       status: true,
       receivedOn: true,
+      createdAt: true,
       vendor: { select: { id: true, name: true } },
       bill: { select: { id: true, number: true } },
       po: { select: { id: true, number: true } },

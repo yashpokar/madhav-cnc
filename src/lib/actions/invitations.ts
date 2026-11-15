@@ -4,25 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { forbidden } from 'next/navigation'
 import { z } from 'zod'
-import { logActivity } from '@/lib/activity'
 import { COMPANY_COOKIE, getActiveCompanyId } from '@/lib/active-company'
 import { INVITE_COOKIE } from '@/lib/invite-cookie'
-import { ROLE_LABELS } from '@/lib/permissions'
 import { getBaseUser, requireUser } from '@/lib/session'
-import {
-  acceptInvitationFor,
-  createInvitationFor,
-  regenerateInvitationFor,
-  revokeInvitationFor,
-  type AcceptResult,
-  type InvitationRow,
-} from '@/lib/services/invitations'
+import { acceptInvitationFor, type AcceptResult } from '@/lib/services/invitations'
+import { inviteFor, regenerateInviteFor, revokeInviteFor, type InviteResult } from '@/lib/services/team'
 import type { UserRole } from '@/generated/prisma/enums'
 import type { SimpleResult } from '@/lib/actions/quotations'
 
-export type InviteResult =
-  | { ok: true; message: string; invitation: InvitationRow }
-  | { ok: false; error: string }
+export type { InviteResult }
 
 const hintSchema = z.object({
   email: z.union([z.literal(''), z.string().trim().toLowerCase().email('Enter a valid email address')]).optional(),
@@ -58,43 +48,18 @@ export async function createInvitation(input: {
 
   if (!hints.success) return { ok: false, error: hints.error.issues[0].message }
 
-  const result = await createInvitationFor({
-    userId: user.id,
-    companyId,
-    role: input.role,
-    ...hints.data,
-  })
+  const result = await inviteFor(user, companyId, { role: input.role, ...hints.data })
 
-  if (!result.ok) return result
-
-  await logActivity({
-    entity: 'company',
-    id: companyId,
-    action: 'invitation-created',
-    summary: `created an invitation to join as ${ROLE_LABELS[result.invitation.role]}`,
-    actor: user,
-  })
-
-  revalidatePath('/settings/team')
+  if (result.ok) revalidatePath('/settings/team')
 
   return result
 }
 
 export async function revokeInvitation(id: string): Promise<SimpleResult> {
   const { user, companyId } = await requireInviter()
-  const result = await revokeInvitationFor({ userId: user.id, companyId, id: String(id) })
+  const result = await revokeInviteFor(user, companyId, String(id))
 
-  if (!result.ok) return result
-
-  await logActivity({
-    entity: 'company',
-    id: companyId,
-    action: 'invitation-revoked',
-    summary: 'revoked an invitation link',
-    actor: user,
-  })
-
-  revalidatePath('/settings/team')
+  if (result.ok) revalidatePath('/settings/team')
 
   return result
 }
@@ -102,19 +67,9 @@ export async function revokeInvitation(id: string): Promise<SimpleResult> {
 /** A fresh link (and a fresh expiry) for an unused invitation; the old link stops working. */
 export async function regenerateInvitation(id: string): Promise<InviteResult> {
   const { user, companyId } = await requireInviter()
-  const result = await regenerateInvitationFor({ userId: user.id, companyId, id: String(id) })
+  const result = await regenerateInviteFor(user, companyId, String(id))
 
-  if (!result.ok) return result
-
-  await logActivity({
-    entity: 'company',
-    id: companyId,
-    action: 'invitation-regenerated',
-    summary: `made a new link for a ${ROLE_LABELS[result.invitation.role]} invitation`,
-    actor: user,
-  })
-
-  revalidatePath('/settings/team')
+  if (result.ok) revalidatePath('/settings/team')
 
   return result
 }

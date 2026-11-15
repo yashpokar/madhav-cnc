@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { DispatchStatus } from '@/generated/prisma/enums'
 
 type DecimalLike = { toNumber: () => number }
@@ -16,14 +17,19 @@ export function countDispatches() {
 export async function listDispatches({
   search,
   status,
+  page,
 }: {
   search?: string
   status?: DispatchStatus
+  /** Keyset page (the mobile API), newest first by (createdAt, id); omit for every row. */
+  page?: PageArgs
 } = {}) {
   const term = search?.trim()
 
   return prisma.dispatch.findMany({
+    ...(page ? { take: page.take } : {}),
     where: {
+      AND: keysetClause(page, 'createdAt', 'desc', 'date'),
       ...(status ? { status } : {}),
       ...(term
         ? {
@@ -44,12 +50,13 @@ export async function listDispatches({
           }
         : {}),
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: page ? [{ createdAt: 'desc' }, { id: 'desc' }] : { createdAt: 'desc' },
     select: {
       id: true,
       number: true,
       status: true,
       dispatchDate: true,
+      createdAt: true,
       vehicleNumber: true,
       receivedByName: true,
       receivedAt: true,

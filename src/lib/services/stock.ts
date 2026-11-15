@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity'
 import { negativeStockGuard, round3, round4, stockKey } from '@/lib/stock-rules'
 import { onHandFor } from '@/lib/services/goods-receipts'
 import type { Failure } from '@/lib/services/goods-receipts'
@@ -158,4 +159,76 @@ export function adjustStock(
 
     return { ok: true, onHand: round3((current.get(key) ?? 0) + input.qty) }
   })
+}
+
+// ---------------------------------------------------------------------------
+// The same jobs with the activity-trail lines the web actions write, for
+// callers with no server action around them (the mobile API).
+
+type StockActor = { id: string; name: string }
+
+/** Adjusts stock by hand and logs it. */
+export async function adjustStockLogged(
+  actor: StockActor,
+  input: Parameters<typeof adjustStock>[1],
+): Promise<StockResult> {
+  const result = await adjustStock(actor.id, input)
+
+  if (result.ok) {
+    await logActivity({
+      entity: 'stock',
+      id: input.target.id,
+      action: 'adjusted',
+      summary: `adjusted stock by ${input.qty > 0 ? '+' : ''}${input.qty} (${input.reason.trim()})`,
+      actor,
+    })
+  }
+
+  return result
+}
+
+/** Sets the opening stock and logs it. */
+export async function openingStockLogged(
+  actor: StockActor,
+  input: Parameters<typeof setOpeningStock>[1],
+): Promise<StockResult> {
+  const result = await setOpeningStock(actor.id, input)
+
+  if (result.ok) {
+    await logActivity({
+      entity: 'stock',
+      id: input.target.id,
+      action: 'opening',
+      summary: `set opening stock to ${input.qty} at ${input.unitCost} each`,
+      actor,
+    })
+  }
+
+  return result
+}
+
+/** Sets (or clears, with null) the level at which a tracked item or material counts as low. */
+export async function setReorderLevel(
+  target: StockTarget,
+  level: number | null,
+): Promise<
+  | { ok: true; reorderLevel: number | null }
+  | { ok: false; error: string; code: 'NOT_FOUND' | 'CONFLICT' | 'VALIDATION_FAILED' }
+> {
+  if (level !== null && (!Number.isFinite(level) || level < 0 || level > 99_999_999)) {
+    return { ok: false, error: 'Reorder level must be between 0 and 99,999,999', code: 'VALIDATION_FAILED' }
+  }
+
+  const row = await loadTarget(prisma, target)
+
+  if (!row) return { ok: false, error: 'Not found', code: 'NOT_FOUND' }
+  if (!row.stockTracked) return { ok: false, error: `Turn on Track stock for ${row.name} first`, code: 'CONFLICT' }
+
+  if (target.kind === 'item') {
+    await prisma.item.update({ where: { id: target.id }, data: { reorderLevel: level } })
+  } else {
+    await prisma.material.update({ where: { id: target.id }, data: { reorderLevel: level } })
+  }
+
+  return { ok: true, reorderLevel: level }
 }

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { keysetClause, type PageArgs } from '@/lib/api/keyset'
 import type { BalanceAdjustmentKind, BalanceAdjustmentReason } from '@/generated/prisma/enums'
 
 const select = {
@@ -40,10 +41,14 @@ export async function listAdjustments(filter: {
   reason?: BalanceAdjustmentReason
   from?: string
   to?: string
+  /** Keyset page (the mobile API), newest first by (adjustedOn, id); omit for every row. */
+  page?: PageArgs
 }): Promise<AdjustmentRow[]> {
   const search = filter.search?.trim()
   const rows = await prisma.balanceAdjustment.findMany({
+    ...(filter.page ? { take: filter.page.take } : {}),
     where: {
+      AND: keysetClause(filter.page, 'adjustedOn', 'desc', 'date'),
       ...(filter.kind ? { kind: filter.kind } : {}),
       ...(filter.reason ? { reason: filter.reason } : {}),
       ...(filter.from || filter.to
@@ -65,7 +70,7 @@ export async function listAdjustments(filter: {
           }
         : {}),
     },
-    orderBy: [{ adjustedOn: 'desc' }, { createdAt: 'desc' }],
+    orderBy: filter.page ? [{ adjustedOn: 'desc' }, { id: 'desc' }] : [{ adjustedOn: 'desc' }, { createdAt: 'desc' }],
     select,
   })
 

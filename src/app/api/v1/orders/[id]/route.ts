@@ -1,11 +1,12 @@
 import { ApiError } from '@/lib/api/errors'
-import { apiRoute, replyWithEtag } from '@/lib/api/handler'
+import { apiRoute, reply, replyWithEtag } from '@/lib/api/handler'
 import { orderDetailFor } from '@/lib/api/reads/detail'
 import { orderDetailOut } from '@/lib/api/reads/mappers'
 import { orderJsonSchema } from '@/lib/api/schemas/writes'
 import { must, saved, userActorOf } from '@/lib/api/writes'
 import { getOrder } from '@/lib/queries/orders'
 import { updateOrder } from '@/lib/services/orders'
+import { deleteOrder } from '@/lib/services/orders'
 
 export const GET = apiRoute({ auth: 'company', capability: 'order:read' }, async ({ request, params }) => {
   const row = await getOrder(params.id)
@@ -28,3 +29,10 @@ export const PATCH = apiRoute(
     return saved(await orderDetailFor(params.id))
   },
 )
+
+/** Same rules as the web (an order with an invoice or dispatch is refused with 409). */
+export const DELETE = apiRoute({ auth: 'company', capability: 'order:delete' }, async ({ params, user }) => {
+  must(await deleteOrder(userActorOf(user), params.id))
+
+  return reply({ id: params.id, deleted: true })
+})

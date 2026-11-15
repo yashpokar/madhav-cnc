@@ -25,6 +25,11 @@ export const companySummary = z.object({
   role: roleSchema,
   capabilities: z.array(z.string()),
   industry: z.string(),
+  industryName: z.string().describe('Display name of the industry template'),
+  terms: z.object({ orders: z.string(), order: z.string() }).describe('What this company calls an order, e.g. Bookings / Booking'),
+  modules: z
+    .object({ production: z.boolean(), dispatch: z.boolean(), partners: z.boolean() })
+    .describe('Optional areas of the app this industry uses (a hidden one stays reachable)'),
 })
 
 export const meResponse = z.object({

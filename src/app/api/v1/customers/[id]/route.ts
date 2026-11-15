@@ -1,5 +1,5 @@
 import { ApiError } from '@/lib/api/errors'
-import { apiRoute, parseWith, replyWithEtag } from '@/lib/api/handler'
+import { apiRoute, parseWith, reply, replyWithEtag } from '@/lib/api/handler'
 import { customerDetailFor } from '@/lib/api/reads/detail'
 import { customerPatchBody } from '@/lib/api/schemas/writes'
 import { actorOf, must, saved } from '@/lib/api/writes'
@@ -10,6 +10,7 @@ import { customerDetailOut } from '@/lib/api/reads/mappers'
 import { can } from '@/lib/permissions'
 import { customerAccount } from '@/lib/queries/payments'
 import { getCustomer } from '@/lib/queries/customers'
+import { deleteCustomer } from '@/lib/services/customers'
 
 export const GET = apiRoute({ auth: 'company', capability: 'customer:read' }, async ({ request, params, user }) => {
   const row = await getCustomer(params.id)
@@ -59,3 +60,10 @@ export const PATCH = apiRoute(
     return saved(await customerDetailFor(user, params.id))
   },
 )
+
+/** Refused (409) while the customer has quotations, orders, invoices, receipts or notes: set it INACTIVE instead. */
+export const DELETE = apiRoute({ auth: 'company', capability: 'customer:delete' }, async ({ params }) => {
+  must(await deleteCustomer(params.id))
+
+  return reply({ id: params.id, deleted: true })
+})

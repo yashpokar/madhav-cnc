@@ -1,7 +1,7 @@
 'use client'
 
 import { dateShort as dateFormat } from '@/lib/format'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'

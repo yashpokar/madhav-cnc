@@ -3,7 +3,6 @@ import {
   DiscountType,
   InvoiceStatus,
   MaterialSupply,
-  PaymentMode,
   WriteOffReason,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'

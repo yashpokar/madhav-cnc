@@ -4,7 +4,6 @@ import {
   NoteParty,
   NoteReason,
   NoteStatus,
-  PaymentMode,
   UnitOfMeasure,
 } from '@/generated/prisma/enums'
 

@@ -24,8 +24,6 @@ import { FormBanner } from '@/components/form-banner'
 import { QuickNameDialog } from '@/components/quick-name-dialog'
 import { VendorPicker, type VendorOption } from '@/components/vendor-picker'
 import { quickCreateExpenseCategory, type FormState } from '@/lib/actions/expenses'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
-import { PaymentMode } from '@/generated/prisma/enums'
 
 export type ExpenseFormValues = {
   categoryId: string | null

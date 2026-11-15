@@ -25,9 +25,9 @@ import {
   writeOffInvoice,
   type SimpleResult,
 } from '@/lib/actions/invoices'
-import { PAYMENT_MODE_LABELS, WRITE_OFF_REASON_LABELS } from '@/lib/labels'
+import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { whatsappLink } from '@/lib/whatsapp'
-import { InvoiceStatus, PaymentMode, WriteOffReason } from '@/generated/prisma/enums'
+import { InvoiceStatus, WriteOffReason } from '@/generated/prisma/enums'
 
 export function InvoiceActions({
   id,

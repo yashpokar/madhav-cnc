@@ -25,8 +25,6 @@ import { FormBanner } from '@/components/form-banner'
 import { createReceipt, openInvoicesFor } from '@/lib/actions/payments'
 import type { FormState } from '@/lib/actions/payments'
 import type { OpenInvoice } from '@/lib/queries/payments'
-import { PAYMENT_MODE_LABELS } from '@/lib/labels'
-import { PaymentMode } from '@/generated/prisma/enums'
 
 const num = (value: string) => {
   const parsed = Number(value)

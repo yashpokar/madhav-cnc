@@ -15,7 +15,7 @@ import {
 } from '@/lib/validation/invoices'
 import type { InvoiceData } from '@/lib/validation/invoices'
 import { logActivity } from '@/lib/activity'
-import { PAYMENT_MODE_LABELS, WRITE_OFF_REASON_LABELS } from '@/lib/labels'
+import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'

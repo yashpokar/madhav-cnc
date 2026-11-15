@@ -209,7 +209,7 @@ export default async function DispatchDetailPage({
         <div className="mt-8 hidden print:block">
           <div className="text-sm">Received in good condition</div>
           <div className="mt-10 border-t border-zinc-400 pt-1 text-xs text-zinc-600">
-            Receiver's name and signature
+            Receiver&apos;s name and signature
           </div>
         </div>
       )}

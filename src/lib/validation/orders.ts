@@ -1,9 +1,7 @@
 import { z } from 'zod'
 import {
   DiscountType,
-  MaterialSupply,
   OrderStatus,
-  PaymentMode,
 } from '@/generated/prisma/enums'
 import { quotationLineSchema } from '@/lib/validation/quotations'
 

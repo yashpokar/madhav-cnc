@@ -63,10 +63,6 @@ export type ItemFormValues = {
   notes: string | null
 }
 
-function numberValue(value: number | null) {
-  return value === null ? '' : String(value)
-}
-
 export function ItemForm({
   action,
   values,

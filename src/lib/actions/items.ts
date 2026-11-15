@@ -21,7 +21,6 @@ function parse(formData: FormData) {
     materialId: formData.get('materialId'),
     unit: formData.get('unit') ?? undefined,
     rate: formData.get('rate') || 0,
-    purchaseRate: formData.get('purchaseRate'),
     brand: formData.get('brand'),
     shade: formData.get('shade'),
     dimensionUnit: formData.get('dimensionUnit') ?? undefined,
@@ -32,7 +31,18 @@ function parse(formData: FormData) {
     taxRatePercent: formData.get('taxRatePercent') || 0,
     isActive: formData.get('isActive') === 'true',
     notes: formData.get('notes'),
+    stockTracked: formData.get('stockTracked') === 'true',
+    reorderLevel: formData.get('reorderLevel'),
   })
+}
+
+/** Services are not stocked, whatever the form sent. */
+function stockFields<T extends { supplyType: string; stockTracked: boolean; reorderLevel: number | null }>(
+  data: T,
+): T {
+  return data.supplyType === 'SERVICE'
+    ? { ...data, stockTracked: false, reorderLevel: null }
+    : data
 }
 
 export async function createItem(
@@ -54,7 +64,7 @@ export async function createItem(
   const code = await nextItemCode()
 
   const item = await prisma.item.create({
-    data: { ...parsed.data, code, createdById: user.id, updatedById: user.id },
+    data: { ...stockFields(parsed.data), code, createdById: user.id, updatedById: user.id },
   })
 
   revalidatePath('/items')
@@ -86,7 +96,7 @@ export async function updateItem(
 
   const item = await prisma.item.update({
     where: { id },
-    data: { ...parsed.data, updatedById: user.id },
+    data: { ...stockFields(parsed.data), updatedById: user.id },
   })
 
   revalidatePath('/items')

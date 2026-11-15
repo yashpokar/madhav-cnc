@@ -79,6 +79,7 @@ export async function getItem(id: string) {
     ...item,
     rate: item.rate.toNumber(),
     purchaseRate: toNumber(item.purchaseRate),
+    reorderLevel: toNumber(item.reorderLevel),
     taxRatePercent: item.taxRatePercent.toNumber(),
     thickness: toNumber(item.thickness),
     length: toNumber(item.length),

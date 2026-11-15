@@ -129,6 +129,11 @@ export function VendorPicker({
           </ComboboxOption>
         )}
       </Combobox>
+      {typed && !exact && !disabled ? (
+        <p className="mt-1 text-xs/5 text-zinc-500 dark:text-zinc-400">
+          New vendor will be created
+        </p>
+      ) : null}
 
       <Dialog open={adding !== null} onClose={() => !pending && setAdding(null)} size="lg">
         <DialogTitle>New vendor</DialogTitle>

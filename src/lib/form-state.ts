@@ -5,6 +5,8 @@ export type FormState =
       message: string
       fieldErrors?: Record<string, string>
       values?: Record<string, string>
+      /** Set when the error is a duplicate; the record the user can open instead. */
+      existingId?: string
     }
   | { status: 'success'; message: string; id?: string }
 

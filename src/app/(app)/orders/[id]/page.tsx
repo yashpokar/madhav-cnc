@@ -193,6 +193,14 @@ export default async function QuotationDetailPage({
         id={order.id}
         status={order.status}
         canUpdate={canUpdate}
+        nextStep={
+          order.status === 'READY' && can(user.role, 'dispatch:create')
+            ? {
+                label: 'Create delivery challan',
+                href: `/dispatch/new?order=${order.id}`,
+              }
+            : undefined
+        }
       />
       </div>
 

@@ -27,10 +27,13 @@ export function OrderStatusActions({
   id,
   status,
   canUpdate,
+  nextStep,
 }: {
   id: string
   status: OrderStatus
   canUpdate: boolean
+  /** A cross-page next step (e.g. create the challan); becomes the primary button. */
+  nextStep?: { label: string; href: string }
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -47,11 +50,11 @@ export function OrderStatusActions({
     })
   }
 
-  if (!canUpdate) {
+  if (!canUpdate && !nextStep) {
     return null
   }
 
-  const actions = NEXT_ACTIONS[status]
+  const actions = canUpdate ? NEXT_ACTIONS[status] : []
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -61,10 +64,11 @@ export function OrderStatusActions({
         </FormBanner>
       ) : null}
 
-      {actions.length > 0 ? (
+      {actions.length > 0 || nextStep ? (
         <div className="flex flex-wrap gap-3">
+          {nextStep ? <Button href={nextStep.href}>{nextStep.label}</Button> : null}
           {actions.map((action) =>
-            action.primary ? (
+            action.primary && !nextStep ? (
               <Button
                 key={action.status}
                 disabled={pending}

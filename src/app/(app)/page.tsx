@@ -386,12 +386,19 @@ export default async function DashboardPage({
 
       {activity && now && before ? (
         <section aria-label={`Activity: ${range.label}`} className="grid gap-3 print:hidden">
-          <h2 className="text-sm/6 font-semibold">
-            {range.label}
-            <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
-              compared with {range.compareLabel}
-            </span>
-          </h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <h2 className="text-sm/6 font-semibold">
+              {range.label}
+              <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
+                compared with {range.compareLabel}
+              </span>
+            </h2>
+            {canMoney ? (
+              <Link href="/reports/compare" className="text-sm/6 font-medium text-accent-700 hover:underline dark:text-accent-300">
+                Compare weeks, months and years →
+              </Link>
+            ) : null}
+          </div>
           {canMoney ? (
             <div className="grid gap-3 md:grid-cols-2">
               <PeriodTile

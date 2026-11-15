@@ -11,6 +11,7 @@ import {
   metaResponse,
   permissionsResponse,
 } from '@/lib/api/schemas'
+import * as c from '@/lib/api/schemas/compare'
 import * as r from '@/lib/api/schemas/reads'
 import * as w from '@/lib/api/schemas/writes'
 
@@ -143,6 +144,18 @@ registerRoute({
   summary: 'The home screen numbers; each block is null when the role lacks the capability behind it',
   auth: 'company',
   response: r.dashboardSummary,
+})
+
+registerRoute({
+  method: 'get',
+  path: '/reports/compare',
+  tag: 'Reports',
+  summary: 'Week, month or year over year: this period so far against the previous period and a year ago, with a 12-period trend',
+  auth: 'company',
+  capability: 'invoice:read',
+  query: c.compareQuery,
+  response: c.compareResponse,
+  errors: ['FORBIDDEN'],
 })
 
 registerRoute({

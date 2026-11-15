@@ -122,6 +122,16 @@ export default async function ReportsPage() {
         <Text>Last 12 months unless stated. Figures count issued invoices only.</Text>
       </div>
 
+      <Link
+        href="/reports/compare"
+        className="flex flex-wrap items-baseline justify-between gap-x-4 surface-card surface-card-interactive p-4"
+      >
+        <span className="font-medium">Compare periods</span>
+        <span className="text-sm/5 text-zinc-500 dark:text-zinc-400">
+          Week, month and year against the one before and last year →
+        </span>
+      </Link>
+
       {canPayments ? (
         <Link
           href="/reports/payment-methods"

@@ -116,7 +116,27 @@ function delta(current: number, previous: number, goodWhenUp: boolean, versus: s
   }
 }
 
-/** A figure for the chosen period, with how it compares to the period before. */
+/** "▲ 12%" as a small tinted pill; flat or unknown comparisons stay quiet text. */
+function DeltaPill({ change }: { change: ReturnType<typeof delta> }) {
+  const tint =
+    change.tone === 'good'
+      ? 'bg-lime-100 text-lime-800 dark:bg-lime-400/15 dark:text-lime-300'
+      : change.tone === 'bad'
+        ? 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-300'
+        : 'bg-zinc-100 text-zinc-600 dark:bg-white/10 dark:text-zinc-300'
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs/4 font-medium ${tint}`}>
+      {change.text}
+    </span>
+  )
+}
+
+/**
+ * A figure for the chosen period, with how it compares to the period before.
+ * "hero" is a card of its own for the two numbers the day turns on; "compact"
+ * is a cell in the quieter strip underneath.
+ */
 export function PeriodTile({
   href,
   label,
@@ -126,6 +146,9 @@ export function PeriodTile({
   goodWhenUp = true,
   versus,
   note,
+  size = 'compact',
+  status,
+  share,
   tone = 'default',
 }: {
   href?: string
@@ -137,40 +160,76 @@ export function PeriodTile({
   goodWhenUp?: boolean
   versus?: string
   note?: string
+  size?: 'hero' | 'compact'
+  /** Replaces the comparison, for a figure that is a position rather than a period total. */
+  status?: { text: string; tone: 'good' | 'bad' | 'flat' }
+  /** 0 to 1: a thin bar for this share of the figure (the overdue part of what is due). */
+  share?: number
   tone?: 'default' | 'good' | 'bad'
 }) {
   const change =
-    current === undefined || previous === undefined || !versus
+    status ??
+    (current === undefined || previous === undefined || !versus
       ? null
-      : delta(current, previous, goodWhenUp, versus)
+      : delta(current, previous, goodWhenUp, versus))
+  const hero = size === 'hero'
   const accent =
     tone === 'good'
       ? 'text-lime-700 dark:text-lime-400'
       : tone === 'bad'
         ? 'text-red-600 dark:text-red-400'
         : 'text-zinc-950 dark:text-white'
-  const changeColor =
-    change?.tone === 'good'
-      ? 'text-lime-700 dark:text-lime-400'
-      : change?.tone === 'bad'
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-zinc-500 dark:text-zinc-400'
+  // "same as yesterday" is not news: show it as plain muted text, not a pill.
+  const quiet = change?.tone === 'flat'
+  const comparison = change ? (
+    quiet ? (
+      <span className="text-xs/5 text-zinc-500 dark:text-zinc-400">{change.text}</span>
+    ) : (
+      <DeltaPill change={change} />
+    )
+  ) : null
+
   const body = (
     <>
-      <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{label}</div>
-      <div className={`mt-1 text-[1.65rem]/8 font-semibold tracking-tight tabular-nums ${accent}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-sm/5 font-medium text-zinc-600 dark:text-zinc-300">{label}</div>
+        {hero && note ? (
+          <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{note}</div>
+        ) : null}
+      </div>
+      <div
+        className={`font-semibold tracking-tight tabular-nums ${accent} ${
+          hero ? 'mt-3 text-4xl/10' : 'mt-1.5 text-xl/7'
+        }`}
+      >
         {value}
       </div>
-      {change ? <div className={`mt-0.5 text-xs/5 ${changeColor}`}>{change.text}</div> : null}
-      {note ? <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">{note}</div> : null}
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${hero ? 'mt-3' : 'mt-1.5'}`}>
+        {comparison}
+      </div>
+      {!hero && note ? (
+        <div className="mt-1 text-xs/5 text-zinc-500 dark:text-zinc-400">{note}</div>
+      ) : null}
+      {share !== undefined ? (
+        <div
+          aria-hidden="true"
+          className="mt-4 h-1.5 overflow-hidden rounded-full bg-zinc-950/5 dark:bg-white/10"
+        >
+          <div
+            className="h-full rounded-full bg-red-500"
+            style={{ width: `${Math.max(2, Math.round(Math.min(1, share) * 100))}%` }}
+          />
+        </div>
+      ) : null}
     </>
   )
-  // A cell of the period strip; the strip draws the outer card.
-  const box =
-    'block border-t border-l border-zinc-950/5 px-5 py-4 dark:border-white/10'
+  const box = hero ? `${CARD} p-5` : 'bg-white px-4 py-3.5 dark:bg-zinc-900'
+  const hover = hero
+    ? 'transition hover:ring-zinc-950/20 dark:hover:ring-white/20'
+    : 'transition hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
 
   return href ? (
-    <Link href={href} className={`${box} hover:bg-zinc-50 dark:hover:bg-white/5`}>
+    <Link href={href} className={`block ${box} ${hover}`}>
       {body}
     </Link>
   ) : (
@@ -178,7 +237,6 @@ export function PeriodTile({
   )
 }
 
-/** Money in against money out, one pair of bars per day (or week). */
 export function MoneyBars({
   buckets,
   weekly,

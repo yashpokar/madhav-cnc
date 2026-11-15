@@ -337,11 +337,10 @@ export default async function DashboardPage({
               compared with {range.compareLabel}
             </span>
           </h2>
-          <div
-            className={`${CARD} grid grid-cols-2 overflow-hidden md:grid-cols-3 2xl:grid-cols-6 [&>*]:-mt-px [&>*]:-ml-px`}
-          >
-            {canMoney ? (
+          {canMoney ? (
+            <div className="grid gap-3 md:grid-cols-2">
               <PeriodTile
+                size="hero"
                 href={`/payments?${span}`}
                 label="Payments received"
                 value={inr.format(now.received)}
@@ -351,16 +350,29 @@ export default async function DashboardPage({
                 tone="good"
                 note={`${now.receivedCount} payment${now.receivedCount === 1 ? '' : 's'}`}
               />
-            ) : null}
-            {canMoney && receivables ? (
-              <PeriodTile
-                href="/payments"
-                label="Payment due"
-                value={inr.format(receivables.outstanding)}
-                tone={receivables.overdue > 0 ? 'bad' : 'default'}
-                note={`${inr.format(receivables.overdue)} overdue · as of today`}
-              />
-            ) : null}
+              {receivables ? (
+                <PeriodTile
+                  size="hero"
+                  href="/payments"
+                  label="Payment due"
+                  value={inr.format(receivables.outstanding)}
+                  tone={receivables.overdue > 0 ? 'bad' : 'default'}
+                  note="all customers, today"
+                  status={
+                    receivables.overdue > 0
+                      ? { text: `${inr.format(receivables.overdue)} overdue`, tone: 'bad' }
+                      : { text: 'Nothing overdue', tone: 'good' }
+                  }
+                  share={
+                    receivables.overdue > 0 && receivables.outstanding > 0
+                      ? receivables.overdue / receivables.outstanding
+                      : undefined
+                  }
+                />
+              ) : null}
+            </div>
+          ) : null}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-zinc-950/10 shadow-xs ring-1 ring-zinc-950/10 md:grid-flow-col md:auto-cols-fr dark:bg-white/10 dark:ring-white/10 [&>:last-child:nth-child(odd)]:col-span-2 md:[&>:last-child:nth-child(odd)]:col-span-1">
             {canExpenses ? (
               <PeriodTile
                 href={`/expenses?${span}`}
@@ -370,7 +382,6 @@ export default async function DashboardPage({
                 previous={before.spent}
                 goodWhenUp={false}
                 versus={range.compareLabel}
-                tone={now.spent > 0 ? 'bad' : 'default'}
                 note="expenses"
               />
             ) : null}
@@ -381,8 +392,8 @@ export default async function DashboardPage({
                 current={now.received - now.spent}
                 previous={before.received - before.spent}
                 versus={range.compareLabel}
-                tone={now.received - now.spent < 0 ? 'bad' : 'good'}
-                note="money in minus out"
+                tone={now.received - now.spent < 0 ? 'bad' : 'default'}
+                note="received minus spent"
               />
             ) : null}
             {canMoney ? (

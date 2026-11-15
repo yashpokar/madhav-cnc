@@ -397,7 +397,7 @@ export default async function DashboardPage({
                   size="hero"
                   href="/payments"
                   label="Payment due"
-                  value={inr.format(receivables.outstanding + receivables.toBillDue)}
+                  value={inr.format(receivables.totalDue)}
                   tone={receivables.overdue > 0 ? 'bad' : 'default'}
                   note={
                     receivables.toBillDue > 0

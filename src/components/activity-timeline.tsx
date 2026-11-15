@@ -1,6 +1,25 @@
 import { ChevronRightIcon } from '@heroicons/react/16/solid'
+import { HistoryDrawer } from '@/components/audit/history-drawer'
 import { LocalTime } from '@/components/local-time'
 import { listActivity, type ActivityEntity } from '@/lib/activity'
+
+/** The audited model behind each kind of record (for its field-level History). */
+const AUDIT_MODEL: Partial<Record<ActivityEntity, string>> = {
+  customer: 'Customer',
+  quotation: 'Quotation',
+  order: 'Order',
+  invoice: 'Invoice',
+  dispatch: 'Dispatch',
+  payment: 'Payment',
+  note: 'CreditDebitNote',
+  expense: 'Expense',
+  item: 'Item',
+  partner: 'Partner',
+  'purchase-order': 'PurchaseOrder',
+  'purchase-bill': 'PurchaseBill',
+  'goods-receipt': 'GoodsReceipt',
+  'vendor-payment': 'VendorPayment',
+}
 
 /** Who did what to this record, newest first. Hidden when printing. */
 export async function ActivityTimeline({
@@ -13,8 +32,15 @@ export async function ActivityTimeline({
   const items = await listActivity(entity, id)
 
   const latest = items[0]
+  const model = AUDIT_MODEL[entity]
 
   return (
+    <div className="relative print:hidden">
+    {model ? (
+      <div className="absolute top-0 right-0 z-10">
+        <HistoryDrawer model={model} id={id} plain label="Full history" />
+      </div>
+    ) : null}
     <details
       // A long history starts folded away; a short one is worth seeing at once.
       open={items.length <= 3}
@@ -62,5 +88,6 @@ export async function ActivityTimeline({
         </ol>
       )}
     </details>
+    </div>
   )
 }

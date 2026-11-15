@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { invoiceInputSchema } from '@/lib/validation/invoices'
 import type { PaymentInput, WriteOffInput } from '@/lib/validation/invoices'
@@ -161,9 +162,12 @@ export async function recordPayment(
 
 export async function removeAllocation(
   allocationId: string,
+  reason?: string,
 ): Promise<SimpleResult> {
   const user = await requireCapability('payment:delete')
-  const result = await invoices.removePaymentAllocation(actorOf(user), allocationId)
+  const result = await withAuditNote({ reason }, () =>
+    invoices.removePaymentAllocation(actorOf(user), allocationId),
+  )
 
   if (result.ok) {
     revalidatePath('/invoices')
@@ -190,9 +194,9 @@ export async function writeOffInvoice(
   return simple(result)
 }
 
-export async function removeWriteOff(writeOffId: string): Promise<SimpleResult> {
+export async function removeWriteOff(writeOffId: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('payment:update')
-  const result = await invoices.removeWriteOff(actorOf(user), writeOffId)
+  const result = await withAuditNote({ reason }, () => invoices.removeWriteOff(actorOf(user), writeOffId))
 
   if (result.ok) {
     revalidatePath('/invoices')
@@ -218,9 +222,9 @@ export async function duplicateInvoice(id: string): Promise<SimpleResult> {
   return simple(result, result.ok ? result.id : undefined)
 }
 
-export async function deleteInvoice(id: string): Promise<SimpleResult> {
+export async function deleteInvoice(id: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('invoice:delete')
-  const result = await invoices.deleteInvoice(actorOf(user), id)
+  const result = await withAuditNote({ reason }, () => invoices.deleteInvoice(actorOf(user), id))
 
   if (result.ok) revalidatePath('/invoices')
 

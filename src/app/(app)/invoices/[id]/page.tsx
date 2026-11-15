@@ -108,6 +108,7 @@ export default async function InvoiceDetailPage({
               description="This permanently removes the invoice and any write-offs on it, and it stops counting towards the customer's balance. Invoices with payments or credit/debit notes must have those removed first. This cannot be undone."
               confirmLabel="Delete invoice"
               redirectTo="/invoices"
+              askReason
               action={deleteInvoice.bind(null, invoice.id)}
             />
           ) : null}

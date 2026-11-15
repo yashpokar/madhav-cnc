@@ -19,6 +19,7 @@ import {
 import { prismaIdempotencyStore } from '@/lib/api/idempotency-store'
 import { clientAddress, enforceRateLimit, rateClassFor } from '@/lib/api/rate-limit'
 import { runInRequestContext } from '@/lib/api/request-context'
+import { apiAuditContext, withAuditNote } from '@/lib/audit-trail/context'
 import type { Action, Resource } from '@/lib/permissions'
 
 export { assertIfMatch, etagOf } from '@/lib/api/etag'
@@ -207,10 +208,28 @@ export function apiRoute<
 
       const context = { request, requestId, user, companyId, body, query, params } as HandlerContext<A, B, Q>
 
+      // Every change this request makes is attributed to the caller, with source
+      // `mobile` or `api` (see sourceOfApiRequest).
+      const audit = apiAuditContext({
+        request,
+        requestId,
+        user,
+        companyId,
+        clientAddress: clientAddress(request.headers),
+      })
+
+      // Why a destructive change is made: X-Audit-Reason (or ?reason=) on any write.
+      // It rides along with every change the handler makes and is kept in the audit trail.
+      const reason =
+        request.method === 'GET' || request.method === 'HEAD'
+          ? null
+          : (request.headers.get('x-audit-reason') ?? url.searchParams.get('reason'))
+      const run = () => (reason ? withAuditNote({ reason }, () => fn(context)) : fn(context))
+
       // A handler may answer a Response itself (a file download); everything else is an enveloped reply.
       const execute = () =>
-        runInRequestContext({ companyId: companyId ?? undefined }, async () => {
-          const out = await fn(context)
+        runInRequestContext({ companyId: companyId ?? undefined, audit }, async () => {
+          const out = await run()
 
           return out instanceof Response ? out : toStored(out)
         })
@@ -220,7 +239,7 @@ export function apiRoute<
       if (key && user) {
         let firstHeaders: Record<string, string> = {}
 
-        const outcome = await runInRequestContext({ companyId: companyId ?? undefined }, () =>
+        const outcome = await runInRequestContext({ companyId: companyId ?? undefined, audit }, () =>
           runIdempotent(
             prismaIdempotencyStore,
             { userId: user.id, companyId: companyId ?? '', key },
@@ -230,7 +249,7 @@ export function apiRoute<
               requestHash: hashRequest(request.method, url.pathname, rawBody),
             },
             async () => {
-              const result = await toStored(await fn(context))
+              const result = await toStored(await run())
 
               firstHeaders = result.reply.init.headers ?? {}
 

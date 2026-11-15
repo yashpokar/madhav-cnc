@@ -9,6 +9,7 @@
 // caller (web requireCapability / API capability).
 
 import { prisma } from '@/lib/prisma'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
 import { parsePaymentDetails } from '@/lib/payment-methods'
 import { nextExpenseNumber } from '@/lib/codes'
@@ -123,6 +124,10 @@ export async function createExpense(
   actor: Actor,
   input: ExpenseInput,
 ): Promise<ServiceResult<{ id: string; number: string }>> {
+  const locked = await guardMoneyChange([input.expenseDate])
+
+  if (!locked.ok) return locked
+
   const mode = await resolveMode(input)
 
   if (!mode.ok) return mode
@@ -153,9 +158,13 @@ export async function updateExpense(
   input: ExpenseInput,
 ): Promise<ServiceResult<{ id: string }>> {
   // The record first: a stranger's id is "not found" whatever else is wrong with the request.
-  const existing = await prisma.expense.findUnique({ where: { id }, select: { id: true } })
+  const existing = await prisma.expense.findUnique({ where: { id }, select: { id: true, expenseDate: true } })
 
   if (!existing) return { ok: false, error: 'Expense not found' }
+
+  const locked = await guardMoneyChange([existing.expenseDate, input.expenseDate])
+
+  if (!locked.ok) return locked
 
   const mode = await resolveMode(input)
 
@@ -174,9 +183,13 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(_actor: Actor, id: string): Promise<ServiceResult> {
-  const expense = await prisma.expense.findUnique({ where: { id }, select: { number: true } })
+  const expense = await prisma.expense.findUnique({ where: { id }, select: { number: true, expenseDate: true } })
 
   if (!expense) return { ok: false, error: 'Expense not found' }
+
+  const allowed = await guardMoneyChange([expense.expenseDate], { destructive: true, what: 'expense' })
+
+  if (!allowed.ok) return allowed
 
   await prisma.expense.delete({ where: { id } })
 

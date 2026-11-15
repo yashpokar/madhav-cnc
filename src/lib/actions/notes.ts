@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { nextNoteNumber } from '@/lib/codes'
 import { documentTotals, lineTotals, splitGst } from '@/lib/pricing'
@@ -115,6 +117,10 @@ export async function createNote(
     }
   }
 
+  const locked = await guardMoneyChange([parsed.data.noteDate])
+
+  if (!locked.ok) return { status: 'error', message: locked.error }
+
   const { totals, lines } = buildPersistable(parsed.data)
   const number = await nextNoteNumber(parsed.data.kind)
 
@@ -167,12 +173,16 @@ export async function updateNote(
 
   const existing = await prisma.creditDebitNote.findUnique({
     where: { id },
-    select: { status: true },
+    select: { status: true, noteDate: true },
   })
 
   if (!existing) {
     return { status: 'error', message: 'Note not found' }
   }
+
+  const locked = await guardMoneyChange([existing.noteDate, parsed.data.noteDate])
+
+  if (!locked.ok) return { status: 'error', message: locked.error }
 
   if (existing.status !== 'DRAFT') {
     return {
@@ -259,12 +269,16 @@ export async function setNoteStatus(
   return { ok: true, message: `${existing.number} marked ${status.toLowerCase()}` }
 }
 
-export async function deleteNote(id: string): Promise<SimpleResult> {
+export async function deleteNote(id: string, reason?: string): Promise<SimpleResult> {
   await requireCapability('note:delete')
 
+  return withAuditNote({ reason }, () => removeNote(id))
+}
+
+async function removeNote(id: string): Promise<SimpleResult> {
   const note = await prisma.creditDebitNote.findUnique({
     where: { id },
-    select: { number: true, status: true },
+    select: { number: true, status: true, noteDate: true },
   })
 
   if (!note) {
@@ -277,6 +291,10 @@ export async function deleteNote(id: string): Promise<SimpleResult> {
       error: 'Cancel the note before deleting it',
     }
   }
+
+  const allowed = await guardMoneyChange([note.noteDate], { destructive: true, what: 'note' })
+
+  if (!allowed.ok) return { ok: false, error: allowed.error }
 
   await prisma.creditDebitNote.delete({ where: { id } })
 

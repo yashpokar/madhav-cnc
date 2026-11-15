@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -93,9 +94,9 @@ export async function updateVendorAllocations(
   return { ok: true, message: result.message }
 }
 
-export async function deleteVendorPayment(paymentId: string): Promise<SimpleResult> {
+export async function deleteVendorPayment(paymentId: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('purchase:delete')
-  const result = await removePayment(user.id, paymentId)
+  const result = await withAuditNote({ reason }, () => removePayment(user.id, paymentId))
 
   if (!result.ok) return result
 

@@ -87,6 +87,7 @@ export default async function BillDetailPage({
               description="This permanently removes the bill. This cannot be undone."
               confirmLabel="Delete bill"
               redirectTo="/purchase-bills"
+              askReason
               action={deleteBill.bind(null, bill.id)}
             />
           ) : null}

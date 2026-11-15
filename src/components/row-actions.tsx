@@ -24,6 +24,7 @@ import {
   DropdownLabel,
   DropdownMenu,
 } from '@/components/catalyst/dropdown'
+import { ReasonField, reasonOk } from '@/components/audit/reason-field'
 import { FormBanner } from '@/components/form-banner'
 
 type DeleteResult =
@@ -42,6 +43,7 @@ export function RowActions({
   editHref,
   items = [],
   deleteAction,
+  askReason = false,
   deleteTitle,
   deleteDescription,
   deleteBlocked,
@@ -52,7 +54,10 @@ export function RowActions({
   editHref?: string
   /** Extra links, shown between Edit and Delete. */
   items?: { label: string; href: string }[]
-  deleteAction?: () => Promise<DeleteResult | { ok: boolean }>
+  /** Receives the reason when `askReason` is set. */
+  deleteAction?: (reason?: string) => Promise<DeleteResult | { ok: boolean }>
+  /** Ask why before deleting (money and document records): kept in the audit trail. */
+  askReason?: boolean
   deleteTitle?: string
   deleteDescription?: React.ReactNode
   /** Why it cannot be deleted yet; the dialog explains instead of deleting. */
@@ -62,6 +67,7 @@ export function RowActions({
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
 
   if (!viewHref && !editHref && items.length === 0 && !deleteAction) {
     return null
@@ -71,12 +77,13 @@ export function RowActions({
     if (!pending) {
       setOpen(false)
       setError(null)
+      setReason('')
     }
   }
 
   function confirm() {
     startTransition(async () => {
-      const result = (await deleteAction?.()) as DeleteResult | undefined
+      const result = (await deleteAction?.(askReason ? reason.trim() : undefined)) as DeleteResult | undefined
 
       if (result && !result.ok) {
         setError(result.error)
@@ -142,6 +149,9 @@ export function RowActions({
                 'This permanently removes the record. This cannot be undone.'}
             </DialogDescription>
           )}
+          {askReason && !deleteBlocked ? (
+            <ReasonField value={reason} onChange={setReason} disabled={pending} />
+          ) : null}
           {error ? (
             <DialogBody>
               <div role="alert">
@@ -154,7 +164,13 @@ export function RowActions({
               {deleteBlocked ? 'Close' : 'Cancel'}
             </Button>
             {deleteBlocked ? null : (
-              <Button type="button" color="red" onClick={confirm} disabled={pending} autoFocus>
+              <Button
+                type="button"
+                color="red"
+                onClick={confirm}
+                disabled={pending || (askReason && !reasonOk(reason))}
+                autoFocus={!askReason}
+              >
                 {pending ? 'Working…' : 'Delete'}
               </Button>
             )}

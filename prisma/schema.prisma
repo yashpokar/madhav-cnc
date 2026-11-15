@@ -788,6 +788,11 @@ model CompanySetting {
 
   invoiceTerms String? @map("invoice_terms")
 
+  /// Books are closed up to and including this date: nothing dated on or before
+  /// it can be created, edited or deleted, except by a company administrator
+  /// who gives a reason (recorded in the audit trail). Null means no lock.
+  lockDate DateTime? @map("lock_date") @db.Date
+
   updatedById      String?           @map("updated_by_id")
   /// Who created the company through self-service onboarding. Null for
   /// companies a platform super-admin added, so only self-made ones are capped.
@@ -1921,6 +1926,12 @@ model BalanceAdjustment {
   reason     BalanceAdjustmentReason
   note       String
 
+  /// Set on the counter entry that reverses another adjustment. The original
+  /// stays on the books; the pair nets to zero. One reversal per original.
+  reversesId String?            @unique @map("reverses_id")
+  reverses   BalanceAdjustment? @relation("AdjustmentReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy BalanceAdjustment? @relation("AdjustmentReversal")
+
   createdById String? @map("created_by_id")
   createdBy   User?   @relation("AdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedById String? @map("updated_by_id")
@@ -2126,4 +2137,58 @@ model BillingPayment {
 
   @@index([companyId, createdAt])
   @@map("billing_payments")
+}
+
+/// The append-only audit trail. Rows are written only by database triggers
+/// (see prisma/migrations/*_audit_trail), never by the application, and the
+/// table rejects UPDATE, DELETE and TRUNCATE. Each company has its own hash
+/// chain (chainKey = company id; platform-level events use ''). There is
+/// deliberately no relation to company_settings, so the trail outlives a
+/// deleted company.
+model AuditEvent {
+  /// Assigned by the insert trigger (a UUID); the application never inserts events.
+  id         String   @id
+  /// 1, 2, 3... within the chain; assigned by the trigger.
+  seq        BigInt
+  chainKey   String   @map("chain_key")
+  companyId  String?  @map("company_id")
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  actorUserId String? @map("actor_user_id")
+  actorName   String  @map("actor_name")
+  actorRole   String? @map("actor_role")
+  /// web | api | mobile | system | webhook | seed | public
+  source      String
+  requestId   String? @map("request_id")
+  ip          String?
+  userAgent   String? @map("user_agent")
+
+  /// The Prisma model name, e.g. "Invoice".
+  entityType String  @map("entity_type")
+  entityId   String  @map("entity_id")
+  /// For line items: the document they belong to, so the document's history shows them.
+  parentType String? @map("parent_type")
+  parentId   String? @map("parent_id")
+  /// create | update | delete | status | restore | baseline
+  action     String
+
+  before        Json?
+  after         Json?
+  changedFields String[] @map("changed_fields")
+  summary       String
+  /// Rows changed by one database transaction (or one named operation) share this.
+  correlationId String   @map("correlation_id")
+  reason        String?
+  txId          BigInt?  @map("tx_id")
+
+  prevHash String @map("prev_hash")
+  hash     String
+
+  @@unique([chainKey, seq])
+  @@index([companyId, occurredAt(sort: Desc)])
+  @@index([entityType, entityId, occurredAt(sort: Desc)])
+  @@index([parentType, parentId, occurredAt(sort: Desc)])
+  @@index([actorUserId])
+  @@index([correlationId])
+  @@map("audit_events")
 }

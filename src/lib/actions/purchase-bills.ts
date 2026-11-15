@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
 import { nextPurchaseBillNumber } from '@/lib/codes'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import { billInputSchema, type BillData } from '@/lib/validation/purchases'
@@ -122,6 +124,10 @@ export async function createBill(
 
   if (problem) return { status: 'error', message: problem }
 
+  const locked = await guardMoneyChange([parsed.data.billDate])
+
+  if (!locked.ok) return { status: 'error', message: locked.error }
+
   const { totals, lines } = buildBill(parsed.data)
   const number = await nextPurchaseBillNumber()
 
@@ -174,10 +180,14 @@ export async function updateBill(
 
   const existing = await prisma.purchaseBill.findUnique({
     where: { id },
-    select: { status: true },
+    select: { status: true, billDate: true },
   })
 
   if (!existing) return { status: 'error', message: 'Bill not found' }
+
+  const locked = await guardMoneyChange([existing.billDate, parsed.data.billDate])
+
+  if (!locked.ok) return { status: 'error', message: locked.error }
 
   if (existing.status !== 'DRAFT') {
     return {
@@ -466,14 +476,19 @@ export async function duplicateBill(id: string): Promise<SimpleResult> {
   }
 }
 
-export async function deleteBill(id: string): Promise<SimpleResult> {
+export async function deleteBill(id: string, reason?: string): Promise<SimpleResult> {
   await requireCapability('purchase:delete')
 
+  return withAuditNote({ reason }, () => removeBill(id))
+}
+
+async function removeBill(id: string): Promise<SimpleResult> {
   const bill = await prisma.purchaseBill.findUnique({
     where: { id },
     select: {
       number: true,
       status: true,
+      billDate: true,
       _count: { select: { allocations: true, receipts: true } },
     },
   })
@@ -491,6 +506,10 @@ export async function deleteBill(id: string): Promise<SimpleResult> {
   if (bill._count.receipts > 0) {
     return { ok: false, error: 'Goods have been received against this bill.' }
   }
+
+  const allowed = await guardMoneyChange([bill.billDate], { destructive: true, what: 'bill' })
+
+  if (!allowed.ok) return { ok: false, error: allowed.error }
 
   await prisma.purchaseBill.delete({ where: { id } })
 

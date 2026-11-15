@@ -12,6 +12,8 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
+import { guardMoneyChange, reasonVerdict } from '@/lib/audit-trail/guards'
+import { currentReason } from '@/lib/audit-trail/context'
 import { getActiveCompanyId } from '@/lib/active-company'
 import { nextAdjustmentNumber } from '@/lib/codes'
 import { isFarFuture, signedAmount } from '@/lib/adjustments-math'
@@ -62,6 +64,10 @@ export async function createAdjustment(
   if (!parsed.ok) return parsed
 
   const { data, adjustedOn, amount } = parsed
+  const locked = await guardMoneyChange([adjustedOn])
+
+  if (!locked.ok) return locked
+
   let name: string
   let customerId: string | null = null
   let channelId: string | null = null
@@ -121,6 +127,9 @@ const existingSelect = {
   number: true,
   kind: true,
   amount: true,
+  adjustedOn: true,
+  reversesId: true,
+  reversedBy: { select: { number: true } },
   customerId: true,
   channel: { select: { name: true } },
   customer: { select: { name: true } },
@@ -143,7 +152,14 @@ export async function updateAdjustment(
 
   if (!existing) return { ok: false, error: 'Adjustment not found' }
 
+  if (existing.reversesId || existing.reversedBy) {
+    return { ok: false, error: `${existing.number} is part of a reversal and can no longer be edited` }
+  }
+
   const { data, adjustedOn, amount } = parsed
+  const locked = await guardMoneyChange([existing.adjustedOn, adjustedOn])
+
+  if (!locked.ok) return locked
 
   await prisma.balanceAdjustment.update({
     where: { id },
@@ -178,6 +194,14 @@ export async function deleteAdjustment(actor: Actor, id: string): Promise<Servic
 
   if (!existing) return { ok: false, error: 'Adjustment not found' }
 
+  if (existing.reversedBy) {
+    return { ok: false, error: `${existing.number} was reversed by ${existing.reversedBy.number}. Delete that reversal first.` }
+  }
+
+  const allowed = await guardMoneyChange([existing.adjustedOn], { destructive: true, what: 'adjustment' })
+
+  if (!allowed.ok) return allowed
+
   await prisma.balanceAdjustment.delete({ where: { id } })
 
   const name = existing.channel?.name ?? existing.customer?.name ?? 'balance'
@@ -191,6 +215,68 @@ export async function deleteAdjustment(actor: Actor, id: string): Promise<Servic
   }
 
   return { ok: true, message: `${existing.number} deleted` }
+}
+
+/**
+ * Reverses an adjustment without touching it: a new, opposite entry dated today
+ * and linked to the original, so the books show both and net to zero. This is
+ * the way to correct an adjustment in a closed period. A reason is required.
+ */
+export async function reverseAdjustment(
+  actor: Actor,
+  id: string,
+  now = new Date(),
+): Promise<ServiceResult<{ id: string; number: string }>> {
+  const reason = currentReason()
+  const given = reasonVerdict(reason, 'adjustment').ok
+
+  if (!given) return { ok: false, error: 'Say why you are reversing this adjustment (a few words are enough).' }
+
+  const original = await prisma.balanceAdjustment.findUnique({
+    where: { id },
+    select: { ...existingSelect, id: true, channelId: true, reason: true },
+  })
+
+  if (!original) return { ok: false, error: 'Adjustment not found' }
+
+  if (original.reversesId) return { ok: false, error: `${original.number} is itself a reversal and can not be reversed` }
+
+  if (original.reversedBy) return { ok: false, error: `${original.number} was already reversed by ${original.reversedBy.number}` }
+
+  // The reversal is dated today: a closed period is corrected going forward.
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const locked = await guardMoneyChange([today])
+
+  if (!locked.ok) return locked
+
+  const created = await prisma.balanceAdjustment.create({
+    data: {
+      number: await nextAdjustmentNumber(),
+      kind: original.kind,
+      channelId: original.channelId,
+      customerId: original.customerId,
+      amount: -original.amount.toNumber(),
+      adjustedOn: today,
+      reason: original.reason,
+      note: `Reversal of ${original.number}: ${reason}`,
+      reversesId: id,
+      createdById: actor.userId,
+      updatedById: actor.userId,
+    },
+    select: { id: true, number: true },
+  })
+
+  const name = original.channel?.name ?? original.customer?.name ?? 'balance'
+  const summary = `reversed ${original.number} with ${created.number} (${describeAdjustment(original.kind, -original.amount.toNumber(), name)})`
+  const who = await activityActor(actor)
+
+  await logActivity({ entity: 'adjustment', id, action: 'reversed', summary, actor: who })
+
+  if (original.customerId) {
+    await logActivity({ entity: 'customer', id: original.customerId, action: 'adjusted', summary, actor: who })
+  }
+
+  return { ok: true, message: `${created.number} reverses ${original.number}`, id: created.id, number: created.number }
 }
 
 // ---- Opening cash and bank balances -------------------------------------
@@ -270,6 +356,10 @@ export async function saveOpeningBalances(
   const plan = planOpeningChanges(parsed.data, names)
 
   if (!plan.ok) return plan
+
+  const locked = await guardMoneyChange(plan.changes.map((change) => change.asOf))
+
+  if (!locked.ok) return locked
 
   const existing = await prisma.channelOpeningBalance.findMany({
     select: { id: true, channelId: true, amount: true, asOf: true },

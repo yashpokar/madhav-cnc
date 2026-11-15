@@ -700,6 +700,7 @@ export default async function PaymentsPage({
                       <RowActions
                         name={payment.number}
                         viewHref={`/payments/${payment.id}`}
+                        askReason
                         deleteAction={
                           can(user.role, 'payment:delete') && !payment.isAdvance
                             ? deleteReceipt.bind(null, payment.id)

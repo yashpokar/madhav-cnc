@@ -6,6 +6,7 @@
 // spend the same outstanding amount.
 
 import { prisma } from '@/lib/prisma'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { logActivity } from '@/lib/activity'
 import { nextVendorPaymentNumber } from '@/lib/codes'
 import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
@@ -164,6 +165,10 @@ export async function createVendorPayment(
 
   if (!vendor) return { ok: false, error: 'Vendor not found' }
 
+  const locked = await guardMoneyChange([input.paidOn])
+
+  if (!locked.ok) return locked
+
   const method = await resolvePaymentMode(input.channelId)
 
   if (!method) return { ok: false, error: 'Choose a payment mode' }
@@ -241,10 +246,14 @@ export async function updateVendorAllocations(
 ): Promise<ServiceResult<{ vendorId: string; billIds: string[] }>> {
   const payment = await prisma.vendorPayment.findUnique({
     where: { id: paymentId },
-    select: { id: true, number: true, vendorId: true },
+    select: { id: true, number: true, vendorId: true, paidOn: true },
   })
 
   if (!payment) return { ok: false, error: 'Payment not found' }
+
+  const locked = await guardMoneyChange([payment.paidOn])
+
+  if (!locked.ok) return locked
 
   const outcome = await inTransaction(async (tx) => {
     await lockVendor(tx, payment.vendorId)
@@ -321,11 +330,16 @@ export async function deleteVendorPayment(
     select: {
       number: true,
       vendorId: true,
+      paidOn: true,
       allocations: { select: { billId: true } },
     },
   })
 
   if (!payment) return { ok: false, error: 'Payment not found' }
+
+  const allowed = await guardMoneyChange([payment.paidOn], { destructive: true, what: 'vendor payment' })
+
+  if (!allowed.ok) return allowed
 
   const outcome = await inTransaction(async (tx) => {
     await lockVendor(tx, payment.vendorId)

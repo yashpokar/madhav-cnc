@@ -36,6 +36,7 @@ export const SCOPED = new Set([
   'BalanceAdjustment',
   'Invitation',
   'ActivityLog',
+  'AuditEvent',
   'IdempotencyKey',
   'Upload',
   'CompanySubscription',
@@ -105,7 +106,7 @@ StockMovement: item>Item@itemId material>Material@materialId receiptLine>GoodsRe
 VendorPayment: vendor>Vendor@vendorId channel>PaymentChannel@channelId allocations>VendorPaymentAllocation
 VendorPaymentAllocation: vendorPayment>VendorPayment@vendorPaymentId bill>PurchaseBill@billId
 ChannelOpeningBalance: channel>PaymentChannel@channelId
-BalanceAdjustment: channel>PaymentChannel@channelId customer>Customer@customerId
+BalanceAdjustment: channel>PaymentChannel@channelId customer>Customer@customerId reverses>BalanceAdjustment@reversesId
 `
 
 export type Relation = { target: string; fk?: string }

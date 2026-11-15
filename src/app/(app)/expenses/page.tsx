@@ -279,6 +279,7 @@ export default async function ExpensesPage({
                     name={expense.number}
                     
                     editHref={canEdit && (true) ? `/expenses/${expense.id}` : undefined}
+                    askReason
                     deleteAction={
                       canDelete && (true)
                         ? deleteExpense.bind(null, expense.id)

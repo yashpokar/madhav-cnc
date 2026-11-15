@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@/generated/prisma/client'
 import { withAudit } from '@/lib/audit'
+import { withAuditContext } from '@/lib/audit-trail/adapter'
 import { withCompanyScope } from '@/lib/company-scope'
 
 function createPrismaClient() {
@@ -13,7 +14,7 @@ function createPrismaClient() {
   return withCompanyScope(
     withAudit(
       new PrismaClient({
-        adapter: new PrismaPg({ connectionString }),
+        adapter: withAuditContext(new PrismaPg({ connectionString })),
       }),
     ),
   )

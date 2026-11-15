@@ -132,7 +132,8 @@ export function ApplyPanel({
             description="Any amounts applied to bills will be released and those bills will show as unpaid again. This cannot be undone."
             redirectTo="/vendor-payments"
             disabled={pending}
-            action={() => deleteVendorPayment(paymentId)}
+            askReason
+            action={(reason) => deleteVendorPayment(paymentId, reason)}
           />
         </div>
       ) : null}

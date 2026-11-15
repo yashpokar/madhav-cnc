@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { guardMoneyChange } from '@/lib/audit-trail/guards'
 import { negativeStockGuard, round3, round4, stockKey } from '@/lib/stock-rules'
 import { onHandFor } from '@/lib/services/goods-receipts'
 import type { Failure } from '@/lib/services/goods-receipts'
@@ -65,6 +66,10 @@ export function setOpeningStock(
 
     if (!date) return { ok: false, error: 'Enter a valid date' }
 
+    const locked = await guardMoneyChange([date])
+
+    if (!locked.ok) return { ok: false, error: locked.error }
+
     const keys = targetKeys(input.target)
     const existing = await tx.stockMovement.count({ where: { ...keys, type: 'OPENING' } })
 
@@ -126,6 +131,10 @@ export function adjustStock(
     const date = parseDay(input.date)
 
     if (!date) return { ok: false, error: 'Enter a valid date' }
+
+    const locked = await guardMoneyChange([date])
+
+    if (!locked.ok) return { ok: false, error: locked.error }
 
     const keys = targetKeys(input.target)
     const key = stockKey(keys)

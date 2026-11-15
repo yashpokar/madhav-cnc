@@ -20,6 +20,7 @@ const db = vi.hoisted(() => ({
 
 vi.mock('@/lib/active-company', () => ({ requireCompanyId: async () => 'co1' }))
 vi.mock('@/lib/activity', () => ({ logActivity: async () => {} }))
+vi.mock('@/lib/audit-trail/guards', () => ({ guardMoneyChange: async () => ({ ok: true }) }))
 vi.mock('@/lib/codes', () => ({ nextInvoiceNumber: async () => 'INV-X', nextPaymentNumber: async () => 'PAY-X' }))
 
 vi.mock('@/lib/prisma', () => ({

@@ -49,6 +49,7 @@ capability is `403 FORBIDDEN`.
 | `GET /production/tasks` | production:read |
 | `GET /payment-methods` | payment:read |
 | `GET /expense-categories` | expense:read |
+| `GET /audit`, `/{customers,quotations,orders,invoices,payments,expenses,vendors,purchase-bills}/{id}/history` | settings:update (log); the record's own read capability (history). See Audit trail |
 | `GET /states` | public, `Cache-Control: public, max-age=86400`, ETag |
 
 Lists are ordered newest first (`createdAt`; payments by `paidOn`; expenses by `expenseDate`; items by name;
@@ -84,10 +85,10 @@ and quantities are JSON numbers going in (decimal strings coming out).
 | `POST /invoices/{id}/cancel` | invoice:update | none. `409` while payments are applied |
 | `POST /invoices/{id}/share` | invoice:update | none. Issued invoices only (`409` for a draft). Same answer as a quotation share |
 | `POST /payments` | payment:create | `{"customerId","amount":500,"methodId":"<GET /payment-methods id>","paidOn":"2026-11-15","details":{...},"allocations":[{"invoiceId","amount"}],"openingApplied":0}` |
-| `DELETE /payments/{id}` | payment:delete | none. Allocations go with it; an order advance is `409` |
+| `DELETE /payments/{id}` | payment:delete | none, but **a reason is required** (see Audit trail). Allocations go with it; an order advance is `409` |
 | `POST /expenses` | expense:create | `{"payeeName","expenseDate","amount","taxRatePercent":18,"methodId","details":{},"receiptUploadId":"..."}` |
 | `PATCH /expenses/{id}` | expense:update | the whole expense; leaving `receiptUploadId` out keeps the receipt, `null` removes it |
-| `DELETE /expenses/{id}` | expense:delete | none |
+| `DELETE /expenses/{id}` | expense:delete | none, but **a reason is required** (see Audit trail) |
 | `POST /production/tasks/{id}/start` | production:update | `{}` or `{"force":true}` (force: administrators only, starts a stage out of order) |
 | `POST /production/tasks/{id}/complete` | production:update | `{}` or `{"startNext":false}` |
 | `POST /production/tasks/{id}/hold` | production:update | `{"reason":"Waiting for ply"}` |
@@ -150,6 +151,40 @@ When `BILLING_ENFORCED=true` and a Free company has issued its 10 free invoices,
 the web). Only issuing is limited: drafts, edits, cancelling, payments, sharing and reading keep working, and
 cancelling an invoice does not give its slot back. Business and grandfathered companies are never limited. While
 `BILLING_ENFORCED` is unset (the default) nothing is refused.
+
+## Audit trail
+
+Every change to business data is recorded by the database itself (docs/AUDIT.md): who, when, from where, and the
+record before and after. The app does not have to send anything for that to work; what it should send is below.
+
+**Source and actor.** Every API write is attributed to the signed-in person (`actorUserId`, name and role at that
+time) with `source: "api"`. When the request carries `X-Client: prodlys-mobile` (or a user agent containing `Expo`) the
+source is `"mobile"` instead. Send the header on every call from the app. The request id of the call is stored with the
+change, so a support question ("what happened on this request?") can be answered from the log.
+
+**Reasons.** Deleting a money record needs a reason: send `X-Audit-Reason: Entered twice by mistake` (or `?reason=`)
+on `DELETE /payments/{id}` and `DELETE /expenses/{id}`. Without one the answer is `422 VALIDATION_FAILED` with
+`fields.reason`. A reason is optional on any other write and is kept the same way. Server switch for the transition
+while older app versions are in use: `AUDIT_REASON_REQUIRED=false` stops refusing a delete that has no reason (the
+full copy of the record is kept either way).
+
+**Closed books.** An administrator can close the books up to a date (web: Settings, Audit log). Creating, changing or
+deleting a record dated on or before it is `409 CONFLICT` for everyone but a company administrator, who must send
+`X-Audit-Reason`.
+
+**Reading the trail.**
+
+| Path | Capability | Answer |
+| --- | --- | --- |
+| `GET /audit` | settings:update | The company's log, newest first. `?limit=&cursor=` plus filters `entity` (e.g. `Invoice`), `entityId`, `actor` (user id), `action` (create, update, delete, status, restore, baseline), `source` (web, api, mobile, system, webhook, seed, public), `from`/`to` (UTC days, inclusive), `q` (record number or id, person, words) |
+| `GET /{customers,quotations,orders,invoices,payments,expenses,vendors,purchase-bills}/{id}/history` | that record's read capability | Every event of the record and its line items, newest first, cursor-paged. A record of another company is `404` (a deleted record keeps its history) |
+
+An event: `{ id, seq, occurredAt, actor: { id, name, role }, source, requestId, entityType, entityLabel, entityId,
+parentType, parentId, action, summary, reason, correlationId, changes: [{ field, label, before, after }] }`.
+`changes` carries the raw values (a create has no `before`, a delete no `after`); secrets (password hashes, tokens,
+all but the last four digits of a bank account number) are masked as `"[redacted]"` / `"••••1234"`. Events changed
+together (one save touching an invoice and its lines) share `correlationId`. `seq` rises by one per company, so a
+client can detect a gap.
 
 ## Tenancy
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { withAuditNote } from '@/lib/audit-trail/context'
 import { requireCapability } from '@/lib/session'
 import { receiptInputSchema } from '@/lib/validation/payments'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
@@ -92,9 +93,11 @@ export async function updateAllocations(
   return { ok: true, message: result.message }
 }
 
-export async function deleteReceipt(paymentId: string): Promise<SimpleResult> {
+export async function deleteReceipt(paymentId: string, reason?: string): Promise<SimpleResult> {
   const user = await requireCapability('payment:delete')
-  const result = await deleteReceiptService({ userId: user.id, name: user.name }, paymentId)
+  const result = await withAuditNote({ reason }, () =>
+    deleteReceiptService({ userId: user.id, name: user.name }, paymentId),
+  )
 
   if (!result.ok) return { ok: false, error: result.error }
 

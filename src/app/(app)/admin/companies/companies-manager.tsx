@@ -67,8 +67,9 @@ export function CompaniesManager({
 
       <section className="grid grid-cols-1 gap-3">
         <Subheading level={2}>Add a company</Subheading>
-        <div className="flex max-w-xl gap-2">
+        <div className="flex max-w-xl items-start gap-2">
           <Input
+            className="min-w-0 flex-1"
             value={name}
             placeholder="Company name"
             aria-label="Company name"
@@ -77,11 +78,11 @@ export function CompaniesManager({
               if (event.key === 'Enter' && name.trim()) add()
             }}
           />
-          <Button disabled={pending || !name.trim()} onClick={add}>
+          <Button className="shrink-0 whitespace-nowrap" disabled={pending || !name.trim()} onClick={add}>
             Add company
           </Button>
         </div>
-        <Text>
+        <Text className="max-w-xl">
           It starts with the production stages, expense categories and payment modes of the company
           you are working in. Add its address, GSTIN, bank and logo under Company details after
           switching to it.

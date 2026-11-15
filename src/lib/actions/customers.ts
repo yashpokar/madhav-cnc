@@ -109,7 +109,7 @@ export async function createCustomer(
   })
 
   revalidatePath('/customers')
-  redirect(`/customers?created=${encodeURIComponent(customer.code)}`)
+  redirect(`/customers?created=${encodeURIComponent(customer.code)}&customer=${customer.id}`)
 }
 
 export async function updateCustomer(
@@ -224,6 +224,7 @@ export type QuickCustomerResult =
         pincode: string | null
         preferredArchitectId: string | null
         preferredCarpenterId: string | null
+        paymentTermsDays: number | null
       }
     }
   | { ok: false; error: string }
@@ -279,6 +280,7 @@ export async function quickCreateCustomer(input: {
       pincode: true,
       preferredArchitectId: true,
       preferredCarpenterId: true,
+      paymentTermsDays: true,
     },
   })
 

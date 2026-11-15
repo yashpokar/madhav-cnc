@@ -117,10 +117,20 @@ export default async function InvoiceDetailPage({
       </div>
 
       {justCreated ? (
-        <FormBanner tone="success">Invoice {invoice.number} created</FormBanner>
+        <FormBanner
+          tone="success"
+          steps={[
+            ...(canTakePayment
+              ? [{ label: 'Record payment', href: `/payments/new?customer=${invoice.customer.id}` }]
+              : []),
+            { label: 'Send on WhatsApp', href: '#invoice-actions' },
+          ]}
+        >
+          Invoice {invoice.number} created
+        </FormBanner>
       ) : null}
 
-      <div className="print:hidden">
+      <div id="invoice-actions" className="print:hidden">
         <InvoiceActions
           modes={modes}
           id={invoice.id}

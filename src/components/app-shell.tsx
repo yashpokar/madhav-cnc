@@ -60,6 +60,7 @@ import {
 import { SidebarLayout } from '@/components/catalyst/sidebar-layout'
 import { CompanySwitcher, type CompanyChoice } from '@/components/company-switcher'
 import { CommandPalette, SearchTrigger } from '@/components/command-palette'
+import { Shortcuts } from '@/components/shortcuts'
 import { setTheme } from '@/lib/theme'
 import Link from 'next/link'
 import { authClient } from '@/lib/auth-client'
@@ -305,6 +306,7 @@ function AppShellFrame({
       }
     >
       <CommandPalette pages={[...nav, ...adminNav]} />
+      <Shortcuts userId={user.id} companyId={activeCompanyId} role={user.role} nav={nav} />
       {children}
       <BottomNav nav={nav} pathname={pathname} />
     </SidebarLayout>

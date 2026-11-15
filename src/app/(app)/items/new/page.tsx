@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { createItem } from '@/lib/actions/items'
+import { getActiveIndustry } from '@/lib/queries/company'
 import { listMaterials } from '@/lib/queries/items'
 import { requireCapability } from '@/lib/session'
 import { ItemForm } from '../item-form'
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function NewItemPage() {
   await requireCapability('item:create')
-  const materials = await listMaterials()
+  const [materials, industry] = await Promise.all([listMaterials(), getActiveIndustry()])
 
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-8">
@@ -32,7 +33,7 @@ export default async function NewItemPage() {
           supplyType: 'GOODS',
           isFlatRate: false,
           materialId: null,
-          unit: 'SQFT',
+          unit: industry.defaultUnits.MATERIAL,
           rate: 0,
           purchaseRate: null,
           brand: null,
@@ -42,7 +43,7 @@ export default async function NewItemPage() {
           length: null,
           width: null,
           hsnCode: null,
-          taxRatePercent: 0,
+          taxRatePercent: industry.defaultGstRate,
           isActive: true,
           notes: null,
         }}

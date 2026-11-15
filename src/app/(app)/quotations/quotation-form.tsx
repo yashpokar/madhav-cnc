@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useMemo, useState, useRef } from 'react'
+import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
@@ -77,6 +78,9 @@ export function QuotationForm({
   carpenters: PartnerOption[]
 }) {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useDirtyGuard(formRef)
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     { status: 'idle' },
@@ -159,7 +163,7 @@ export function QuotationForm({
   )?.[1]
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
       <input type="hidden" name="siteCity" value={siteCity} />

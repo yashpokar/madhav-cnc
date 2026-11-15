@@ -3,9 +3,11 @@
 import { PaymentModeSelect } from '@/components/payment-mode-select'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { date as dateFormat, money as currency } from '@/lib/format'
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useState, useTransition, useRef } from 'react'
+import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import { useRouter } from 'next/navigation'
-import { QuickCustomerDialog } from '@/components/quick-customer-dialog'
+import { CustomerCombobox } from '@/components/customer-combobox'
+import type { CustomerOption } from '@/lib/queries/quotations'
 import { Button } from '@/components/catalyst/button'
 import { Divider } from '@/components/catalyst/divider'
 import {
@@ -18,7 +20,6 @@ import {
   Legend,
 } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
-import { Select } from '@/components/catalyst/select'
 import { Textarea } from '@/components/catalyst/textarea'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
@@ -47,15 +48,31 @@ export function ReceiptForm({
   modes: PaymentModeOption[]
 }) {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useDirtyGuard(formRef)
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     createReceipt,
     { status: 'idle' },
   )
 
   const [customerId, setCustomerId] = useState(initialCustomerId)
-  const [created, setCreated] = useState<{ id: string; name: string; phone: string }[]>([])
-  const [newCustomerOpen, setNewCustomerOpen] = useState(false)
-  const customers = [...initialCustomers, ...created]
+  const customerOptions: CustomerOption[] = initialCustomers.map((customer) => ({
+    id: customer.id,
+    code: '',
+    name: customer.name,
+    phone: customer.phone,
+    city: null,
+    address: null,
+    pincode: null,
+    preferredArchitectId: null,
+    preferredCarpenterId: null,
+    paymentTermsDays: null,
+  }))
+  // Holds a customer added on the spot, which is not in the server list yet.
+  const [picked, setPicked] = useState<CustomerOption | null>(null)
+  const selectedCustomer =
+    picked?.id === customerId ? picked : (customerOptions.find((option) => option.id === customerId) ?? null)
   const [invoices, setInvoices] = useState<OpenInvoice[]>(initialInvoices)
   const [loading, startLoading] = useTransition()
   const [amount, setAmount] = useState('')
@@ -123,7 +140,7 @@ export function ReceiptForm({
   )
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       <input type="hidden" name="customerId" value={customerId} />
       <input type="hidden" name="allocations" value={serialised} />
       <input type="hidden" name="openingApplied" value={openingAmount || ''} />
@@ -138,27 +155,12 @@ export function ReceiptForm({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Customer</Label>
-              <Select
-                value={customerId}
-                onChange={(event) => pickCustomer(event.target.value)}
-                invalid={Boolean(errors.customerId)}
-              >
-                <option value="">Select a customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </Select>
-              <Button type="button" plain onClick={() => setNewCustomerOpen(true)}>
-                + New customer
-              </Button>
-              <QuickCustomerDialog
-                open={newCustomerOpen}
-                onClose={() => setNewCustomerOpen(false)}
-                onCreated={(customer) => {
-                  setCreated((current) => [...current, customer])
-                  pickCustomer(customer.id)
+              <CustomerCombobox
+                options={customerOptions}
+                value={selectedCustomer}
+                onChange={(option) => {
+                  setPicked(option)
+                  pickCustomer(option?.id ?? '')
                 }}
               />
               {errors.customerId ? (
@@ -207,7 +209,7 @@ export function ReceiptForm({
             </Field>
             <Field>
               <Label>Mode</Label>
-              <PaymentModeSelect name="channelId" modes={modes} />
+              <PaymentModeSelect name="channelId" modes={modes} remember />
             </Field>
             <Field>
               <Label>Reference</Label>

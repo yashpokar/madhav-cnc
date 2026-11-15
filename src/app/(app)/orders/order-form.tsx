@@ -1,8 +1,10 @@
 'use client'
 
 import { PaymentModeSelect } from '@/components/payment-mode-select'
+import { dueDateFromTerms } from '@/lib/form-defaults'
+import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
@@ -148,6 +150,10 @@ export function OrderForm({
     values.advanceChannelId ?? modes[0]?.id ?? '',
   )
   const [discountValue, setDiscountValue] = useState(String(values.discountValue))
+  const [dueDate, setDueDate] = useState(values.dueDate ?? '')
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useDirtyGuard(formRef)
   const [transportCharge, setTransportCharge] = useState(
     String(values.transportCharge),
   )
@@ -185,6 +191,9 @@ export function OrderForm({
 
     if (!option) return
 
+    // Default the due date from the customer's payment terms, unless one is already set.
+    if (!dueDate) setDueDate(dueDateFromTerms(values.orderDate, option.paymentTermsDays) ?? '')
+
     setArchitectId(option.preferredArchitectId)
     setCarpenterId(option.preferredCarpenterId)
     setSiteAddress(option.address ?? '')
@@ -219,7 +228,7 @@ export function OrderForm({
   )?.[1]
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-8">
+    <form ref={formRef} action={formAction} className="grid grid-cols-1 gap-8">
       <input type="hidden" name="customerId" value={customer?.id ?? ''} />
       <input type="hidden" name="siteAddress" value={siteAddress} />
       <input type="hidden" name="siteCity" value={siteCity} />
@@ -278,7 +287,8 @@ export function OrderForm({
               <Input
                 name="dueDate"
                 type="date"
-                defaultValue={keep('dueDate', values.dueDate)}
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
               />
             </Field>
           </div>
@@ -537,6 +547,7 @@ export function OrderForm({
                   modes={modes}
                   value={advanceChannelId}
                   onChange={setAdvanceChannelId}
+                  remember={!values.advanceChannelId}
                 />
               </Field>
               <Field>

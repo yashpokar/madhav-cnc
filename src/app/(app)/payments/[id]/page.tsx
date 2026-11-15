@@ -81,7 +81,12 @@ export default async function ReceiptPage({
       </div>
 
       {justCreated ? (
-        <FormBanner tone="success">Receipt {receipt.number} recorded</FormBanner>
+        <FormBanner
+          tone="success"
+          steps={[{ label: 'Record another receipt', href: '/payments/new' }]}
+        >
+          Receipt {receipt.number} recorded
+        </FormBanner>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

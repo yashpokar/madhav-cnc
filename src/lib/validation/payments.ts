@@ -27,6 +27,8 @@ export const receiptInputSchema = z.object({
   paidOn: requiredDate,
   notes: optionalText(500),
   allocations: z.array(allocationSchema).default([]),
+  /** Part of the receipt that settles the customer's opening balance. */
+  openingApplied: z.coerce.number().min(0).max(99_999_999).default(0),
 })
 
 export type ReceiptData = z.output<typeof receiptInputSchema>

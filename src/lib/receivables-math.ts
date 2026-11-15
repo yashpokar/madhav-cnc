@@ -55,3 +55,91 @@ export function autoApplyAmount(receipt: number, due: number): number {
 export function uninvoicedDue(orderTotal: number, advancePaid: number): number {
   return Math.max(0, orderTotal - advancePaid)
 }
+
+/**
+ * What is still owed from before the system: the opening due less whatever
+ * receipts have been applied to it. Never negative.
+ */
+export function openingRemaining(openingDue: number, applied: number): number {
+  return round2(Math.max(0, openingDue - applied))
+}
+
+/**
+ * A receipt's opening portion is valid when it is not negative, does not exceed
+ * what is left of the opening balance and, together with the invoice
+ * allocations, does not exceed the receipt.
+ */
+export function validateOpeningApplied(input: {
+  receipt: number
+  invoiceAllocated: number
+  openingApplied: number
+  openingLeft: number
+}): { ok: true } | { ok: false; error: string } {
+  if (input.openingApplied < 0) {
+    return { ok: false, error: 'The opening balance amount cannot be negative' }
+  }
+
+  if (input.openingApplied > input.openingLeft + 0.005) {
+    return {
+      ok: false,
+      error: `Only ₹${input.openingLeft} of the opening balance is outstanding`,
+    }
+  }
+
+  const total = round2(input.invoiceAllocated + input.openingApplied)
+
+  if (total > input.receipt + 0.005) {
+    return {
+      ok: false,
+      error: `You have applied ₹${total} of a ₹${input.receipt} receipt`,
+    }
+  }
+
+  return { ok: true }
+}
+
+/**
+ * Auto-apply for a receipt where the user chose nothing. Only when there is
+ * exactly one thing it could belong to: a single open invoice (and no opening
+ * balance), or an opening balance (and no open invoice). Anything else needs a
+ * choice and the money stays on account.
+ */
+export function planAutoApply(input: {
+  receipt: number
+  explicitInvoiceTotal: number
+  explicitOpening: number
+  openInvoiceDues: number[]
+  openingLeft: number
+}): { invoiceIndex: number | null; invoiceAmount: number; openingAmount: number } {
+  const none = { invoiceIndex: null, invoiceAmount: 0, openingAmount: 0 }
+
+  if (input.explicitInvoiceTotal > 0 || input.explicitOpening > 0) return none
+
+  const dues = input.openInvoiceDues.filter((due) => due > 0)
+
+  if (dues.length === 1 && input.openingLeft <= 0) {
+    return {
+      invoiceIndex: input.openInvoiceDues.findIndex((due) => due > 0),
+      invoiceAmount: autoApplyAmount(input.receipt, dues[0]),
+      openingAmount: 0,
+    }
+  }
+
+  if (dues.length === 0 && input.openingLeft > 0) {
+    return {
+      invoiceIndex: null,
+      invoiceAmount: 0,
+      openingAmount: autoApplyAmount(input.receipt, input.openingLeft),
+    }
+  }
+
+  return none
+}
+
+/**
+ * Closing balance of a payment mode (signed): opening plus money in minus
+ * money out since the opening date. A negative opening is an overdraft.
+ */
+export function channelClosing(opening: number, inflow: number, outflow: number): number {
+  return round2(opening + inflow - outflow)
+}

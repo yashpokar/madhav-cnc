@@ -98,7 +98,7 @@ export default async function ReceiptPage({
             Applied to invoices
           </div>
           <div className="mt-1 text-2xl/8 font-semibold tabular-nums">
-            {currency.format(receipt.allocated)}
+            {currency.format(receipt.allocated + receipt.openingApplied)}
           </div>
         </div>
         <div
@@ -117,7 +117,7 @@ export default async function ReceiptPage({
         </div>
       </div>
 
-      {receipt.allocations.length > 0 ? (
+      {receipt.allocations.length > 0 || receipt.openingApplied > 0 ? (
         <div>
           <Subheading level={2}>Applied to</Subheading>
           <div className="mt-4">
@@ -152,6 +152,20 @@ export default async function ReceiptPage({
                     </TableCell>
                   </TableRow>
                 ))}
+                {receipt.openingApplied > 0 ? (
+                  <TableRow>
+                    <TableCell className="font-medium">Opening balance</TableCell>
+                    <TableCell className="text-zinc-500 dark:text-zinc-400">
+                      {receipt.openingAsOf
+                        ? `as of ${dateFormat.format(receipt.openingAsOf)}`
+                        : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">—</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {currency.format(receipt.openingApplied)}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           </div>
@@ -187,6 +201,8 @@ export default async function ReceiptPage({
             receiptAmount={receipt.amount}
             invoices={openInvoices}
             current={current}
+            openingLeft={receipt.openingLeft}
+            openingApplied={receipt.openingApplied}
             canUpdate={can(user.role, 'payment:update')}
             canDelete={can(user.role, 'payment:delete')}
           />

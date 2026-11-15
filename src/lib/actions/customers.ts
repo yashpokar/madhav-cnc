@@ -31,6 +31,8 @@ function parse(formData: FormData) {
     preferredCarpenterId: formData.get('preferredCarpenterId'),
     paymentTermsDays: formData.get('paymentTermsDays'),
     notes: formData.get('notes'),
+    openingDue: formData.get('openingDue'),
+    openingAsOf: formData.get('openingAsOf'),
   })
 }
 

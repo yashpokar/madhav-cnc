@@ -32,6 +32,8 @@ export default async function NewVendorPage() {
           city: null,
           description: null,
           isActive: true,
+          openingPayable: null,
+          openingAsOf: null,
         }}
       />
     </div>

@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import {
+  openingAmount,
+  openingDate,
+  requireOpeningDate,
+} from '@/lib/validation/opening'
 
 const optionalText = (max: number) =>
   z
@@ -30,6 +35,10 @@ export const vendorInputSchema = z.object({
   city: optionalText(100),
   description: optionalText(500),
   isActive: z.boolean().default(true),
-})
+  openingPayable: openingAmount,
+  openingAsOf: openingDate,
+}).superRefine((data, ctx) =>
+  requireOpeningDate(data.openingPayable, data.openingAsOf, ctx),
+)
 
 export type VendorData = z.output<typeof vendorInputSchema>

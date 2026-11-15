@@ -116,9 +116,12 @@ export default async function PaymentsPage({
   const appliedTo = (row: (typeof data.payments)[number]) =>
     row.isAdvance
       ? 'Order advance'
-      : row.invoiceNumbers.length === 0
+      : row.invoiceNumbers.length === 0 && row.openingApplied <= 0
         ? 'On account'
-        : row.invoiceNumbers.join(', ')
+        : [
+            ...row.invoiceNumbers,
+            ...(row.openingApplied > 0 ? ['Opening balance'] : []),
+          ].join(', ')
   const receipts = sortRows(receiptsMatching, params, {
     recv_number: (row) => row.number,
     recv_date: (row) => row.paidOn,
@@ -239,7 +242,7 @@ export default async function PaymentsPage({
           hint={
             data.creditOutstanding > 0 || data.onAccountTotal > 0
               ? `${currency.format(data.outstanding)} billed, less ${currency.format(data.creditOutstanding + data.onAccountTotal)} credit held`
-              : `across ${data.invoices.length} issued invoice${data.invoices.length === 1 ? '' : 's'}`
+              : `across ${data.invoices.length} issued invoice${data.invoices.length === 1 ? '' : 's'}${data.openingBalances.length > 0 ? ` and ${data.openingBalances.length} opening balance${data.openingBalances.length === 1 ? '' : 's'}` : ''}`
           }
         />
         <Tile

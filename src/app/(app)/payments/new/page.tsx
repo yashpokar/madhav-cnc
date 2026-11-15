@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { listPaymentModeOptions } from '@/lib/queries/payment-modes'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
-import { openInvoiceBalances } from '@/lib/queries/payments'
+import { openInvoiceBalances, openingBalanceFor } from '@/lib/queries/payments'
 import { listCustomersForPicker } from '@/lib/queries/accounting'
 import { requireCapability } from '@/lib/session'
 import { ReceiptForm } from '../receipt-form'
@@ -19,9 +19,10 @@ export default async function NewReceiptPage({
 
   const preset = typeof params.customer === 'string' ? params.customer : ''
 
-  const [customers, invoices] = await Promise.all([
+  const [customers, invoices, opening] = await Promise.all([
     listCustomersForPicker(),
     preset ? openInvoiceBalances(preset) : Promise.resolve([]),
+    preset ? openingBalanceFor(preset) : Promise.resolve(null),
   ])
 
   const modes = await listPaymentModeOptions()
@@ -45,6 +46,7 @@ export default async function NewReceiptPage({
         }))}
         initialCustomerId={preset}
         initialInvoices={invoices}
+        initialOpeningLeft={opening?.remaining ?? 0}
       />
     </div>
   )

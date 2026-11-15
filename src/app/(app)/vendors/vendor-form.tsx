@@ -30,6 +30,8 @@ export type VendorFormValues = {
   city: string | null
   description: string | null
   isActive: boolean
+  openingPayable: number | null
+  openingAsOf: string | null
 }
 
 export function VendorForm({
@@ -138,6 +140,37 @@ export function VendorForm({
             />
             {errors.gstin ? <ErrorMessage>{errors.gstin}</ErrorMessage> : null}
           </Field>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Field>
+              <Label>Opening payable (you owe them)</Label>
+              <Input
+                name="openingPayable"
+                type="number"
+                step="0.01"
+                min={0}
+                defaultValue={keep(
+                  'openingPayable',
+                  values.openingPayable ? String(values.openingPayable) : null,
+                )}
+                invalid={Boolean(errors.openingPayable)}
+              />
+              {errors.openingPayable ? (
+                <ErrorMessage>{errors.openingPayable}</ErrorMessage>
+              ) : null}
+            </Field>
+            <Field>
+              <Label>As of</Label>
+              <Input
+                name="openingAsOf"
+                type="date"
+                defaultValue={keep('openingAsOf', values.openingAsOf)}
+                invalid={Boolean(errors.openingAsOf)}
+              />
+              {errors.openingAsOf ? (
+                <ErrorMessage>{errors.openingAsOf}</ErrorMessage>
+              ) : null}
+            </Field>
+          </div>
           <SwitchField>
             <Label>Active</Label>
             <Description>

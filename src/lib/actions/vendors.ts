@@ -20,6 +20,8 @@ function parse(formData: FormData) {
     city: formData.get('city'),
     description: formData.get('description'),
     isActive: formData.get('isActive') === 'true',
+    openingPayable: formData.get('openingPayable'),
+    openingAsOf: formData.get('openingAsOf'),
   })
 }
 

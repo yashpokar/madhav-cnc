@@ -46,6 +46,8 @@ export type CustomerFormValues = {
   preferredCarpenterId: string | null
   paymentTermsDays: number | null
   notes: string | null
+  openingDue: number | null
+  openingAsOf: string | null
 }
 
 const TYPE_LABELS: Record<CustomerType, string> = {
@@ -288,6 +290,47 @@ export function CustomerForm({
           {type === 'INDIVIDUAL' ? (
             <Text>Tax details are usually only needed for company customers.</Text>
           ) : null}
+        </FieldGroup>
+      </Fieldset>
+
+      <Divider />
+
+      <Fieldset>
+        <Legend>Opening balance</Legend>
+        <FieldGroup>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <Field>
+              <Label>Opening balance (they owe you)</Label>
+              <Input
+                name="openingDue"
+                type="number"
+                step="0.01"
+                min={0}
+                defaultValue={keep('openingDue', values.openingDue || null)}
+                invalid={Boolean(errors.openingDue)}
+              />
+              {errors.openingDue ? (
+                <ErrorMessage>{errors.openingDue}</ErrorMessage>
+              ) : null}
+            </Field>
+            <Field>
+              <Label>As of</Label>
+              <Input
+                name="openingAsOf"
+                type="date"
+                defaultValue={keep('openingAsOf', values.openingAsOf)}
+                invalid={Boolean(errors.openingAsOf)}
+              />
+              {errors.openingAsOf ? (
+                <ErrorMessage>{errors.openingAsOf}</ErrorMessage>
+              ) : null}
+            </Field>
+          </div>
+          <Text>
+            What this customer still owed before you started using the system.
+            Invoices and receipts already in the system are not part of this.
+            Receipts can be applied to it.
+          </Text>
         </FieldGroup>
       </Fieldset>
 

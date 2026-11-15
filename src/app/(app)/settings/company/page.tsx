@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Heading } from '@/components/catalyst/heading'
+import { Link } from '@/components/catalyst/link'
 import { Text } from '@/components/catalyst/text'
 import { getCompanySetting } from '@/lib/queries/company'
 import { requireCapability } from '@/lib/session'
@@ -20,6 +21,12 @@ export default async function CompanySettingsPage() {
         <Text>
           Used on quotations, orders and invoices. Bank details and the UPI QR
           code are how customers pay you.
+        </Text>
+        <Text>
+          <Link href="/settings/opening-balances" className="underline">
+            Opening cash and bank balances
+          </Link>{' '}
+          are set on their own page.
         </Text>
       </div>
 

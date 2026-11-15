@@ -1,4 +1,4 @@
-import { dateShort, moneyWhole as inr } from '@/lib/format'
+import { date as dateLong, dateShort, moneyWhole as inr } from '@/lib/format'
 import type { Metadata } from 'next'
 import { DateRangeFilter } from '@/components/date-range-filter'
 import { Button } from '@/components/catalyst/button'
@@ -8,6 +8,7 @@ import { Text } from '@/components/catalyst/text'
 import { EmptyState } from '@/components/form-banner'
 import { readDateRange } from '@/lib/list-controls'
 import { paymentsByMethod } from '@/lib/queries/payment-methods'
+import { getChannelBalances } from '@/lib/queries/cash'
 import { can } from '@/lib/permissions'
 import { requireCapability } from '@/lib/session'
 
@@ -15,6 +16,10 @@ export const metadata: Metadata = { title: 'Payment methods' }
 
 const iso = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/** Negative amounts keep an explicit minus sign. */
+const signed = (value: number) =>
+  value < 0 ? `−${inr.format(Math.abs(value))}` : inr.format(value)
 
 const netTone = (value: number) =>
   value < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-950 dark:text-white'
@@ -31,7 +36,12 @@ export default async function PaymentMethodsPage({
   const from = range.from ?? iso(new Date(now.getFullYear(), now.getMonth(), 1))
   const to = range.to ?? iso(now)
 
-  const { groups, totals } = await paymentsByMethod({ from, to }, canExpenses)
+  const [{ groups, totals }, balances] = await Promise.all([
+    paymentsByMethod({ from, to }, canExpenses),
+    canExpenses ? getChannelBalances() : Promise.resolve([]),
+  ])
+  const withOpening = balances.filter((b) => b.closing !== null)
+  const canSetOpening = can(user.role, 'settings:update')
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -44,6 +54,68 @@ export default async function PaymentMethodsPage({
           Money {canExpenses ? 'received and spent' : 'received'}, grouped by how it was paid.
         </Text>
       </div>
+
+      {canExpenses && balances.length > 0 ? (
+        <section className="grid grid-cols-1 gap-3 rounded-lg p-4 ring-1 ring-zinc-950/10 dark:ring-white/10">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <Subheading level={2}>Balance by payment mode</Subheading>
+            {canSetOpening ? (
+              <Link
+                href="/settings/opening-balances"
+                className="text-sm/6 text-zinc-500 underline dark:text-zinc-400"
+              >
+                {withOpening.length === 0 ? 'Set opening balances' : 'Edit opening balances'}
+              </Link>
+            ) : null}
+          </div>
+          {withOpening.length === 0 ? (
+            <Text>
+              Enter what each payment mode held when you started using the system to
+              see its running balance here.
+            </Text>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-left text-sm/6">
+                <thead className="text-zinc-500 dark:text-zinc-400">
+                  <tr>
+                    <th className="pb-2 pr-3 font-medium">Payment mode</th>
+                    <th className="pb-2 pr-3 text-right font-medium">Opening</th>
+                    <th className="pb-2 pr-3 text-right font-medium">In</th>
+                    <th className="pb-2 pr-3 text-right font-medium">Out</th>
+                    <th className="pb-2 text-right font-medium">Closing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withOpening.map((b) => (
+                    <tr key={b.channelId} className="border-t border-zinc-950/5 dark:border-white/10">
+                      <td className="py-2 pr-3">
+                        <div className="font-medium">{b.name}</div>
+                        {b.asOf ? (
+                          <div className="text-xs/5 text-zinc-500 dark:text-zinc-400">
+                            from {dateLong.format(b.asOf)}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className={`py-2 pr-3 text-right tabular-nums ${netTone(b.opening ?? 0)}`}>
+                        {signed(b.opening ?? 0)}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-lime-700 dark:text-lime-400">
+                        {inr.format(b.inflow)}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-rose-600 dark:text-rose-400">
+                        {inr.format(b.outflow)}
+                      </td>
+                      <td className={`py-2 text-right font-semibold tabular-nums ${netTone(b.closing ?? 0)}`}>
+                        {signed(b.closing ?? 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <form method="get" className="flex flex-wrap items-center gap-2">
         <DateRangeFilter defaultFrom={from} defaultTo={to} label="Date" autoSubmit />

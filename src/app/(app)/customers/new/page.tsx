@@ -49,6 +49,8 @@ export default async function NewCustomerPage() {
           preferredCarpenterId: null,
           paymentTermsDays: null,
           notes: null,
+          openingDue: null,
+          openingAsOf: null,
         }}
       />
     </div>

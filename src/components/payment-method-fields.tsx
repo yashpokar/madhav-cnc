@@ -82,7 +82,7 @@ export function PaymentMethodFields({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2" data-payment-method={method.key}>
+    <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2" data-payment-method={method.key}>
       <input type="hidden" name={name} value={JSON.stringify(posted)} />
 
       {fields.map((field) => {

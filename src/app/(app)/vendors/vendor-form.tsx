@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/catalyst/button'
 import {
@@ -46,6 +47,7 @@ export function VendorForm({
   })
 
   const errors = state.status === 'error' ? (state.fieldErrors ?? {}) : {}
+  const existingId = state.status === 'error' ? state.existingId : undefined
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
   const keep = (name: string, fallback: string | null | undefined) =>
     submitted[name] ?? fallback ?? ''
@@ -67,6 +69,16 @@ export function VendorForm({
               invalid={Boolean(errors.name)}
             />
             {errors.name ? <ErrorMessage>{errors.name}</ErrorMessage> : null}
+            {existingId ? (
+              <p className="mt-2 text-sm/6">
+                <Link
+                  href={`/vendors/${existingId}`}
+                  className="font-medium text-zinc-950 underline dark:text-white"
+                >
+                  Open existing vendor
+                </Link>
+              </p>
+            ) : null}
           </Field>
           <Field>
             <Label>What they supply</Label>

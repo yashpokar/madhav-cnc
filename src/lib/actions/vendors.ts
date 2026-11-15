@@ -23,7 +23,7 @@ function parse(formData: FormData) {
   })
 }
 
-async function nameTaken(name: string, exceptId?: string) {
+async function findByName(name: string, exceptId?: string) {
   const other = await prisma.vendor.findFirst({
     where: {
       name: { equals: name, mode: 'insensitive' },
@@ -32,7 +32,7 @@ async function nameTaken(name: string, exceptId?: string) {
     select: { id: true },
   })
 
-  return Boolean(other)
+  return other?.id ?? null
 }
 
 export async function createVendor(
@@ -51,12 +51,15 @@ export async function createVendor(
     }
   }
 
-  if (await nameTaken(parsed.data.name)) {
+  const taken = await findByName(parsed.data.name)
+
+  if (taken) {
     return {
       status: 'error',
       message: 'A vendor with this name already exists',
       fieldErrors: { name: 'A vendor with this name already exists' },
       values: rawValues(formData),
+      existingId: taken,
     }
   }
 
@@ -83,12 +86,15 @@ export async function updateVendor(
     }
   }
 
-  if (await nameTaken(parsed.data.name, id)) {
+  const taken = await findByName(parsed.data.name, id)
+
+  if (taken) {
     return {
       status: 'error',
       message: 'A vendor with this name already exists',
       fieldErrors: { name: 'A vendor with this name already exists' },
       values: rawValues(formData),
+      existingId: taken,
     }
   }
 

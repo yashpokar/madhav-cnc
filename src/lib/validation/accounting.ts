@@ -98,4 +98,8 @@ export const expenseJsonSchema = expenseInputSchema.extend({
   paymentDetails: z.unknown().optional(),
 })
 
-export type ExpenseInput = ExpenseData & { paymentDetails?: unknown }
+export type ExpenseInput = ExpenseData & {
+  paymentDetails?: unknown
+  /** An Upload of this company (purpose expense_receipt): the bill photo. Absent leaves it as it is, null removes it. */
+  receiptUploadId?: string | null
+}

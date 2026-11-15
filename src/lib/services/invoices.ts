@@ -26,6 +26,7 @@ import { requireCompanyId } from '@/lib/active-company'
 import { nextInvoiceNumber, nextPaymentNumber } from '@/lib/codes'
 import { resolvePaymentMode } from '@/lib/payment-modes'
 import { logActivity } from '@/lib/activity'
+import { assertCanIssueInvoice } from '@/lib/billing/guard'
 import { WRITE_OFF_REASON_LABELS } from '@/lib/labels'
 import { detailsFromOrderLine } from '@/lib/line-details'
 import { newShareToken } from '@/lib/share-token'
@@ -133,6 +134,9 @@ export async function createInvoice(
 
   if (!customer) return notFound('Customer not found')
 
+  // An invoice created directly as ISSUED takes a slot of the plan's quota.
+  if (data.status === 'ISSUED') await assertCanIssueInvoice(await requireCompanyId())
+
   const invoice = await persistInvoice(data, actor.id)
 
   await logActivity({
@@ -219,6 +223,7 @@ export async function changeInvoiceStatus(
     select: {
       status: true,
       number: true,
+      issuedAt: true,
       _count: { select: { paymentAllocations: true } },
     },
   })
@@ -232,6 +237,13 @@ export async function changeInvoiceStatus(
   )
 
   if (blocked) return conflict(blocked)
+
+  // DRAFT -> ISSUED uses one of the plan's invoices. A draft that was issued
+  // before (and moved back) already holds its slot, so it is never refused.
+  // Cancelling, editing and everything else is never guarded.
+  if (status === 'ISSUED' && existing.status === 'DRAFT' && !existing.issuedAt) {
+    await assertCanIssueInvoice(await requireCompanyId())
+  }
 
   await prisma.invoice.update({
     where: { id },

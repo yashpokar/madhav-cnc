@@ -99,7 +99,8 @@ function fieldsOf(error: z.ZodError): Record<string, string> {
   return fields
 }
 
-function parseWith<T extends z.ZodType>(schema: T, value: unknown, what: string): z.output<T> {
+/** Parses `value` with `schema`; a failure is a 422 VALIDATION_FAILED with `fields`. */
+export function parseWith<T extends z.ZodType>(schema: T, value: unknown, what: string): z.output<T> {
   const parsed = schema.safeParse(value)
 
   if (!parsed.success) {
@@ -206,12 +207,19 @@ export function apiRoute<
 
       const context = { request, requestId, user, companyId, body, query, params } as HandlerContext<A, B, Q>
 
+      // A handler may answer a Response itself (a file download); everything else is an enveloped reply.
       const execute = () =>
-        runInRequestContext({ companyId: companyId ?? undefined }, async () => toStored(await fn(context)))
+        runInRequestContext({ companyId: companyId ?? undefined }, async () => {
+          const out = await fn(context)
+
+          return out instanceof Response ? out : toStored(out)
+        })
 
       const key = options.idempotent && user ? parseIdempotencyKey(request.headers.get(IDEMPOTENCY_HEADER)) : null
 
       if (key && user) {
+        let firstHeaders: Record<string, string> = {}
+
         const outcome = await runInRequestContext({ companyId: companyId ?? undefined }, () =>
           runIdempotent(
             prismaIdempotencyStore,
@@ -224,18 +232,26 @@ export function apiRoute<
             async () => {
               const result = await toStored(await fn(context))
 
+              firstHeaders = result.reply.init.headers ?? {}
+
               return { status: result.status, body: result.body }
             },
           ),
         )
 
+        // The first run answers with the headers its handler set (the ETag). A replay has
+        // only the stored body (Postgres jsonb reorders its keys, so an ETag recomputed from
+        // it would not match the first one): it carries no ETag, GET the record for one.
         return withCommonHeaders(
-          toResponse(outcome, outcome.replayed ? { 'Idempotent-Replayed': 'true' } : {}),
+          toResponse(outcome, outcome.replayed ? { 'Idempotent-Replayed': 'true' } : firstHeaders),
           requestId,
         )
       }
 
       const result = await execute()
+
+      if (result instanceof Response) return withCommonHeaders(result, requestId)
+
       const headers = result.reply.init.headers ?? {}
 
       return withCommonHeaders(toResponse(result, headers), requestId)

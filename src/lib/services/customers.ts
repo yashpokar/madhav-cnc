@@ -245,3 +245,28 @@ export async function quickCreateCustomer(
 
   return { ok: true, customer }
 }
+
+/**
+ * createCustomer for callers that cannot ask the person "is this the same
+ * customer?" (the mobile app): refuses a phone number another customer
+ * already uses, answering CONFLICT with that customer's id in `existingId`.
+ */
+export async function createCustomerUnique(
+  actor: Actor,
+  data: CustomerData,
+): Promise<{ ok: true; id: string; code: string; name: string } | Failure> {
+  const duplicate = await prisma.customer.findFirst({
+    where: { phone: data.phone },
+    select: { id: true, name: true, code: true },
+  })
+
+  if (duplicate) {
+    return fail(
+      `${duplicate.name} (${duplicate.code}) already uses that phone number. Open that customer instead.`,
+      'CONFLICT',
+      { existingId: duplicate.id },
+    )
+  }
+
+  return createCustomer(actor, data)
+}

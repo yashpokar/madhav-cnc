@@ -414,6 +414,7 @@ export const expenseDetail = expenseListItem.extend({
   vendorGstin: z.string().nullable(),
   notes: z.string().nullable(),
   paymentDetails: z.record(z.string(), z.unknown()).nullable(),
+  receiptUploadId: idSchema.nullable().describe('The uploaded bill photo (GET /uploads/{id})'),
   createdAt: instant,
 })
 

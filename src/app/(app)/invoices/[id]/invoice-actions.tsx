@@ -4,6 +4,7 @@ import { PaymentModeSelect } from '@/components/payment-mode-select'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ClipboardIcon, TrashIcon } from '@heroicons/react/16/solid'
 import { Button } from '@/components/catalyst/button'
@@ -178,6 +179,14 @@ export function InvoiceActions({
       {result ? (
         <FormBanner tone={result.ok ? 'success' : 'error'}>
           {result.ok ? result.message : result.error}
+          {!result.ok && result.href ? (
+            <>
+              {' '}
+              <Link href={result.href} className="font-medium underline">
+                Open Plan &amp; billing
+              </Link>
+            </>
+          ) : null}
         </FormBanner>
       ) : null}
 

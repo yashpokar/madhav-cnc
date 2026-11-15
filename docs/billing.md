@@ -2,7 +2,7 @@
 
 Status: foundation. Plans, entitlements, payments (PhonePe), the Plan & billing screen, the
 platform-admin screen and the read-only API are built. **Enforcement is off** (`BILLING_ENFORCED`
-defaults to `false`) and the guard is **not yet wired into the invoice code** (see "Call sites").
+defaults to `false`) and the guard is wired into the invoice services (see "Call sites").
 
 ## 1. Goals
 
@@ -106,30 +106,30 @@ PHONEPE DOCS"). They were checked against the Standard Checkout v2 reference pag
 header encoding (we accept hex, with or without a `SHA256 ` prefix) and the exact spelling of the create-payment
 expiry field (not read by us). Test in the PhonePe sandbox before going live.
 
-## 7. Call sites to wire the guard after the invoice refactor merges (PRs #83-#87)
+## 7. Call sites of the guard (wired)
 
 `assertCanIssueInvoice(companyId, count = 1)` from `src/lib/billing/guard.ts` throws
-`DomainError('...', 'PLAN_LIMIT_REACHED')` (HTTP 402) when blocked and enforcement is on. It was deliberately not
-wired in to avoid conflicts. Call it **before** the write, in the service layer, at every place an invoice can
-become ISSUED:
+`DomainError('...', 'PLAN_LIMIT_REACHED')` (HTTP 402) when blocked and enforcement is on. It runs in the service
+layer, before the write, so the web actions and `/api/v1` share it:
 
-1. The issue transition (`setInvoiceStatus(id, 'ISSUED')` in `src/lib/actions/invoices.ts`, or its service
-   equivalent in `src/lib/services/invoices.ts`) when the current status is DRAFT. Do not guard ISSUED to
-   CANCELLED, edits, payments, sharing or printing.
-2. Any create-and-issue path (an invoice created directly as ISSUED, including bulk issue: pass `count`).
-3. Quick invoice from an order or from a dispatch, if it issues immediately.
-4. The API issue endpoint under `/api/v1/invoices`, when it exists (the thrown DomainError maps to 402).
+1. `changeInvoiceStatus` in `src/lib/services/invoices.ts` on DRAFT -> ISSUED. A draft that was issued before
+   (it has `issuedAt`) already holds its slot and is never refused. Cancel, back-to-draft, edits, payments,
+   sharing and printing are not guarded.
+2. `createInvoice` in the same file when the new invoice is created as ISSUED.
+3. There is no other path: the quick invoice from an order (`createInvoiceFromOrder`) and `duplicateInvoice`
+   always make drafts, and there is no bulk issue (a future one must pass `count`).
+4. API: `POST /api/v1/invoices/{id}/issue` and `POST /api/v1/invoices` with `status: "ISSUED"` (402).
 
-In server actions, catch the error and show the paywall message (`PLAN_LIMIT_MESSAGE`) with a link to
-`/settings/billing`. Until wired, the Plan & billing meter and banners (dashboard and billing page) are the
-fallback and nothing is blocked.
+The web actions (`setInvoiceStatus`, `createInvoice` in `src/lib/actions/invoices.ts`) catch the error with
+`planLimitMessage` (`src/lib/billing/web.ts`) and show the paywall message with a link to `/settings/billing`.
+A cancelled invoice still counts (the quota counts every invoice ever issued), so cancelling frees no slot.
 
 ## 8. Rollout
 
 1. Merge and deploy with `BILLING_ENFORCED` unset: the migration grandfathers everyone, new companies start
    FREE and see "n of 10 free invoices used"; nothing is blocked.
 2. Set the PhonePe sandbox keys on a staging environment; run a real sandbox purchase and a webhook.
-3. After the invoice refactor merges, wire the guard (section 7).
+3. The guard is wired (section 7); check an issue on a Free company with enforcement on a staging copy.
 4. Production keys, register the webhook, then set `BILLING_ENFORCED=true`.
 
 ## 9. Risks

@@ -9,6 +9,7 @@ import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
 import type { InvoiceStatus } from '@/generated/prisma/enums'
 import * as invoices from '@/lib/services/invoices'
+import { BILLING_PAGE, planLimitMessage } from '@/lib/billing/web'
 
 export type { FormState, SimpleResult }
 
@@ -80,7 +81,17 @@ export async function createInvoice(
 
   if (!parsed.success) return invalidState(formData, parsed.error)
 
-  const result = await invoices.createInvoice(actorOf(user), parsed.data)
+  let result: Awaited<ReturnType<typeof invoices.createInvoice>>
+
+  try {
+    result = await invoices.createInvoice(actorOf(user), parsed.data)
+  } catch (error) {
+    const limit = planLimitMessage(error)
+
+    if (!limit) throw error
+
+    return { status: 'error', message: `${limit} Open Plan & billing (${BILLING_PAGE}).` }
+  }
 
   if (!result.ok) return { status: 'error', message: result.error }
 
@@ -113,7 +124,17 @@ export async function setInvoiceStatus(
   status: InvoiceStatus,
 ): Promise<SimpleResult> {
   const user = await requireCapability('invoice:update')
-  const result = await invoices.changeInvoiceStatus(actorOf(user), id, status)
+  let result: Awaited<ReturnType<typeof invoices.changeInvoiceStatus>>
+
+  try {
+    result = await invoices.changeInvoiceStatus(actorOf(user), id, status)
+  } catch (error) {
+    const limit = planLimitMessage(error)
+
+    if (!limit) throw error
+
+    return { ok: false, error: limit, href: BILLING_PAGE }
+  }
 
   if (result.ok) {
     revalidatePath('/invoices')

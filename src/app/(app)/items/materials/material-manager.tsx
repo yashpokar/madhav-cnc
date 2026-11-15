@@ -7,6 +7,7 @@ import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
+import { Switch } from '@/components/catalyst/switch'
 import {
   Table,
   TableBody,
@@ -23,6 +24,7 @@ import {
   moveMaterial,
   renameMaterial,
   setMaterialActive,
+  setMaterialStock,
 } from '@/lib/actions/materials'
 import type { SimpleResult } from '@/lib/actions/materials'
 import type { MaterialRow } from '@/lib/queries/materials'
@@ -79,6 +81,7 @@ export function MaterialManager({ materials }: { materials: MaterialRow[] }) {
             <TableHeader>Material</TableHeader>
             <TableHeader>Status</TableHeader>
             <TableHeader className="text-right">Items</TableHeader>
+            <TableHeader>Track stock</TableHeader>
             <TableHeader className="text-right">Actions</TableHeader>
           </TableRow>
         </TableHead>
@@ -124,6 +127,37 @@ export function MaterialManager({ materials }: { materials: MaterialRow[] }) {
               </TableCell>
               <TableCell className="text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                 {material._count.items}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    aria-label={`Track stock for ${material.name}`}
+                    checked={material.stockTracked}
+                    disabled={pending}
+                    onChange={(on) =>
+                      run(() => setMaterialStock(material.id, on, material.reorderLevel))
+                    }
+                  />
+                  {material.stockTracked ? (
+                    <Input
+                      type="number"
+                      step="0.001"
+                      min={0}
+                      className="w-28"
+                      aria-label={`Reorder level for ${material.name}`}
+                      placeholder="Reorder at"
+                      defaultValue={material.reorderLevel ?? ''}
+                      onBlur={(event) => {
+                        const text = event.target.value.trim()
+                        const next = text === '' ? null : Number(text)
+
+                        if (next !== material.reorderLevel) {
+                          run(() => setMaterialStock(material.id, true, next))
+                        }
+                      }}
+                    />
+                  ) : null}
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-1">

@@ -11,7 +11,12 @@ import type { SimpleResult } from '@/lib/actions/quotations'
 import { billInputSchema, type BillData } from '@/lib/validation/purchases'
 import { requireCompanyId } from '@/lib/active-company'
 import { buildBill, canMoveBill, suggestInterState } from '@/lib/purchase-rules'
-import { onBillCancelled, onBillPosted, type HookBill } from '@/lib/purchase-hooks'
+import {
+  onBillCancelled,
+  onBillPosted,
+  PurchaseHookError,
+  type HookBill,
+} from '@/lib/purchase-hooks'
 import type { PurchaseBillStatus } from '@/generated/prisma/enums'
 
 export type { FormState, SimpleResult }
@@ -283,6 +288,7 @@ const SUMMARY: Record<PurchaseBillStatus, string> = {
 export async function setBillStatus(
   id: string,
   status: PurchaseBillStatus,
+  options: { receiveNow?: boolean } = {},
 ): Promise<SimpleResult> {
   const user = await requireCapability('purchase:update')
 
@@ -291,54 +297,70 @@ export async function setBillStatus(
     | { kind: 'same'; number: string }
     | { kind: 'done'; number: string }
 
-  const outcome: Outcome = await prisma.$transaction(async (tx) => {
-    const current = await tx.purchaseBill.findUnique({
-      where: { id },
-      select: {
-        number: true,
-        status: true,
-        _count: { select: { allocations: true, lines: true } },
-      },
-    })
+  if (options.receiveNow && status === 'POSTED') {
+    // Receiving goods is a stock job: posting alone needs only purchase rights.
+    await requireCapability('stock:create')
+  }
 
-    if (!current) return { kind: 'error', error: 'Bill not found' } as const
+  let outcome: Outcome
 
-    if (current.status === status) {
-      return { kind: 'same', number: current.number } as const
-    }
+  try {
+    outcome = await prisma.$transaction(async (tx): Promise<Outcome> => {
+      const current = await tx.purchaseBill.findUnique({
+        where: { id },
+        select: {
+          number: true,
+          status: true,
+          _count: { select: { allocations: true, lines: true } },
+        },
+      })
 
-    const move = canMoveBill(current.status, status, current._count.allocations)
+      if (!current) return { kind: 'error', error: 'Bill not found' } as const
 
-    if (!move.ok) return { kind: 'error', error: move.reason } as const
-
-    if (status === 'POSTED' && current._count.lines === 0) {
-      return { kind: 'error', error: 'Add at least one line before posting' } as const
-    }
-
-    const claimed = await tx.purchaseBill.updateMany({
-      where: { id, status: current.status },
-      data: { status, updatedById: user.id },
-    })
-
-    if (claimed.count === 0) {
-      return {
-        kind: 'error',
-        error: 'This bill was changed by someone else. Refresh and try again.',
-      } as const
-    }
-
-    const bill = await hookBill(tx, id)
-
-    if (bill) {
-      if (status === 'POSTED') {
-        await onBillPosted(tx, bill)
-      } else if (current.status === 'POSTED') {
-        await onBillCancelled(tx, bill, status === 'DRAFT' ? 'unposted' : 'cancelled')
+      if (current.status === status) {
+        return { kind: 'same', number: current.number } as const
       }
-    }
 
-    return { kind: 'done', number: current.number } as const
-  })
+      const move = canMoveBill(current.status, status, current._count.allocations)
+
+      if (!move.ok) return { kind: 'error', error: move.reason } as const
+
+      if (status === 'POSTED' && current._count.lines === 0) {
+        return { kind: 'error', error: 'Add at least one line before posting' } as const
+      }
+
+      const claimed = await tx.purchaseBill.updateMany({
+        where: { id, status: current.status },
+        data: { status, updatedById: user.id },
+      })
+
+      if (claimed.count === 0) {
+        return {
+          kind: 'error',
+          error: 'This bill was changed by someone else. Refresh and try again.',
+        } as const
+      }
+
+      const bill = await hookBill(tx, id)
+
+      if (bill) {
+        if (status === 'POSTED') {
+          await onBillPosted(tx, bill, {
+            userId: user.id,
+            receiveNow: options.receiveNow === true,
+          })
+        } else if (current.status === 'POSTED') {
+          await onBillCancelled(tx, bill, status === 'DRAFT' ? 'unposted' : 'cancelled')
+        }
+      }
+
+      return { kind: 'done', number: current.number } as const
+    })
+  } catch (error) {
+    if (error instanceof PurchaseHookError) return { ok: false, error: error.message }
+
+    throw error
+  }
 
   if (outcome.kind === 'error') return { ok: false, error: outcome.error }
 
@@ -357,7 +379,13 @@ export async function setBillStatus(
   revalidatePath('/purchase-bills')
   revalidatePath(`/purchase-bills/${id}`)
 
-  return { ok: true, message: `${outcome.number} marked ${status.toLowerCase()}` }
+  return {
+    ok: true,
+    message:
+      options.receiveNow && status === 'POSTED'
+        ? `${outcome.number} posted and goods received`
+        : `${outcome.number} marked ${status.toLowerCase()}`,
+  }
 }
 
 export async function duplicateBill(id: string): Promise<SimpleResult> {

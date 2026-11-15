@@ -37,7 +37,7 @@ export const itemInputSchema = z.object({
     .number()
     .min(0, 'Rate cannot be negative')
     .max(99_999_999, 'Rate is too large'),
-  purchaseRate: optionalDecimal(99_999_999, 'Purchase rate'),
+  // The purchase rate is not typed in: it follows the last goods receipt.
   brand: optionalText(100),
   shade: optionalText(100),
   dimensionUnit: z.enum(DimensionUnit).default('MM'),
@@ -61,6 +61,8 @@ export const itemInputSchema = z.object({
     .max(100, 'Tax rate cannot exceed 100'),
   isActive: z.boolean().default(true),
   notes: optionalText(1000),
+  stockTracked: z.boolean().default(false),
+  reorderLevel: optionalDecimal(99_999_999, 'Reorder level'),
 })
 
 export const materialInputSchema = z.object({

@@ -16,6 +16,7 @@ import {
 } from '@/components/catalyst/table'
 import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
+import { RECEIPT_STATUS_COLORS, RECEIPT_STATUS_LABELS } from '@/lib/receipt-labels'
 import { ConfirmButton } from '@/components/confirm-button'
 import { deleteBill } from '@/lib/actions/purchase-bills'
 import { getBill } from '@/lib/queries/purchases'
@@ -49,6 +50,8 @@ export default async function BillDetailPage({
   const canUpdate = can(user.role, 'purchase:update')
   const canCreate = can(user.role, 'purchase:create')
   const canDelete = can(user.role, 'purchase:delete')
+  const canReceive =
+    can(user.role, 'stock:create') && bill.lines.some((line) => line.itemId || line.materialId)
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -105,6 +108,7 @@ export default async function BillDetailPage({
         balance={bill.due}
         canUpdate={canUpdate}
         canCreate={canCreate}
+        canReceive={canReceive}
       />
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -289,14 +293,33 @@ export default async function BillDetailPage({
 
         <div>
           <Subheading level={2}>Goods received</Subheading>
-          <Text className="mt-2">
-            Receiving goods against this bill, and the stock it adds, comes in a later
-            release. Nothing is received automatically when a bill is posted yet.
-          </Text>
-          {bill.receipts.length > 0 ? (
+          {bill.receipts.length === 0 ? (
             <Text className="mt-2">
-              Receipts: {bill.receipts.map((receipt) => receipt.number).join(', ')}
+              {bill.status === 'POSTED'
+                ? 'No goods have been received against this bill yet.'
+                : 'Goods can be received once the bill is posted, or tick "Mark goods as received now" when posting.'}
             </Text>
+          ) : (
+            <ul className="mt-2 grid gap-1 text-sm/6">
+              {bill.receipts.map((receipt) => (
+                <li key={receipt.id} className="flex items-center gap-3">
+                  <TextLink href={`/goods-receipts/${receipt.id}`}>{receipt.number}</TextLink>
+                  <Badge color={RECEIPT_STATUS_COLORS[receipt.status]}>
+                    {RECEIPT_STATUS_LABELS[receipt.status]}
+                  </Badge>
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {dateFormat.format(receipt.receivedOn)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {bill.status === 'POSTED' && canReceive ? (
+            <div className="mt-3">
+              <Button outline href={`/goods-receipts/new?bill=${bill.id}`}>
+                Receive goods
+              </Button>
+            </div>
           ) : null}
         </div>
       </div>

@@ -46,6 +46,8 @@ export default async function NewItemPage() {
           taxRatePercent: industry.defaultGstRate,
           isActive: true,
           notes: null,
+          stockTracked: false,
+          reorderLevel: null,
         }}
       />
     </div>

@@ -13,6 +13,7 @@ import {
 } from '@/components/dashboard-parts'
 import { PayablesTile } from '@/components/payables-tile'
 import { DashboardRangeBar } from '@/components/dashboard-range-bar'
+import { LowStockTile } from '@/components/low-stock-tile'
 import { readDashboardRange } from '@/lib/dashboard-range'
 import { ORDER_STATUS_LABELS } from '@/lib/labels'
 import { can } from '@/lib/permissions'
@@ -377,6 +378,8 @@ export default async function DashboardPage({
           </>
         )}
       </section>
+
+      <LowStockTile role={role} />
 
       {activity && now && before ? (
         <section aria-label={`Activity: ${range.label}`} className="grid gap-3 print:hidden">

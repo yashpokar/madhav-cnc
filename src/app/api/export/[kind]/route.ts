@@ -8,6 +8,7 @@ import { listOrders } from '@/lib/queries/orders'
 import { listInvoices } from '@/lib/queries/invoices'
 import { listBills, listPurchaseOrders } from '@/lib/queries/purchases'
 import { listVendorPayments } from '@/lib/queries/vendor-payments'
+import { listStock } from '@/lib/queries/stock'
 import { listExpenses } from '@/lib/queries/accounting'
 import { listPaymentsForExport } from '@/lib/queries/reports'
 import {
@@ -29,6 +30,7 @@ const RESOURCE: Record<string, Resource> = {
   'purchase-bills': 'purchase',
   'purchase-orders': 'purchase',
   'vendor-payments': 'purchase',
+  stock: 'stock',
 }
 
 function pick<T extends string>(
@@ -159,6 +161,17 @@ async function build(
         rows: rows.map((p) => [
           p.number, p.paidOn, p.vendor.name, p.modeName ?? p.mode, p.reference,
           p.billNumbers.join(', '), p.amount, p.allocated, p.openingApplied, p.advance,
+        ]),
+      }
+    }
+    case 'stock': {
+      const filter = status === 'low' || status === 'out' || status === 'negative' ? status : 'all'
+      const rows = await listStock({ search, filter })
+
+      return {
+        headers: ['Code', 'Name', 'Type', 'On hand', 'Average cost', 'Value (INR)', 'Reorder level', 'State'],
+        rows: rows.map((r) => [
+          r.code, r.name, r.kind, r.onHand, r.averageCost, r.value, r.reorderLevel, r.state,
         ]),
       }
     }

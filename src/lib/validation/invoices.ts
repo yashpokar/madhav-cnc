@@ -97,3 +97,12 @@ export const writeOffInputSchema = z.object({
 
 export type InvoiceData = z.output<typeof invoiceInputSchema>
 export type PaymentData = z.output<typeof paymentInputSchema>
+
+/**
+ * JSON-native input types for the service layer and the API. The schemas above
+ * already accept JSON values (numbers, nulls, yyyy-mm-dd strings) as well as
+ * the strings a form sends; the FormData adapter only gathers the fields.
+ */
+export type InvoiceInput = z.input<typeof invoiceInputSchema>
+export type WriteOffInput = z.input<typeof writeOffInputSchema>
+export type PaymentInput = z.input<typeof paymentInputSchema>

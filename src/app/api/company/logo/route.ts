@@ -27,7 +27,10 @@ export async function GET() {
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
         'Content-Type': setting.logoMimeType ?? 'image/png',
-        'Cache-Control': 'public, max-age=600',
+        // Per company, so never shared: the same URL serves whichever company
+        // the cookie selects.
+        'Cache-Control': 'private, max-age=600',
+        Vary: 'Cookie',
       },
     })
   } catch {

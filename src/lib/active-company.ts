@@ -5,36 +5,63 @@ import { redirect } from 'next/navigation'
 /** The cookie that remembers which company a person is working in. */
 export const COMPANY_COOKIE = 'company'
 
+export type CompanyScope =
+  /** Nobody is signed in, or there is no request (public links, seed scripts). */
+  | { kind: 'open' }
+  | { kind: 'company'; companyId: string }
+  /** Signed in, but may not open any company: must see no company data at all. */
+  | { kind: 'none' }
+
 /**
- * The company this request works in: the one chosen in the switcher if the
- * signed-in person may open it, otherwise the first they may open. Null when
- * nobody is signed in (public quotation links) or outside a request (seed
- * scripts), in which case nothing is filtered by company.
+ * Who the database layer should filter for. It fails closed: a signed-in
+ * person with no company (a new sign-up, a deactivated account) is `none`,
+ * never `open`, so they can not read every company's rows by accident.
  *
  * Loaded lazily by the database layer, so it must not import the database
  * client at the top: session -> auth -> prisma would be a cycle.
  */
-export const getActiveCompanyId = cache(async (): Promise<string | null> => {
+export const getCompanyScope = cache(async (): Promise<CompanyScope> => {
   // Seed scripts have no request, so they name their company in the environment.
-  if (process.env.SEED_COMPANY_ID) return process.env.SEED_COMPANY_ID
+  if (process.env.SEED_COMPANY_ID) {
+    return { kind: 'company', companyId: process.env.SEED_COMPANY_ID }
+  }
+
+  let chosen: string | undefined
 
   try {
-    const { getBaseUser } = await import('@/lib/session')
-    const user = await getBaseUser()
-
-    if (!user || !user.isActive) return null
-
-    const { prisma } = await import('@/lib/prisma')
-    const accessible = await listAccessibleCompanies(user, prisma)
-
-    if (accessible.length === 0) return null
-
-    const chosen = (await cookies()).get(COMPANY_COOKIE)?.value
-
-    return accessible.find((c) => c.id === chosen)?.id ?? accessible[0].id
+    chosen = (await cookies()).get(COMPANY_COOKIE)?.value
   } catch {
-    return null
+    // Outside a request (seed script, auth callbacks).
+    return { kind: 'open' }
   }
+
+  const { getBaseUser } = await import('@/lib/session')
+  const user = await getBaseUser()
+
+  if (!user) return { kind: 'open' }
+
+  if (!user.isActive) return { kind: 'none' }
+
+  const { prisma } = await import('@/lib/prisma')
+  const accessible = await listAccessibleCompanies(user, prisma)
+
+  if (accessible.length === 0) return { kind: 'none' }
+
+  const id = accessible.find((c) => c.id === chosen)?.id ?? accessible[0].id
+
+  return { kind: 'company', companyId: id }
+})
+
+/**
+ * The company this request works in: the one chosen in the switcher if the
+ * signed-in person may open it, otherwise the first they may open. Null when
+ * nobody is signed in (public quotation links), outside a request (seed
+ * scripts), or the person has no company.
+ */
+export const getActiveCompanyId = cache(async (): Promise<string | null> => {
+  const scope = await getCompanyScope()
+
+  return scope.kind === 'company' ? scope.companyId : null
 })
 
 type Who = { id: string; isSuperAdmin: boolean }

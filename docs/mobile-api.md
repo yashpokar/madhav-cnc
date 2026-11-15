@@ -160,87 +160,168 @@ Status: contract listed here first so apps can code against it; each row is mark
 
 ### Purchasing and stock
 
-| Endpoint | Capability |
-| --- | --- |
-| `GET /vendors`, `GET /vendors/{id}` | expense:read |
-| `POST /vendors` | expense:create (a duplicate name is `409`) |
-| `PATCH /vendors/{id}` | expense:update (whole record) |
-| `DELETE /vendors/{id}` | expense:delete (`409` while it has expenses) |
-| `GET /vendors/{id}/statement`, `GET /payables` | purchase:read |
-| `GET /purchase-orders`, `/purchase-orders/{id}` | purchase:read |
-| `POST /purchase-orders` | purchase:create |
-| `PATCH /purchase-orders/{id}` | purchase:update (whole document) |
-| `POST /purchase-orders/{id}/status` | purchase:update |
-| `POST /purchase-orders/{id}/create-bill` | purchase:create |
-| `DELETE /purchase-orders/{id}` | purchase:delete |
-| `GET /purchase-bills`, `/purchase-bills/{id}` | purchase:read |
-| `POST /purchase-bills` | purchase:create |
-| `PATCH /purchase-bills/{id}` | purchase:update (whole document) |
-| `POST /purchase-bills/{id}/status` | purchase:update (receiving stock also needs stock:create) |
-| `POST /purchase-bills/{id}/duplicate` | purchase:create |
-| `DELETE /purchase-bills/{id}` | purchase:delete |
-| `GET /goods-receipts`, `/goods-receipts/{id}` | purchase:read |
-| `GET /goods-receipts/receivable?billId=` or `?poId=` | purchase:read (what is still to receive) |
-| `POST /goods-receipts` | stock:create |
-| `POST /goods-receipts/{id}/cancel` | stock:update |
-| `GET /vendor-payments`, `/vendor-payments/{id}` | purchase:read |
-| `POST /vendor-payments` | purchase:update |
-| `PATCH /vendor-payments/{id}/allocations` | purchase:update |
-| `DELETE /vendor-payments/{id}` | purchase:delete |
-| `GET /stock`, `GET /stock/{kind}/{id}` (ledger; kind is `item` or `material`) | stock:read |
-| `POST /stock/adjustments`, `POST /stock/opening` | stock:create |
-| `PATCH /stock/{kind}/{id}/reorder-level` | item:update |
+Lists (cursor pagination as above): vendors by name, purchase orders by order date, bills by bill date, goods
+receipts by received date, vendor payments by payment date (newest first), stock by name. Records carry an `ETag`.
+Documents (`purchase-orders`, `purchase-bills`) and vendors are replaced whole by `PATCH`; dates are `YYYY-MM-DD`.
+The rules are the web's: the endpoints call the same services (`src/lib/services/purchase-orders.ts`,
+`purchase-bills.ts`, `vendors.ts`, `goods-receipts.ts`, `vendor-payments.ts`, `stock.ts`).
+
+| Endpoint | Capability | Body (example) |
+| --- | --- | --- |
+| `GET /vendors?q=&includeInactive=`, `GET /vendors/{id}` | expense:read | |
+| `POST /vendors` | expense:create | `{"name":"Ply House","phone":"9876500002","gstin":"24ABCDE1234F1Z5","city":"Surat","openingPayable":1000,"openingAsOf":"2026-04-01"}` (a duplicate name is `409`; `openingAsOf` is required with an opening payable) |
+| `PATCH /vendors/{id}` | expense:update | the whole vendor (`isActive` left out means `true`) |
+| `DELETE /vendors/{id}` | expense:delete | none. `409` while it has expenses (mark it inactive instead) |
+| `GET /vendors/{id}/statement` | purchase:read | none. Open bills, then bills and payments with a running balance |
+| `GET /payables` | purchase:read | none. Totals, ageing buckets and a row per vendor with something due |
+| `GET /purchase-orders?q=&status=`, `/purchase-orders/{id}` | purchase:read | |
+| `POST /purchase-orders` | purchase:create | `{"vendorId":"...","orderDate":"2026-11-15","expectedDate":"2026-11-25","notes":"","lines":[{"itemId":"...","description":"Ply 18mm","qty":10,"unit":"SHEET","rate":1800,"taxRatePercent":18}]}` (a line points at an `itemId` or a `materialId`, or neither for free text; a new order is a DRAFT) |
+| `PATCH /purchase-orders/{id}` | purchase:update | the same document; a received or cancelled order is `409` |
+| `POST /purchase-orders/{id}/status` | purchase:update | `{"status":"SENT"}` (an illegal move is `409`) |
+| `POST /purchase-orders/{id}/create-bill` | purchase:create | none. `201` with a draft bill copied from the order (`409` for a cancelled order) |
+| `DELETE /purchase-orders/{id}` | purchase:delete | none. Draft or cancelled orders without bills or receipts only |
+| `GET /purchase-bills?q=&status=`, `/purchase-bills/{id}` | purchase:read | `paid`, `due` and `paymentStatus` are computed for posted bills |
+| `POST /purchase-bills` | purchase:create | `{"vendorId","poId":null,"vendorBillNumber":"VB-77","billDate":"2026-11-15","dueDate":"2026-12-15","isInterState":false,"lines":[{"description":"Ply","qty":10,"unit":"SHEET","rate":1800,"discount":0,"taxRatePercent":18}]}` (a DRAFT; GST totals come back) |
+| `PATCH /purchase-bills/{id}` | purchase:update | the same document; a posted bill is `409` (move it back to draft first) |
+| `POST /purchase-bills/{id}/status` | purchase:update | `{"status":"POSTED"}` or `{"status":"POSTED","receiveNow":true}` (the latter also needs stock:create). A bill with payments cannot leave POSTED |
+| `POST /purchase-bills/{id}/duplicate` | purchase:create | none. `201`, a draft copy |
+| `DELETE /purchase-bills/{id}` | purchase:delete | none. `409` for a posted bill, or one with payments or receipts |
+| `GET /goods-receipts?q=&status=`, `/goods-receipts/{id}` | purchase:read | |
+| `GET /goods-receipts/receivable?billId=` or `?poId=` | purchase:read | what is still to receive: `lines[].lineId` and `remaining` feed the next call |
+| `POST /goods-receipts` | stock:create | `{"billId":"...","receivedOn":"2026-11-15","notes":"","lines":[{"lineId":"<receivable lineId>","qty":4}]}` (or `poId` instead of `billId`). Adds to stock |
+| `POST /goods-receipts/{id}/cancel` | stock:update | `{}` or `{"allowNegative":true}` (administrators only). Reverses the stock; below zero is `409` |
+| `GET /vendor-payments?q=&mode=&from=&to=`, `/vendor-payments/{id}` | purchase:read | |
+| `POST /vendor-payments` | purchase:update | `{"vendorId","amount":5000,"methodId":"<GET /payment-methods id>","paidOn":"2026-11-15","details":{...},"allocations":[{"billId","amount":3000}],"openingApplied":0}` (same auto-apply rules as the web when neither is sent) |
+| `PATCH /vendor-payments/{id}/allocations` | purchase:update | `{"allocations":[{"billId","amount":3000}],"openingApplied":0}` (the full new split) |
+| `DELETE /vendor-payments/{id}` | purchase:delete | none. The bills owe again |
+| `GET /stock?q=&filter=all\|low\|out\|negative` | stock:read | |
+| `GET /stock/{kind}/{id}` | stock:read | `kind` is `item` or `material`. Ledger, oldest first with a running balance |
+| `POST /stock/adjustments` | stock:create | `{"kind":"item","id":"...","qty":-2,"reason":"Damaged","date":"2026-11-15"}` (below zero is `409`; `"allowNegative":true` works for administrators) |
+| `POST /stock/opening` | stock:create | `{"kind":"material","id":"...","qty":50,"unitCost":12.5}` (once per item or material) |
+| `PATCH /stock/{kind}/{id}/reorder-level` | item:update | `{"reorderLevel":10}` or `{"reorderLevel":null}`. The item must have Track stock on |
+
+Quantities and rates come back as decimal strings and go in as JSON numbers. Receipts have no edit stamp, so
+their `updatedAt` is the recorded time (as for payments).
 
 ### Master data and settings
 
-| Endpoint | Capability |
-| --- | --- |
-| `POST /items`, `PATCH /items/{id}`, `DELETE /items/{id}` | item:create, item:update, item:delete |
-| `GET /materials`, `POST /materials`, `PATCH /materials/{id}` (rename, active), `POST /materials/{id}/move`, `DELETE /materials/{id}` | item:read, item:create, item:update, item:update, item:delete |
-| `GET /partners`, `/partners/{id}` | partner:read |
-| `POST /partners`, `PATCH /partners/{id}`, `POST /partners/{id}/active`, `DELETE /partners/{id}` | partner:create, partner:update, partner:update, partner:delete |
-| `GET /settings/payment-modes` (with use counts), `POST`, `PATCH /{id}`, `POST /{id}/move`, `DELETE /{id}` | settings:update |
-| `POST /expense-categories`, `PATCH /expense-categories/{id}`, `DELETE /expense-categories/{id}` | expense:create, expense:update, expense:delete |
-| `GET /settings/company`, `PATCH /settings/company` | settings:update |
-| `POST /settings/company/{logo|signature|stamp}` (multipart `file`), `DELETE` the same | settings:update |
-| `GET /settings/stages`, `POST`, `PATCH /{id}`, `POST /{id}/move`, `DELETE /{id}` | settings:update |
-| `GET /adjustments`, `/adjustments/{id}` | payment:read |
-| `POST /adjustments`, `PATCH /adjustments/{id}`, `DELETE /adjustments/{id}` (balance adjustments, reversals) | settings:update |
-| `GET /settings/opening-balances`, `PUT /settings/opening-balances` | settings:update |
-| `GET /notes`, `/notes/{id}` (credit and debit notes) | note:read |
-| `POST /notes`, `PATCH /notes/{id}`, `POST /notes/{id}/status`, `DELETE /notes/{id}` | note:create, note:update, note:update, note:delete |
-| `GET /dispatches`, `/dispatches/{id}`, `GET /dispatches/dispatchable-orders` | dispatch:read |
-| `POST /dispatches`, `PATCH /dispatches/{id}`, `POST /dispatches/{id}/status`, `POST /dispatches/{id}/receipt`, `DELETE /dispatches/{id}` | dispatch:create, dispatch:update, dispatch:update, dispatch:update, dispatch:delete |
+Settings lists are small, so **materials, payment modes and production stages answer the whole updated list after
+every change** (a screen just replaces its copy). Other records answer the saved record like the rest of the API.
+`PATCH` on a master record (item, partner, payment mode, expense category, company profile, material, stage) is
+**partial**: only the fields sent change (`null` clears an optional one) and the merged record goes through the web's own
+validation. `PATCH` on a document (note, dispatch, adjustment) replaces it. A refusal that is a state rule is `409`.
+
+| Endpoint | Capability | Body (example) |
+| --- | --- | --- |
+| `POST /items` | item:create | `{"name":"Plywood 18mm","unit":"SQFT","rate":120,"taxRatePercent":18,"materialId":"...","stockTracked":true,"reorderLevel":50}` (same fields as the web form; code is assigned) |
+| `PATCH /items/{id}` | item:update | `{"rate":130}` |
+| `DELETE /items/{id}` | item:delete | `409` while the item is on a document line (set `isActive:false` instead) |
+| `GET /materials` | item:read | every material, inactive too: `{id,name,sortOrder,isActive,stockTracked,reorderLevel,itemCount}` |
+| `POST /materials` | item:create | `{"name":"Hardware"}` (`201`, the whole list; a repeated name is `409`) |
+| `PATCH /materials/{id}` | item:update | any of `{"name","isActive","stockTracked","reorderLevel"}` (the reorder level of a stock-tracked material; the whole list comes back) |
+| `POST /materials/{id}/move` | item:update | `{"direction":"up"}` |
+| `DELETE /materials/{id}` | item:delete | `409` while items use it |
+| `GET /partners`, `GET /partners/{id}` | partner:read | list takes `?q=&type=ARCHITECT\|CARPENTER&includeInactive=true`, name order, cursor |
+| `POST /partners` | partner:create | `{"type":"ARCHITECT","name":"Ravi Shah","phone":"9876500001","firmName":"RS Studio","city":"Surat"}` |
+| `PATCH /partners/{id}` | partner:update | `{"city":"Vapi"}` (the type is fixed) |
+| `POST /partners/{id}/active` | partner:update | `{"isActive":false}` |
+| `DELETE /partners/{id}` | partner:delete | `409` while customers, quotations or orders point at it |
+| `GET /settings/payment-modes` | settings:update | every mode with `details`, `accountDetails`, `showOnDocuments`, `hasQr`, `usage` |
+| `POST /settings/payment-modes` | settings:update | `{"name":"HDFC UPI","kind":"UPI","accountDetails":{"upiId":"acme@hdfc"},"showOnDocuments":true,"details":[{"label":"Bank","value":"HDFC"}]}` (`201`, whole list; the receiving fields per kind are the ones `GET /payment-methods` describes) |
+| `PATCH /settings/payment-modes/{id}` | settings:update | any of `name, kind, details, accountDetails, showOnDocuments, isActive` (hiding the last active mode is `409`) |
+| `POST /settings/payment-modes/{id}/move` | settings:update | `{"direction":"down"}` |
+| `DELETE /settings/payment-modes/{id}` | settings:update | `409` once it has been used (hide it instead) |
+| `GET`/`POST`/`DELETE /settings/payment-modes/{id}/qr` | payment:read / settings:update | the QR image; `POST` is multipart `file` (PNG, JPEG or WebP, 10 MB), answers the mode |
+| `GET /settings/expense-categories` | expense:read | every category, inactive too, with `expenseCount` (the existing `GET /expense-categories` stays the active-only picker list) |
+| `POST /expense-categories` | expense:create | `{"name":"Fuel","sortOrder":10}` |
+| `PATCH /expense-categories/{id}` | expense:update | `{"isActive":false}` |
+| `DELETE /expense-categories/{id}` | expense:delete | `409` while expenses use it |
+| `GET /settings/company` | settings:update | the profile (`ETag`); `hasLogo`, `hasSignature`, `hasStamp` |
+| `PATCH /settings/company` | settings:update | `{"companyName":"Acme Interiors","gstin":"24ABCDE1234F1Z5","defaultAdvancePercent":70,"invoiceTerms":"..."}` |
+| `GET`/`POST`/`DELETE /settings/company/{logo\|signature\|stamp}` | settings:update | the image; `POST` is multipart `file` (PNG, JPEG or WebP, 10 MB) and answers the profile |
+| `GET /settings/stages` | settings:update | every stage in order with `linkedStatus` and `taskCount` |
+| `POST /settings/stages` | settings:update | `{"name":"Polish"}` (`201`, whole list) |
+| `PATCH /settings/stages/{id}` | settings:update | any of `{"name","isActive","linkedStatus":"READY"\|null}` (retiring a stage with open tasks is `409`) |
+| `POST /settings/stages/{id}/move` | settings:update | `{"direction":"up"}` |
+| `DELETE /settings/stages/{id}` | settings:update | `409` while tasks are on record (retire it) |
+| `GET /adjustments`, `GET /adjustments/{id}` | payment:read | `?q=&kind=&reason=&from=&to=`, newest first, cursor; `amount` is signed |
+| `POST /adjustments` | settings:update | `{"kind":"CHANNEL","targetId":"<payment mode id>","direction":"up","amount":500,"adjustedOn":"2026-11-15","reason":"FORGOTTEN_ENTRY","note":"Cash found in drawer"}` (`kind` `CUSTOMER` takes a customer id) |
+| `PATCH /adjustments/{id}` | settings:update | the same body; only amount, date, reason and note change |
+| `DELETE /adjustments/{id}` | settings:update | reverses it: the balance is back as it was |
+| `GET /settings/opening-balances` | settings:update | per payment mode: `{channelId,name,isActive,amount,asOf}` |
+| `PUT /settings/opening-balances` | settings:update | `{"balances":[{"channelId":"...","amount":-2500.5,"asOf":"2026-04-01"},{"channelId":"...","amount":null,"asOf":null}]}` (`null` removes an entry; the whole list comes back; customer and vendor opening balances are on their own records) |
+| `GET /notes`, `GET /notes/{id}` | note:read | `?q=&kind=CREDIT\|DEBIT&status=`, newest first, cursor; detail has the lines and GST split |
+| `POST /notes` | note:create | `{"kind":"CREDIT","partyType":"CUSTOMER","customerId":"...","invoiceId":"...","reason":"SALES_RETURN","noteDate":"2026-11-15","lines":[{"description":"Returned panel","quantity":1,"rate":1200,"taxRatePercent":18}]}` (a `VENDOR` note sends `vendorName` instead of `customerId`) |
+| `PATCH /notes/{id}` | note:update | the same document; draft only (an issued note is `409`) |
+| `POST /notes/{id}/status` | note:update | `{"status":"ISSUED"}` (`DRAFT`, `ISSUED`, `CANCELLED`; the same status again is `409`) |
+| `DELETE /notes/{id}` | note:delete | an issued note is `409` (cancel first) |
+| `GET /dispatches`, `GET /dispatches/{id}` | dispatch:read | `?q=&status=`, newest first, cursor |
+| `GET /dispatches/dispatchable-orders`, `GET /dispatches/dispatchable-orders/{orderId}` | dispatch:read | orders a challan can be made for, and one order with `ordered`, `dispatched`, `remaining` per line |
+| `POST /dispatches` | dispatch:create | `{"orderId":"...","dispatchDate":"2026-11-15","status":"DRAFT","vehicleNumber":"GJ05AB1234","lines":[{"orderLineId":"...","description":"Wardrobe","unit":"NOS","quantity":1}]}` (a line over what is left is `422` with `fields`) |
+| `PATCH /dispatches/{id}` | dispatch:update | the same document; one already delivered is `409` |
+| `POST /dispatches/{id}/status` | dispatch:update | `{"status":"DISPATCHED"}` (an illegal move is `409`) |
+| `POST /dispatches/{id}/receipt` | dispatch:update | `{"receivedByName":"Mohan"}` |
+| `DELETE /dispatches/{id}` | dispatch:delete | only a draft or cancelled challan (`409` once goods left) |
+
+Every create above and every action (`status`, `active`, `move`, `receipt`) takes an `Idempotency-Key`; `PATCH`, `PUT`
+and `DELETE` do not (repeating them is safe). Image uploads are limited to 10 a minute like `POST /uploads`.
 
 ### Sales gaps
 
-| Endpoint | Capability |
-| --- | --- |
-| `DELETE /customers/{id}` | customer:delete |
-| `DELETE /quotations/{id}`, `POST /quotations/{id}/revision` | quotation:delete, quotation:create |
-| `DELETE /quotations/{id}/share` (revoke the link) | quotation:update |
-| `POST /quotations/{id}/attachments` (`uploadId`), `DELETE /quotations/{id}/attachments/{attachmentId}` | quotation:update |
-| `DELETE /orders/{id}` | order:delete |
-| `POST /orders/{id}/tracking`, `DELETE /orders/{id}/tracking` (create or replace, revoke the link) | order:update |
-| `DELETE /invoices/{id}`, `POST /invoices/{id}/duplicate` | invoice:delete, invoice:create |
-| `POST /invoices/{id}/payments`, `DELETE /invoices/{id}/allocations/{allocationId}` | payment:create, payment:update |
-| `POST /invoices/{id}/write-off`, `DELETE /invoices/{id}/write-offs/{writeOffId}` | invoice:update |
-| `PATCH /payments/{id}/allocations` | payment:update |
+Deletes answer `{ "data": { "id", "deleted": true } }`; the rules are the web's (a record that is still in use is `409`).
+
+| Endpoint | Capability | Body (example) |
+| --- | --- | --- |
+| `DELETE /customers/{id}` | customer:delete | none. `409` while it has quotations, orders, invoices, receipts or notes (set it INACTIVE) |
+| `DELETE /quotations/{id}` | quotation:delete | none. `409` while orders or later revisions point at it |
+| `POST /quotations/{id}/revision` | quotation:create | none. `201` with the new draft quotation |
+| `DELETE /quotations/{id}/share` | quotation:update | none. Revokes the customer link (`409` if none is active) |
+| `POST /quotations/{id}/comments` | quotation:update | `{"body":"Please make it darker","attachmentId":null}` |
+| `POST /quotations/{id}/attachments` | quotation:update | `{"uploadId":"...","fileName":"wall.jpg","comment":"reference"}` (uploadId from `POST /uploads` purpose `quotation_attachment`). `201 {id,fileName,mimeType,sizeBytes,comment,approvalCleared}`; clears a customer approval like the web; a converted quotation is `409` |
+| `PATCH /quotations/{id}/attachments/{attachmentId}` | quotation:update | `{"comment":"new text"}` |
+| `DELETE /quotations/{id}/attachments/{attachmentId}` | quotation:update | none (takes it out of the current set) |
+| `POST /quotations/{id}/attachments/{attachmentId}/restore` | quotation:update | none |
+| `DELETE /orders/{id}` | order:delete | none |
+| `POST /orders/{id}/tracking` | order:update | `{}` (the active link or a new one) or `{"replace":true}`; answers `{url,token,whatsappText,whatsappLink,created}` |
+| `DELETE /orders/{id}/tracking` | order:update | none. Revokes the link (`409` if none) |
+| `DELETE /invoices/{id}` | invoice:delete | none. Drafts only |
+| `POST /invoices/{id}/duplicate` | invoice:create | none. `201` with the new draft invoice |
+| `POST /invoices/{id}/payments` | payment:create | `{"amount":500,"methodId":"<GET /payment-methods id>","paidOn":"2026-11-15","reference":"UTR123","notes":null}`. `201` with the invoice |
+| `DELETE /invoices/{id}/payments/{paymentId}` | payment:delete | none. Unapplies that receipt (`paymentId` from the invoice's `payments`) from the invoice; answers the invoice |
+| `POST /invoices/{id}/write-off` | payment:update | `{"amount":50,"reason":"DISPUTE","writtenOffOn":"2026-11-15","notes":null}`. `201` with the invoice |
+| `DELETE /invoices/{id}/write-offs/{writeOffId}` | payment:update | none. Answers the invoice |
+| `POST /invoices/{id}/share/regenerate` | invoice:update | none. A fresh link (the old one stops opening); issued invoices only |
+| `PATCH /payments/{id}/allocations` | payment:update | `{"allocations":[{"invoiceId":"...","amount":100}],"openingApplied":0}` (replaces what the receipt settles) |
+
+Not exposed: attaching a `payment_proof` upload to a payment (the data model has no proof field on a payment, so there
+is nothing to attach it to), and a quotation share "regenerate" (the web has only create and revoke for quotations).
 
 ### Account, team, billing, search
 
-| Endpoint | Capability |
-| --- | --- |
-| `GET /me` (each company also has `industryName`, `terms`, `modules`) | signed in |
-| `GET /industries` | signed in (templates: terms, modules, stages, units) |
-| `GET /team/members` | user:read |
-| `PATCH /team/members/{userId}` (role), `DELETE /team/members/{userId}` (remove) | user:update |
-| `GET /invitations`, `POST /invitations`, `DELETE /invitations/{id}`, `POST /invitations/{id}/regenerate` | user:update (create returns the link and a WhatsApp text/link) |
-| `GET /invitations/preview?token=` | signed in |
-| `POST /invitations/accept` | signed in (already live) |
-| `GET /billing/payments`, `POST /billing/checkout` (returns `redirectUrl` to open in the browser) | settings:update |
-| `GET /search?q=` | per type: customer, partner, item, quotation, order, invoice read |
-| `GET /export/{kind}` (CSV: customers, quotations, orders, invoices, payments, expenses, purchase-bills, purchase-orders, vendor-payments, stock) | the kind's read capability |
+Live. `GET /me` (and `POST /companies`) answer every company with `role`, `capabilities`, `industry`, `industryName`,
+`terms` (what the company calls an order: `{"orders":"Bookings","order":"Booking"}`) and `modules`
+(`{"production":true,"dispatch":true,"partners":true}`; hide a screen when false). Switching company is client-side:
+send the other company's id as `X-Company-Id`. Adding a company is `POST /companies` (same 3-company cap as the web).
+
+| Endpoint | Capability | Body (example) |
+| --- | --- | --- |
+| `GET /industries` | signed in | none. Templates with terms, modules, stages, units, expense categories (ETag) |
+| `GET /team/members` | user:update | none. `[{id,name,email,role,isSuperAdmin}]` |
+| `POST /team/members` | user:update | `{"email":"mira@example.com","role":"SALES"}`. Adds an existing account (`422` on `email` when none exists, `409` when already a member) |
+| `PATCH /team/members/{userId}` | user:update | `{"role":"ACCOUNTANT"}`. The last administrator cannot be demoted (`409`); someone not on this team is `404` |
+| `DELETE /team/members/{userId}` | user:update | none. Removes them from this company, not the account |
+| `GET /invitations` | user:update | none. Each has `url`, `token`, `whatsappText`, `whatsappLink` |
+| `POST /invitations` | user:update | `{"role":"SALES","phone":"9876543210","email":"","note":"Showroom"}`. Capped per company (`409`) |
+| `DELETE /invitations/{id}` | user:update | none. Revokes the link (`409` if not open) |
+| `POST /invitations/{id}/regenerate` | user:update | none. New link and expiry (resend) |
+| `GET /invitations/preview?token=` | signed in | the join screen: `{companyName, role, inviterName, emailHint, expiresAt, status, usable}`; `404` for an unknown token |
+| `POST /invitations/accept` | signed in | `{"token":"..."}` (live since M1) |
+| `GET /billing/payments` | settings:update | none. Last 20 plan payments |
+| `POST /billing/checkout` | settings:update | `{"plan":"BUSINESS"}`. Returns `{paymentId, redirectUrl}`: open `redirectUrl` in the system browser, then poll `GET /billing`. App-store rules about selling plans in-app are the product's call; the endpoint is the same as the web button |
+| `GET /search?q=` | none; each group needs its read capability | `[{id,group,title,subtitle,type,recordId}]`, at most 5 per group, `q` of 2+ characters. `type` is customer, partner, item, quotation, order or invoice |
+| `GET /export/{kind}?q=&status=` | the kind's read capability | CSV (`text/csv`, UTF-8 with BOM) of customers, quotations, orders, invoices, payments, expenses, purchase-bills, purchase-orders, vendor-payments or stock |
+
+There are no notification preferences on the web (only device registration, `POST /devices`), so none are exposed.
 
 ## Tenancy
 

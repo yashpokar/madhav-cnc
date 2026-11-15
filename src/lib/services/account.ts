@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { capabilitiesFor } from '@/lib/permissions'
 import { effectiveRole } from '@/lib/company-roles'
 import { anonymisedIdentity, deletionBlocks, describeDeletionBlocks } from '@/lib/account-deletion-rules'
+import { getIndustry, type IndustryModules, type IndustryTerms } from '@/lib/industry'
 import type { UserRole } from '@/generated/prisma/enums'
 
 export type MyCompany = {
@@ -13,6 +14,19 @@ export type MyCompany = {
   role: UserRole
   capabilities: readonly string[]
   industry: string
+  /** Display name of the industry template ("Decoration & interiors"). */
+  industryName: string
+  /** What the company calls an order ("Orders"/"Order", "Bookings"/"Booking"). */
+  terms: IndustryTerms
+  /** Which optional areas of the app the industry uses; hide a screen when false. */
+  modules: IndustryModules
+}
+
+/** The industry fields every company summary carries (the template is a code constant, not a query). */
+export function industryFields(industry: string) {
+  const template = getIndustry(industry)
+
+  return { industry, industryName: template.label, terms: template.terms, modules: template.modules }
 }
 
 /** Every company the person may open (all of them for a super-admin), with their role in each. */
@@ -40,7 +54,7 @@ export async function listMyCompanies(user: {
       name: row.companyName,
       role,
       capabilities: capabilitiesFor(role),
-      industry: row.industry,
+      ...industryFields(row.industry),
     }
   })
 }

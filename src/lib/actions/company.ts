@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireCompanyId } from '@/lib/active-company'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
+import { saveCompanySetting } from '@/lib/services/company-settings'
 import { companySettingSchema } from '@/lib/validation/company'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
 import type { SimpleResult } from '@/lib/actions/quotations'
@@ -41,11 +40,7 @@ export async function updateCompanySetting(
     }
   }
 
-  await prisma.companySetting.upsert({
-    where: { id: await requireCompanyId() },
-    update: { ...parsed.data, updatedById: user.id },
-    create: { id: await requireCompanyId(), ...parsed.data, updatedById: user.id },
-  })
+  await saveCompanySetting(user, parsed.data)
 
   revalidatePath('/settings/company')
 

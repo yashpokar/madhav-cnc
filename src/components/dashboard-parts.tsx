@@ -301,7 +301,11 @@ export function NowStrip({
   return (
     <section aria-label="Right now" className={`${CARD} overflow-hidden`}>
       <h2 className="px-4 pt-4 text-sm/6 font-semibold">Right now</h2>
-      <dl className="mt-2 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+      <dl
+        // One column per cell on wide screens, so the strip fills the card at any count.
+        style={{ '--cells': items.length } as React.CSSProperties}
+        className="mt-2 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-[repeat(var(--cells),minmax(0,1fr))]"
+      >
         {items.map((item) => (
           <Link
             key={item.label}

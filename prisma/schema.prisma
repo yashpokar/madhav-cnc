@@ -688,6 +688,14 @@ model CompanySetting {
   logoStoredName String? @map("logo_stored_name")
   logoMimeType   String? @map("logo_mime_type")
 
+  /// Printed on invoices above "Authorised signatory", with the stamp beside it.
+  signatureStoredName String? @map("signature_stored_name")
+  signatureMimeType   String? @map("signature_mime_type")
+  stampStoredName     String? @map("stamp_stored_name")
+  stampMimeType       String? @map("stamp_mime_type")
+  signatoryName       String? @map("signatory_name")
+  signatoryTitle      String? @map("signatory_title")
+
   upiId          String? @map("upi_id")
   upiQrStoredName String? @map("upi_qr_stored_name")
   upiQrMimeType   String? @map("upi_qr_mime_type")

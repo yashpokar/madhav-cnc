@@ -18,6 +18,8 @@ import { Text, TextLink } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { PrintButton } from '@/components/print-button'
 import { PaymentTerms } from '@/components/payment-terms'
+import { DocumentLetterhead } from '@/components/document-letterhead'
+import { DocumentSignatures } from '@/components/document-signatures'
 import { getInvoice } from '@/lib/queries/invoices'
 import { getCompanySetting } from '@/lib/queries/company'
 import { InvoiceRelated } from '@/components/related-sections'
@@ -133,28 +135,12 @@ export default async function InvoiceDetailPage({
         />
       </div>
 
-      <div className="hidden print:block">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-lg font-semibold">{company.companyName}</div>
-            <div className="text-sm text-zinc-600">
-              {[company.addressLine, company.city, company.state, company.pincode]
-                .filter(Boolean)
-                .join(', ')}
-            </div>
-            {company.gstin ? (
-              <div className="text-sm text-zinc-600">GSTIN {company.gstin}</div>
-            ) : null}
-          </div>
-          <div className="text-right">
-            <div className="text-base font-semibold">Tax invoice</div>
-            <div className="font-mono text-sm">{invoice.number}</div>
-            <div className="text-sm text-zinc-600">
-              {dateFormat.format(invoice.invoiceDate)}
-            </div>
-          </div>
-        </div>
-      </div>
+      <DocumentLetterhead
+        company={company}
+        title="Tax invoice"
+        reference={invoice.number}
+        date={invoice.invoiceDate}
+      />
 
       <Divider className="print:hidden" />
 
@@ -506,6 +492,8 @@ export default async function InvoiceDetailPage({
           </div>
         </>
       ) : null}
+
+      <DocumentSignatures company={company} />
 
       <InvoiceRelated id={invoice.id} role={user.role} />
 

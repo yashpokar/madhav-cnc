@@ -21,6 +21,7 @@ export function DocumentLetterhead({
     phone: string | null
     email: string | null
     gstin: string | null
+    pan?: string | null
     logoStoredName: string | null
   }
   title: string
@@ -56,7 +57,10 @@ export function DocumentLetterhead({
               {[company.phone, company.email].filter(Boolean).join(' · ')}
             </div>
             {company.gstin ? (
-              <div className="text-sm text-zinc-600">GSTIN {company.gstin}</div>
+              <div className="text-sm text-zinc-600">
+                GSTIN {company.gstin}
+                {company.pan ? ` · PAN ${company.pan}` : ''}
+              </div>
             ) : null}
           </div>
         </div>

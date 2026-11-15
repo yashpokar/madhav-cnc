@@ -34,6 +34,8 @@ export async function updateCompanySetting(
     upiId: formData.get('upiId'),
     defaultAdvancePercent: formData.get('defaultAdvancePercent') || 0,
     invoiceTerms: formData.get('invoiceTerms'),
+    signatoryName: formData.get('signatoryName'),
+    signatoryTitle: formData.get('signatoryTitle'),
   })
 
   if (!parsed.success) {

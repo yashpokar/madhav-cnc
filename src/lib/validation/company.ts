@@ -93,6 +93,8 @@ export const companySettingSchema = z.object({
     .min(0, 'Advance cannot be negative')
     .max(100, 'Advance cannot exceed 100%'),
   invoiceTerms: optionalText(2000),
+  signatoryName: optionalText(120),
+  signatoryTitle: optionalText(80),
 })
 
 export type CompanySettingData = z.output<typeof companySettingSchema>

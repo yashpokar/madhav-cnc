@@ -18,6 +18,7 @@ import { Textarea } from '@/components/catalyst/textarea'
 import { Subheading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
+import { ImageSlot } from './image-slot'
 import { removeUpiQr, updateCompanySetting } from '@/lib/actions/company'
 import type { FormState, SimpleResult } from '@/lib/actions/company'
 import type { CompanySetting } from '@/lib/queries/company'
@@ -295,6 +296,24 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
               />
               <Description>Default terms printed on invoices.</Description>
             </Field>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Field>
+                <Label>Signatory name</Label>
+                <Input
+                  name="signatoryName"
+                  defaultValue={keep('signatoryName', setting.signatoryName)}
+                />
+                <Description>Printed under the signature on invoices.</Description>
+              </Field>
+              <Field>
+                <Label>Signatory title</Label>
+                <Input
+                  name="signatoryTitle"
+                  placeholder="Authorised signatory"
+                  defaultValue={keep('signatoryTitle', setting.signatoryTitle)}
+                />
+              </Field>
+            </div>
           </FieldGroup>
         </Fieldset>
 
@@ -361,6 +380,26 @@ export function CompanyForm({ setting }: { setting: CompanySetting }) {
           }}
         />
       </div>
+
+      <Divider />
+
+      <ImageSlot
+        title="Signature"
+        endpoint="/api/company/signature"
+        initiallyHasImage={Boolean(setting.signatureStoredName)}
+        emptyLabel="No signature"
+        help="Printed on invoices above the signatory's name. Use a photo or scan of the signature on a white or transparent background."
+      />
+
+      <Divider />
+
+      <ImageSlot
+        title="Stamp"
+        endpoint="/api/company/stamp"
+        initiallyHasImage={Boolean(setting.stampStoredName)}
+        emptyLabel="No stamp"
+        help="The company seal, printed beside the signature on invoices. Optional."
+      />
 
       <Divider />
 

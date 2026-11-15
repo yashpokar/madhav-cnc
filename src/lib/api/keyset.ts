@@ -31,18 +31,22 @@ export function keyOf(value: Date | string): string {
  * "Rows after this one" for a list ordered by (`field` dir, id dir) with the id
  * in the same direction as the field. Returns an empty condition for the first page.
  */
-export function keysetClause<W extends object>(
+// Returns `any` on purpose: a return-only generic (`<W extends object>`) is inferred
+// as `object` by TypeScript 6 when handed to a Prisma `where`, which erased the
+// relation types from every list query's result.
+export function keysetClause(
   page: PageArgs | undefined,
   field: string,
   dir: 'asc' | 'desc',
   kind: SortKind,
-): W {
-  if (!page?.after) return {} as W
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+  if (!page?.after) return {}
 
   const op = dir === 'desc' ? 'lt' : 'gt'
   const value = parseKey(kind, page.after.k)
 
   return {
     OR: [{ [field]: { [op]: value } }, { [field]: value, id: { [op]: page.after.id } }],
-  } as W
+  }
 }

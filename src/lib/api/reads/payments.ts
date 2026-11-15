@@ -31,7 +31,7 @@ export async function listPayments({
   return prisma.payment.findMany({
     take: page.take,
     where: {
-      AND: keysetClause<Prisma.PaymentWhereInput>(page, 'paidOn', 'desc', 'date'),
+      AND: keysetClause(page, 'paidOn', 'desc', 'date'),
       ...(mode ? { mode } : {}),
       ...(from || to ? { paidOn } : {}),
       ...(term

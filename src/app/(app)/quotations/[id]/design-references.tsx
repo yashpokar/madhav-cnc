@@ -209,6 +209,7 @@ export function DesignReferences({
                     PDF · {item.fileName}
                   </div>
                 ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- user-uploaded attachment served by our API route; next/image cannot optimise it
                   <img
                     src={`/api/attachments/${item.id}`}
                     alt={item.comment ?? item.fileName}
@@ -293,6 +294,7 @@ export function DesignReferences({
                       PDF
                     </div>
                   ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- user-uploaded attachment served by our API route; next/image cannot optimise it
                     <img
                       src={`/api/attachments/${item.id}`}
                       alt={item.fileName}

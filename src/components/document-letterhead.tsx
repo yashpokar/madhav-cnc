@@ -35,6 +35,7 @@ export function DocumentLetterhead({
       <div className="flex items-start justify-between gap-6 border-b border-zinc-300 pb-4">
         <div className="flex items-start gap-4">
           {company.logoStoredName ? (
+            // eslint-disable-next-line @next/next/no-img-element -- print letterhead: logo served by our API route, must render as-is
             <img
               src="/api/company/logo"
               alt=""

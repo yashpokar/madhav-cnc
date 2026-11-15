@@ -339,13 +339,14 @@ export default async function DashboardPage({
       ) : null}
 
       <section aria-label="Needs attention" className={`${CARD} print:hidden`}>
-        <h2 className="px-4 pt-4 text-sm/6 font-semibold">Needs attention</h2>
         {attention.length === 0 ? (
-          <p className="flex items-center gap-2 px-4 pt-2 pb-5 text-sm/6 text-zinc-500 dark:text-zinc-400">
-            <span aria-hidden="true" className="size-2 rounded-full bg-lime-500" />
+          <p className="flex items-center gap-2 px-4 py-2.5 text-sm/6 text-zinc-500 dark:text-zinc-400">
+            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-lime-500" />
             All clear. Nothing is late or waiting on you.
           </p>
         ) : (
+          <>
+          <h2 className="px-4 pt-4 text-sm/6 font-semibold">Needs attention</h2>
           <ul className="mt-2 divide-y divide-zinc-950/5 pb-2 dark:divide-white/5">
             {attention.map((item) => (
               <li key={item.text}>
@@ -368,6 +369,7 @@ export default async function DashboardPage({
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
 

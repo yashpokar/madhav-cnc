@@ -62,6 +62,7 @@ export function ImageSlot({
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex h-28 w-56 items-center justify-center rounded-lg bg-white p-2 ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">
           {has ? (
+            // eslint-disable-next-line @next/next/no-img-element -- user-uploaded image served by our API route; next/image cannot optimise it
             <img
               key={version}
               src={`${endpoint}?v=${version}`}

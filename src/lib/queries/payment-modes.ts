@@ -1,14 +1,17 @@
 import { prisma } from '@/lib/prisma'
+import { receivingRows } from '@/lib/payment-methods'
+import type { PaymentMode } from '@/generated/prisma/enums'
 
-export type PaymentModeOption = { id: string; name: string }
+/** `kind` is the payment method (UPI, NEFT, cheque...), which decides the fixed fields to ask for. */
+export type PaymentModeOption = { id: string; name: string; kind: PaymentMode }
 
 /** The modes someone can pick when recording money, in the order set up. */
 export async function listPaymentModeOptions(include?: string | null): Promise<PaymentModeOption[]> {
   return prisma.paymentChannel.findMany({
     where: { OR: [{ isActive: true }, ...(include ? [{ id: include }] : [])] },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    select: { id: true, name: true },
-  })
+    select: { id: true, name: true, mode: true },
+  }).then((rows) => rows.map((row) => ({ id: row.id, name: row.name, kind: row.mode })))
 }
 
 /** Every mode with how often it has been used, for the settings page. */
@@ -22,6 +25,7 @@ export async function listPaymentModesWithUse() {
       isActive: true,
       sortOrder: true,
       details: true,
+      accountDetails: true,
       showOnDocuments: true,
       qrStoredName: true,
       _count: { select: { payments: true, expenses: true } },
@@ -49,6 +53,10 @@ export function parseDetails(value: unknown): ModeDetail[] {
 export type DocumentPaymentMode = {
   id: string
   name: string
+  kind: PaymentMode
+  /** Our fixed receiving fields (UPI ID, account number, IFSC...), in display order. */
+  account: { key: string; label: string; value: string }[]
+  /** Free-form extras the owner added. */
   details: ModeDetail[]
   hasQr: boolean
 }
@@ -61,12 +69,14 @@ export async function listDocumentPaymentModes(companyId?: string): Promise<Docu
   const rows = await prisma.paymentChannel.findMany({
     where: { isActive: true, showOnDocuments: true, ...(companyId ? { companyId } : {}) },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    select: { id: true, name: true, details: true, qrStoredName: true },
+    select: { id: true, name: true, mode: true, details: true, accountDetails: true, qrStoredName: true },
   })
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    kind: row.mode,
+    account: receivingRows(row.mode, row.accountDetails),
     details: parseDetails(row.details),
     hasQr: Boolean(row.qrStoredName),
   }))

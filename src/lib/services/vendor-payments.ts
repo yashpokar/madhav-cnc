@@ -8,7 +8,8 @@
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity'
 import { nextVendorPaymentNumber } from '@/lib/codes'
-import { resolvePaymentMode } from '@/lib/payment-modes'
+import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
+import { parsePaymentDetails } from '@/lib/payment-methods'
 import { money } from '@/lib/format'
 import {
   planVendorAutoApply,
@@ -24,7 +25,7 @@ import type { BillAllocationInput } from '@/lib/validation/vendor-payments'
 
 export type ServiceResult<T = Record<string, never>> =
   | ({ ok: true; message: string } & T)
-  | { ok: false; error: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> }
 
 /** Thrown inside a transaction to roll it back with a message for the person. */
 class Rejected extends Error {}
@@ -144,7 +145,8 @@ export async function createVendorPayment(
     vendorId: string
     amount: number
     channelId: string
-    reference: string | null
+    /** The method's fixed fields, as posted (JSON text or an object); checked against the chosen method. */
+    paymentDetails?: unknown
     paidOn: Date
     notes: string | null
     allocations: BillAllocationInput[]
@@ -165,6 +167,10 @@ export async function createVendorPayment(
   const method = await resolvePaymentMode(input.channelId)
 
   if (!method) return { ok: false, error: 'Choose a payment mode' }
+
+  const details = parsePaymentDetails(method.mode, input.paymentDetails, 'out')
+
+  if (!details.ok) return { ok: false, error: details.error, fieldErrors: details.fieldErrors }
 
   const number = await nextVendorPaymentNumber()
 
@@ -187,7 +193,8 @@ export async function createVendorPayment(
         mode: method.mode,
         channelId: method.channelId,
         modeName: method.modeName,
-        reference: input.reference,
+        reference: details.reference,
+        paymentDetails: detailsColumn(details.details),
         paidOn: input.paidOn,
         notes: input.notes,
         recordedById: userId,

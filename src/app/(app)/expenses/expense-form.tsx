@@ -1,6 +1,7 @@
 'use client'
 
 import { PaymentModeSelect } from '@/components/payment-mode-select'
+import { PaymentMethodFields, detailsFromJson } from '@/components/payment-method-fields'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { useActionState, useEffect, useState, useRef } from 'react'
@@ -40,6 +41,8 @@ export type ExpenseFormValues = {
   billNumber: string | null
   channelId: string | null
   reference: string | null
+  /** The method's fixed fields as saved; null for older entries with only a reference. */
+  paymentDetails?: Record<string, string> | null
   notes: string | null
   orderId: string | null
 }
@@ -84,6 +87,8 @@ export function ExpenseForm({
     keep('categoryId', values.categoryId),
   )
   const [newCategoryOpen, setNewCategoryOpen] = useState(false)
+  const [channelId, setChannelId] = useState(keep('channelId', values.channelId) || (modes[0]?.id ?? ''))
+  const method = modes.find((mode) => mode.id === channelId)?.kind
   const [payee, setPayee] = useState(keep('payeeName', values.payeeName))
   const [amount, setAmount] = useState(keep('amount', values.amount))
   const quick = useQuickContext()
@@ -283,23 +288,17 @@ export function ExpenseForm({
       <Fieldset>
         <Legend>Payment</Legend>
         <FieldGroup>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Mode</Label>
               <PaymentModeSelect
                 name="channelId"
                 modes={modes}
-                defaultValue={keep('channelId', values.channelId)}
+                value={channelId}
+                onChange={setChannelId}
                 remember={!values.channelId}
               />
-            </Field>
-            <Field>
-              <Label>Reference</Label>
-              <Input
-                name="reference"
-                placeholder="UTR, cheque no."
-                defaultValue={keep('reference', values.reference)}
-              />
+              {errors.channelId ? <ErrorMessage>{errors.channelId}</ErrorMessage> : null}
             </Field>
             <Field>
               <Label>Against order</Label>
@@ -313,6 +312,17 @@ export function ExpenseForm({
               </Select>
             </Field>
           </div>
+
+          <PaymentMethodFields
+            mode={method}
+            direction="out"
+            errors={errors}
+            defaultValues={
+              submitted.paymentDetails !== undefined
+                ? detailsFromJson(submitted.paymentDetails)
+                : (values.paymentDetails ?? undefined)
+            }
+          />
 
           <Field>
             <Label>Notes</Label>

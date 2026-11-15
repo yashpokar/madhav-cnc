@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { modeText } from '@/lib/payment-modes'
 import { ADJUSTMENT_REASON_LABELS } from '@/lib/labels'
+import { shortReference } from '@/lib/payment-methods'
 
 export type MethodEntry = {
   id: string
@@ -13,6 +14,8 @@ export type MethodEntry = {
   amount: number
   /** Where the entry opens, when it is not a receipt or an expense. */
   href?: string
+  /** Short reference such as "UPI · 4131…" or "Cheque · 123456"; empty if none. */
+  reference?: string
 }
 
 export type MethodGroup = {
@@ -59,6 +62,8 @@ export async function paymentsByMethod(
         amount: true,
         mode: true,
         modeName: true,
+        reference: true,
+        paymentDetails: true,
         customer: { select: { name: true } },
       },
       orderBy: [{ paidOn: 'desc' }, { number: 'desc' }],
@@ -73,6 +78,8 @@ export async function paymentsByMethod(
             total: true,
             paymentMode: true,
             modeName: true,
+            reference: true,
+            paymentDetails: true,
             payeeName: true,
           },
           orderBy: [{ expenseDate: 'desc' }, { number: 'desc' }],
@@ -88,6 +95,8 @@ export async function paymentsByMethod(
             amount: true,
             mode: true,
             modeName: true,
+            reference: true,
+            paymentDetails: true,
             vendor: { select: { name: true } },
           },
           orderBy: [{ paidOn: 'desc' }, { number: 'desc' }],
@@ -125,7 +134,7 @@ export async function paymentsByMethod(
 
     g.received = round2(g.received + amount)
     g.receivedCount += 1
-    g.entries.push({ id: p.id, kind: 'in', source: 'payment', date: p.paidOn, number: p.number, party: p.customer.name, amount })
+    g.entries.push({ id: p.id, kind: 'in', source: 'payment', date: p.paidOn, number: p.number, party: p.customer.name, amount, reference: shortReference(p.mode, p.paymentDetails, p.reference) })
   }
 
   for (const e of expenses) {
@@ -134,7 +143,7 @@ export async function paymentsByMethod(
 
     g.spent = round2(g.spent + amount)
     g.spentCount += 1
-    g.entries.push({ id: e.id, kind: 'out', source: 'expense', date: e.expenseDate, number: e.number, party: e.payeeName, amount })
+    g.entries.push({ id: e.id, kind: 'out', source: 'expense', date: e.expenseDate, number: e.number, party: e.payeeName, amount, reference: shortReference(e.paymentMode, e.paymentDetails, e.reference) })
   }
 
   // Adjustments are shown beside receipts and expenses but are not counted as
@@ -172,6 +181,7 @@ export async function paymentsByMethod(
       party: `${v.vendor.name} (vendor payment)`,
       amount,
       href: `/vendor-payments/${v.id}`,
+      reference: shortReference(v.mode, v.paymentDetails, v.reference),
     })
   }
 

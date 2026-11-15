@@ -227,10 +227,16 @@ export const ADJUSTMENT_REASON_LABELS: Record<BalanceAdjustmentReason, string> =
 export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
   CASH: 'Cash',
   UPI: 'UPI',
-  BANK_TRANSFER: 'Bank transfer',
+  BANK_TRANSFER: 'Bank transfer (NEFT/RTGS/IMPS)',
   CHEQUE: 'Cheque',
-  CARD: 'Card',
+  CARD: 'Card (POS)',
   OTHER: 'Other',
+  NEFT: 'NEFT',
+  RTGS: 'RTGS',
+  IMPS: 'IMPS',
+  NET_BANKING: 'Net banking',
+  DEMAND_DRAFT: 'Demand draft',
+  WALLET: 'Wallet',
 }
 
 export const DISPATCH_STATUS_LABELS: Record<DispatchStatus, string> = {

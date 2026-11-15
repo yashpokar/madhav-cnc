@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { resolvePaymentMode } from '@/lib/payment-modes'
+import { detailsColumn, resolvePaymentMode } from '@/lib/payment-modes'
+import { parsePaymentDetails } from '@/lib/payment-methods'
 import { requireCapability } from '@/lib/session'
 import { nextExpenseNumber } from '@/lib/codes'
 import { round2 } from '@/lib/pricing'
@@ -30,7 +31,6 @@ function parse(formData: FormData) {
     vendorGstin: formData.get('vendorGstin'),
     billNumber: formData.get('billNumber'),
     channelId: formData.get('channelId'),
-    reference: formData.get('reference'),
     notes: formData.get('notes'),
     orderId: formData.get('orderId'),
   })
@@ -66,6 +66,17 @@ export async function createExpense(_previous: FormState, formData: FormData): P
     }
   }
 
+  const details = parsePaymentDetails(method.mode, formData.get('paymentDetails'), 'out')
+
+  if (!details.ok) {
+    return {
+      status: 'error',
+      message: details.error,
+      fieldErrors: details.fieldErrors,
+      values: rawValues(formData),
+    }
+  }
+
   const number = await nextExpenseNumber()
   const vendor = await resolveVendor(parsed.data.payeeName)
 
@@ -85,7 +96,8 @@ export async function createExpense(_previous: FormState, formData: FormData): P
       paymentMode: method.mode,
       channelId: method.channelId,
       modeName: method.modeName,
-      reference: parsed.data.reference,
+      reference: details.reference,
+      paymentDetails: detailsColumn(details.details),
       notes: parsed.data.notes,
       orderId: parsed.data.orderId,
       ...amounts(parsed.data),
@@ -125,6 +137,17 @@ export async function updateExpense(
     }
   }
 
+  const details = parsePaymentDetails(method.mode, formData.get('paymentDetails'), 'out')
+
+  if (!details.ok) {
+    return {
+      status: 'error',
+      message: details.error,
+      fieldErrors: details.fieldErrors,
+      values: rawValues(formData),
+    }
+  }
+
   const existing = await prisma.expense.findUnique({
     where: { id },
     select: { id: true },
@@ -152,7 +175,8 @@ export async function updateExpense(
       paymentMode: method.mode,
       channelId: method.channelId,
       modeName: method.modeName,
-      reference: parsed.data.reference,
+      reference: details.reference,
+      paymentDetails: detailsColumn(details.details),
       notes: parsed.data.notes,
       orderId: parsed.data.orderId,
       ...amounts(parsed.data),

@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { PaymentModeSelect } from '@/components/payment-mode-select'
+import { PaymentMethodFields, detailsFromJson } from '@/components/payment-method-fields'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
 import { money as currency } from '@/lib/format'
 import { Button } from '@/components/catalyst/button'
@@ -67,6 +68,8 @@ export function PaymentForm({
   const [openingLeft, setOpeningLeft] = useState(initialOpeningLeft)
   const [openingAsOf, setOpeningAsOf] = useState(initialOpeningAsOf)
   const [opening, setOpening] = useState('')
+  const [channelId, setChannelId] = useState(modes[0]?.id ?? '')
+  const method = modes.find((mode) => mode.id === channelId)?.kind
 
   function pickVendor(nextId: string) {
     setVendorId(nextId)
@@ -160,7 +163,7 @@ export function PaymentForm({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Field>
               <Label>Paid on</Label>
               <Input
@@ -172,14 +175,23 @@ export function PaymentForm({
             </Field>
             <Field>
               <Label>Mode</Label>
-              <PaymentModeSelect name="channelId" modes={modes} />
+              <PaymentModeSelect
+                name="channelId"
+                modes={modes}
+                value={channelId}
+                onChange={setChannelId}
+                remember
+              />
               {errors.channelId ? <ErrorMessage>{errors.channelId}</ErrorMessage> : null}
             </Field>
-            <Field>
-              <Label>Reference</Label>
-              <Input name="reference" placeholder="UTR, cheque no." />
-            </Field>
           </div>
+
+          <PaymentMethodFields
+            mode={method}
+            direction="out"
+            errors={errors}
+            defaultValues={detailsFromJson(state.status === 'error' ? state.values?.paymentDetails : null)}
+          />
 
           <Field>
             <Label>Notes</Label>

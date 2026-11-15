@@ -6,13 +6,14 @@ import { ArrowDownIcon, ArrowUpIcon, PlusIcon, XMarkIcon } from '@heroicons/reac
 import { Badge } from '@/components/catalyst/badge'
 import { Button } from '@/components/catalyst/button'
 import { Checkbox, CheckboxField } from '@/components/catalyst/checkbox'
-import { Description, Field, Label } from '@/components/catalyst/fieldset'
+import { Description, ErrorMessage, Field, Label } from '@/components/catalyst/fieldset'
 import { Input } from '@/components/catalyst/input'
 import { Select } from '@/components/catalyst/select'
 import { Subheading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { FormBanner } from '@/components/form-banner'
 import { PAYMENT_MODE_LABELS } from '@/lib/labels'
+import { SELECTABLE_METHODS, bankFromIfsc, checkField, receivingFieldsFor, upiPayLink } from '@/lib/payment-methods'
 import {
   addPaymentMode,
   deletePaymentMode,
@@ -31,13 +32,15 @@ type Mode = {
   isActive: boolean
   used: number
   details: Detail[]
+  /** How we receive money in this mode: UPI ID, account number, IFSC... keyed by field. */
+  accountDetails: Record<string, string>
   showOnDocuments: boolean
   hasQr: boolean
 }
 
-const KINDS = Object.keys(PAYMENT_MODE_LABELS) as PaymentMode[]
+const KINDS = SELECTABLE_METHODS.map((method) => method.key)
 
-const SUGGESTIONS = ['Account name', 'Bank name', 'Branch', 'Account number', 'IFSC', 'UPI ID']
+const SUGGESTIONS = ['Contact person', 'Phone for payment queries', 'Remarks']
 
 type Notice = { ok: boolean; text: string } | null
 
@@ -132,8 +135,8 @@ export function ModesManager({ modes }: { modes: Mode[] }) {
                   </div>
                   <div className="mt-0.5 text-xs/5 text-zinc-500 dark:text-zinc-400">
                     {mode.used === 0 ? 'Not used yet' : `Used on ${mode.used} record${mode.used === 1 ? '' : 's'}`}
-                    {mode.details.length > 0
-                      ? ` · ${mode.details.length} detail${mode.details.length === 1 ? '' : 's'}`
+                    {Object.keys(mode.accountDetails).length + mode.details.length > 0
+                      ? ` · ${Object.keys(mode.accountDetails).length + mode.details.length} detail${Object.keys(mode.accountDetails).length + mode.details.length === 1 ? '' : 's'}`
                       : ''}
                     {mode.hasQr ? ' · QR code' : ''}
                   </div>
@@ -207,6 +210,7 @@ function ModeEditor({
     name: string
     kind: string
     details: Detail[]
+    accountDetails: Record<string, string>
     showOnDocuments: boolean
   }) => void
   onCancel: () => void
@@ -215,11 +219,33 @@ function ModeEditor({
   onQrError?: (message: string) => void
 }) {
   const [name, setName] = useState(mode?.name ?? '')
-  const [kind, setKind] = useState<string>(mode?.kind ?? 'BANK_TRANSFER')
+  const [kind, setKind] = useState<string>(mode?.kind ?? 'UPI')
+  const [account, setAccount] = useState<Record<string, string>>(mode?.accountDetails ?? {})
+  const [shown, setShown] = useState<Record<string, boolean>>({})
   const [details, setDetails] = useState<Detail[]>(mode?.details ?? [])
   const [show, setShow] = useState(mode?.showOnDocuments ?? false)
 
   const labels = new Set(details.map((row) => row.label.trim().toLowerCase()))
+
+  const accountFields = receivingFieldsFor(kind)
+  const vpa = account.vpa ?? ''
+  const payLink = kind === 'UPI' ? upiPayLink(vpa, account.payeeName || undefined) : null
+
+  function setAccountValue(key: string, value: string) {
+    setAccount((current) => {
+      const next = { ...current, [key]: value }
+
+      // The first four letters of an IFSC name the bank: fill it in unless typed by hand.
+      if (key === 'ifsc') {
+        const guess = bankFromIfsc(value)
+        const previous = bankFromIfsc(current.ifsc ?? '')
+
+        if (guess && (!current.bankName || current.bankName === previous)) next.bankName = guess
+      }
+
+      return next
+    })
+  }
 
   function setRow(index: number, patch: Partial<Detail>) {
     setDetails((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
@@ -239,7 +265,7 @@ function ModeEditor({
         <Field>
           <Label>Kind</Label>
           <Select value={kind} onChange={(event) => setKind(event.target.value)}>
-            {KINDS.map((value) => (
+            {(KINDS.includes(kind as PaymentMode) ? KINDS : [...KINDS, kind as PaymentMode]).map((value) => (
               <option key={value} value={value}>
                 {PAYMENT_MODE_LABELS[value]}
               </option>
@@ -248,10 +274,70 @@ function ModeEditor({
         </Field>
       </div>
 
+      {accountFields.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <div className="text-sm/6 font-medium">How you receive money</div>
+            <Text>
+              {kind === 'UPI'
+                ? 'Your UPI ID and the name customers see when they pay.'
+                : kind === 'CHEQUE' || kind === 'DEMAND_DRAFT'
+                  ? 'Who a cheque or draft is made out to, and where to send it.'
+                  : kind === 'CARD' || kind === 'WALLET'
+                    ? 'Optional: the merchant or wallet ID.'
+                    : 'Your bank account, as customers should enter it for a transfer.'}
+            </Text>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {accountFields.map((field) => {
+              const value = account[field.key] ?? ''
+              const message = shown[field.key] ? checkField({ ...field, required: false }, value).error : null
+
+              return (
+                <Field key={field.key}>
+                  <Label>{field.label}</Label>
+                  {field.type === 'select' ? (
+                    <Select value={value} onChange={(event) => setAccountValue(field.key, event.target.value)}>
+                      <option value="">Not set</option>
+                      {field.options?.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      value={value}
+                      placeholder={field.placeholder}
+                      inputMode={field.inputMode}
+                      autoComplete="off"
+                      invalid={Boolean(message)}
+                      onChange={(event) => setAccountValue(field.key, event.target.value)}
+                      onBlur={() => {
+                        const checked = checkField({ ...field, required: false }, value)
+
+                        setAccount((current) => ({ ...current, [field.key]: checked.value }))
+                        setShown((current) => ({ ...current, [field.key]: true }))
+                      }}
+                    />
+                  )}
+                  {message ? <ErrorMessage>{message}</ErrorMessage> : null}
+                </Field>
+              )
+            })}
+          </div>
+          {payLink ? (
+            <Text>
+              Customers on a phone get a &quot;Pay with UPI&quot; link on invoices and quotations from this ID.
+            </Text>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3">
         <div>
-          <div className="text-sm/6 font-medium">Details</div>
-          <Text>Anything customers need to pay you this way. Add as many rows as you like.</Text>
+          <div className="text-sm/6 font-medium">{accountFields.length > 0 ? 'Anything else' : 'Details'}</div>
+          <Text>Anything else customers need to pay you this way. Add as many rows as you like.</Text>
         </div>
 
         {details.map((row, index) => (
@@ -321,7 +407,7 @@ function ModeEditor({
         <div className="flex gap-2">
           <Button
             disabled={pending || !name.trim()}
-            onClick={() => onSubmit({ name, kind, details, showOnDocuments: show })}
+            onClick={() => onSubmit({ name, kind, details, accountDetails: account, showOnDocuments: show })}
           >
             {pending ? 'Saving…' : submitLabel}
           </Button>

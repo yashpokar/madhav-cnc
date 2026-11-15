@@ -77,6 +77,8 @@ export const orderInputSchema = z.object({
   discountValue: z.coerce.number().min(0).max(99_999_999).default(0),
   advanceAmount: z.coerce.number().min(0).max(99_999_999).default(0),
   advanceChannelId: z.string().trim().default(''),
+  /** The advance's method fields as posted (JSON); validated against the chosen method on the server. */
+  advancePaymentDetails: z.string().max(4000).default(''),
   transportCharge: z.coerce.number().min(0).max(9_999_999).default(0),
   transportTaxRatePercent: z.coerce.number().min(0).max(100).default(0),
   notes: optionalText(2000),

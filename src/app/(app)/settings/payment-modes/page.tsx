@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Heading } from '@/components/catalyst/heading'
 import { Text } from '@/components/catalyst/text'
 import { listPaymentModesWithUse, parseDetails } from '@/lib/queries/payment-modes'
+import { readReceivingValues } from '@/lib/payment-methods'
 import { requireCapability } from '@/lib/session'
 import { ModesManager } from './modes-manager'
 
@@ -20,7 +21,7 @@ export default async function PaymentModesPage() {
         <Heading>Payment modes</Heading>
         <Text className="max-w-2xl">
           The ways money comes in and goes out: cash, a bank account, a UPI handle, a cheque book,
-          anything else. Add the details you want to show (bank name, account number, IFSC, UPI ID)
+          anything else. Fill in how you receive money (UPI ID, account number, IFSC, payable-to)
           and tick a mode to print it on invoices and quotations so customers know how to pay.
         </Text>
       </div>
@@ -33,6 +34,7 @@ export default async function PaymentModesPage() {
           isActive: row.isActive,
           used: row._count.payments + row._count.expenses,
           details: parseDetails(row.details),
+          accountDetails: readReceivingValues(row.mode, row.accountDetails),
           showOnDocuments: row.showOnDocuments,
           hasQr: Boolean(row.qrStoredName),
         }))}

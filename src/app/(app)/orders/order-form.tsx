@@ -1,6 +1,7 @@
 'use client'
 
 import { PaymentModeSelect } from '@/components/payment-mode-select'
+import { PaymentMethodFields, detailsFromJson } from '@/components/payment-method-fields'
 import { dueDateFromTerms } from '@/lib/form-defaults'
 import { useDirtyGuard } from '@/lib/use-dirty-guard'
 import type { PaymentModeOption } from '@/lib/queries/payment-modes'
@@ -51,6 +52,8 @@ export type OrderFormValues = {
   customerPoNumber: string | null
   advanceAmount: number
   advanceChannelId: string | null
+  /** The advance's method fields as saved (UTR, cheque number...). */
+  advancePaymentDetails?: Record<string, string> | null
   transportCharge: number
   transportTaxRatePercent: number
   siteAddress: string | null
@@ -168,6 +171,8 @@ export function OrderForm({
   const submitted = state.status === 'error' ? (state.values ?? {}) : {}
   const keep = (name: string, fallback: string | number | null | undefined) =>
     submitted[name] ?? (fallback === null || fallback === undefined ? '' : String(fallback))
+  const [advanceAmount, setAdvanceAmount] = useState(keep('advanceAmount', values.advanceAmount))
+  const advanceMethod = modes.find((mode) => mode.id === advanceChannelId)?.kind
 
   const totals = useMemo(
     () =>
@@ -535,6 +540,7 @@ export function OrderForm({
                   step="0.01"
                   min={0}
                   defaultValue={keep('advanceAmount', values.advanceAmount)}
+                  onChange={(event) => setAdvanceAmount(event.target.value)}
                 />
                 <Description>
                   Recorded as a receipt in Payments.
@@ -550,6 +556,20 @@ export function OrderForm({
                   remember={!values.advanceChannelId}
                 />
               </Field>
+              {Number(advanceAmount) > 0 ? (
+                <div className="sm:col-span-2">
+                  <PaymentMethodFields
+                    mode={advanceMethod}
+                    name="advancePaymentDetails"
+                    errors={errors}
+                    defaultValues={
+                      submitted.advancePaymentDetails !== undefined
+                        ? detailsFromJson(submitted.advancePaymentDetails)
+                        : (values.advancePaymentDetails ?? undefined)
+                    }
+                  />
+                </div>
+              ) : null}
               <Field>
                 <Label>Customer PO number</Label>
                 <Input

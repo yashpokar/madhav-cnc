@@ -51,6 +51,7 @@ export async function listExpenses({
               { number: { contains: term, mode: 'insensitive' } },
               { payeeName: { contains: term, mode: 'insensitive' } },
               { billNumber: { contains: term, mode: 'insensitive' } },
+              { reference: { contains: term, mode: 'insensitive' } },
               { description: { contains: term, mode: 'insensitive' } },
             ],
           }
@@ -69,6 +70,8 @@ export async function listExpenses({
       isInputCredit: true,
       paymentMode: true,
       modeName: true,
+      reference: true,
+      paymentDetails: true,
       billNumber: true,
       category: { select: { id: true, name: true } },
       order: { select: { id: true, number: true } },

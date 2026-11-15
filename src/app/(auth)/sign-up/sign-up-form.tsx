@@ -15,7 +15,15 @@ import { Strong, Text, TextLink } from '@/components/catalyst/text'
 import { GoogleButton } from '@/components/google-button'
 import { authClient } from '@/lib/auth-client'
 
-export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function SignUpForm({
+  googleEnabled,
+  inviteToken,
+  afterGoogle,
+}: {
+  googleEnabled: boolean
+  inviteToken: string | null
+  afterGoogle: string
+}) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -29,10 +37,18 @@ export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
       <div className="grid w-full max-w-sm grid-cols-1 gap-6">
         <Heading>Account created</Heading>
         <Text>
-          Sign in with <Strong>{email}</Strong> to create your company. If you are joining an
-          existing company instead, ask its administrator to add this email under Team.
+          {inviteToken ? (
+            <>
+              Sign in with <Strong>{email}</Strong> to accept your invitation and join the team.
+            </>
+          ) : (
+            <>
+              Sign in with <Strong>{email}</Strong> to create your company. If you are joining an
+              existing company instead, ask its administrator to send you an invitation link.
+            </>
+          )}
         </Text>
-        <Button href="/sign-in" className="w-full">
+        <Button href={inviteToken ? `/sign-in?invite=${inviteToken}` : '/sign-in'} className="w-full">
           Sign in
         </Button>
       </div>
@@ -119,13 +135,13 @@ export function SignUpForm({ googleEnabled }: { googleEnabled: boolean }) {
           {pending ? 'Creating account…' : 'Create account'}
         </Button>
         {googleEnabled ? (
-          <GoogleButton label="Register with Google" callbackURL="/onboarding" />
+          <GoogleButton label="Register with Google" callbackURL={afterGoogle} />
         ) : null}
       </div>
 
       <Text>
         Already registered?{' '}
-        <TextLink href="/sign-in">
+        <TextLink href={inviteToken ? `/sign-in?invite=${inviteToken}` : '/sign-in'}>
           <Strong>Sign in</Strong>
         </TextLink>
       </Text>

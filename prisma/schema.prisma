@@ -72,9 +72,11 @@ model User {
   stockMovementsCreated    StockMovement[]       @relation("StockMovementCreatedBy")
   vendorPaymentsRecorded   VendorPayment[]       @relation("VendorPaymentRecordedBy")
 
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  userCompanies UserCompany[]
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  userCompanies       UserCompany[]
+  invitationsSent     Invitation[]  @relation("InvitationInvitedBy")
+  invitationsAccepted Invitation[]  @relation("InvitationAcceptedBy")
 
   @@index([role])
   @@index([isActive])
@@ -813,6 +815,7 @@ model CompanySetting {
   vendorPayments         VendorPayment[]
   channelOpeningBalances ChannelOpeningBalance[]
   balanceAdjustments     BalanceAdjustment[]
+  invitations            Invitation[]
 
   updatedBy User? @relation("CompanySettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   createdBy User? @relation("CompanySettingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1896,4 +1899,45 @@ model BalanceAdjustment {
   @@index([customerId])
   @@index([adjustedOn])
   @@map("balance_adjustments")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+/// A shareable link that lets one person join a company with a set role. The
+/// token is the capability (160 random bits, WhatsApp-safe), single use. It
+/// only ever creates a company membership: it can never make anyone a platform
+/// administrator. `email` and `phone` are optional hints; `phone` is used only
+/// to open the right WhatsApp chat.
+model Invitation {
+  id String @id @default(cuid())
+
+  companyId String         @default("") @map("company_id")
+  company   CompanySetting @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  token String   @unique
+  role  UserRole
+  email String?
+  phone String?
+  note  String?
+
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime         @map("expires_at")
+
+  invitedById String? @map("invited_by_id")
+  invitedBy   User?   @relation("InvitationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  acceptedById String?   @map("accepted_by_id")
+  acceptedBy   User?     @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedAt   DateTime? @map("accepted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, status])
+  @@index([invitedById, createdAt])
+  @@map("invitations")
 }

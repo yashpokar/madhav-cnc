@@ -7,6 +7,7 @@ import { BrandMark } from '@/components/brand-mark'
 import { SignOutButton } from '@/components/sign-out-button'
 import { prisma } from '@/lib/prisma'
 import { getBaseUser } from '@/lib/session'
+import { joinPath, pendingInviteToken } from '@/lib/invite-cookie'
 import { canCreateAnotherCompany } from '@/lib/team-rules'
 import { OnboardingForm } from './onboarding-form'
 
@@ -18,6 +19,11 @@ export default async function OnboardingPage() {
   const user = await getBaseUser()
 
   if (!user) redirect('/sign-in')
+
+  // Someone who came here from an invitation joins that company rather than creating one.
+  const inviteToken = await pendingInviteToken()
+
+  if (inviteToken) redirect(joinPath(inviteToken))
 
   // Platform administrators and people who already belong to a company never see this.
   if (user.isSuperAdmin) redirect('/')

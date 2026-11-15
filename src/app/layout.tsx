@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { THEME_SCRIPT } from '@/lib/theme'
 import { AppToaster } from '@/components/toaster'
+import { BRAND } from '@/lib/brand'
 
 // A neutral, highly legible UI face with tabular figures for money columns.
 const inter = Inter({
@@ -12,13 +13,28 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.PUBLIC_BASE_URL || BRAND.appUrl),
   title: {
-    default: 'Prodlys',
-    template: '%s · Prodlys',
+    default: `${BRAND.name}: ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
   },
-  description: 'Run your whole business in one place: quotes, orders, production and billing.',
-  applicationName: 'Prodlys',
-  appleWebApp: { capable: true, title: 'Prodlys', statusBarStyle: 'default' },
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  keywords: ['business management', 'quotations', 'invoicing', 'production'],
+  appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: 'default' },
+  // The app sits behind sign-in; only the sign-in and register pages opt in.
+  robots: { index: false, follow: false },
+  openGraph: {
+    type: 'website',
+    siteName: BRAND.name,
+    title: `${BRAND.name}: ${BRAND.tagline}`,
+    description: BRAND.description,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${BRAND.name}: ${BRAND.tagline}`,
+    description: BRAND.description,
+  },
 }
 
 export const viewport: Viewport = {

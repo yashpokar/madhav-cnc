@@ -1,5 +1,7 @@
 import { date as dateFormat } from '@/lib/format'
 import type { Metadata } from 'next'
+import { PoweredBy } from '@/components/powered-by'
+import { shareMetadata } from '@/lib/share-metadata'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { describeSchedule } from '@/lib/calendar'
@@ -9,9 +11,29 @@ import type {
   ProductionTaskStatus,
 } from '@/generated/prisma/enums'
 
-export const metadata: Metadata = {
-  title: 'Order status',
-  robots: { index: false, follow: false },
+export async function generateMetadata({
+  params,
+}: PageProps<'/t/[token]'>): Promise<Metadata> {
+  const { token } = await params
+  const order = await prisma.order.findUnique({
+    where: { trackingToken: token },
+    select: { companyId: true, number: true, status: true },
+  })
+
+  if (!order || order.status === 'CANCELLED') {
+    return shareMetadata({ kind: 'Order status' })
+  }
+
+  const company = await prisma.companySetting.findUnique({
+    where: { id: order.companyId },
+    select: { companyName: true },
+  })
+
+  return shareMetadata({
+    kind: 'Order',
+    company: company?.companyName,
+    number: order.number,
+  })
 }
 
 const DISPATCH_LABELS: Record<DispatchStatus, string> = {
@@ -263,6 +285,8 @@ export default async function TrackingPage({
           ' Please get in touch with us.'
         )}
       </footer>
+
+      <PoweredBy />
     </main>
   )
 }

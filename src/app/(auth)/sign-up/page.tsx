@@ -6,6 +6,7 @@ import { SignUpForm } from './sign-up-form'
 
 export const metadata: Metadata = {
   title: 'Register',
+  robots: { index: true, follow: true },
 }
 
 export default function SignUpPage() {

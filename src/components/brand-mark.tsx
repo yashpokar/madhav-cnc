@@ -1,4 +1,10 @@
 import clsx from 'clsx'
+import {
+  MARK_PATH,
+  MARK_STROKE_WIDTH,
+  MARK_TILE_RADIUS,
+  MARK_VIEWBOX,
+} from '@/lib/brand'
 
 /**
  * The Prodlys mark: a rounded tile holding a "p" whose bowl rises like a
@@ -8,16 +14,21 @@ import clsx from 'clsx'
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox={MARK_VIEWBOX}
       fill="none"
       aria-hidden="true"
       className={clsx('size-8 shrink-0', className)}
     >
-      <rect width="32" height="32" rx="9" className="fill-accent-600" />
+      <rect
+        width="32"
+        height="32"
+        rx={MARK_TILE_RADIUS}
+        className="fill-accent-600"
+      />
       <path
-        d="M12 24.5V8.5h4.6a5.2 5.2 0 0 1 0 10.4H12"
+        d={MARK_PATH}
         stroke="#fff"
-        strokeWidth="2.6"
+        strokeWidth={MARK_STROKE_WIDTH}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

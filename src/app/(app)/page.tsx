@@ -91,7 +91,8 @@ export default async function DashboardPage({
   const canDispatch = can(role, 'dispatch:read')
   const canMoney = can(role, 'invoice:read')
   const canExpenses = can(role, 'expense:read')
-  const isAdmin = can(role, 'user:update')
+  // Approving accounts is for platform super-admins only, not company admins.
+  const isAdmin = user.isSuperAdmin
 
   const [
     quotes,

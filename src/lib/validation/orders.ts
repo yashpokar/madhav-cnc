@@ -39,7 +39,7 @@ const optionalTime = z
 
 export const orderLineSchema = quotationLineSchema
 
-export const orderInputSchema = z.object({
+const orderShape = {
   customerId: z.string().trim().min(1, 'Select a customer'),
   architectId: z
     .union([z.literal(''), z.null(), z.string()])
@@ -84,23 +84,63 @@ export const orderInputSchema = z.object({
   notes: optionalText(2000),
   terms: optionalText(2000),
   lines: z.array(orderLineSchema).min(1, 'Add at least one line'),
-})
-  .superRefine((value, context) => {
-    if (!value.startDate && (value.startTime || value.endDate || value.endTime)) {
-      context.addIssue({ code: 'custom', path: ['startDate'], message: 'Choose a start date' })
+}
 
-      return
-    }
+type ScheduleFields = {
+  startDate?: string | null
+  startTime?: string | null
+  endDate?: string | null
+  endTime?: string | null
+}
 
-    const { startsAt, endsAt } = scheduleFromFields(value)
+function checkSchedule(value: ScheduleFields, context: z.RefinementCtx) {
+  if (!value.startDate && (value.startTime || value.endDate || value.endTime)) {
+    context.addIssue({ code: 'custom', path: ['startDate'], message: 'Choose a start date' })
 
-    if (startsAt && endsAt && endsAt < startsAt) {
-      context.addIssue({ code: 'custom', path: ['endDate'], message: 'Ends before it starts' })
-    }
-  })
-  .transform(({ startDate, startTime, endDate, endTime, ...rest }) => ({
-    ...rest,
+    return
+  }
+
+  const { startsAt, endsAt } = scheduleFromFields(value)
+
+  if (startsAt && endsAt && endsAt < startsAt) {
+    context.addIssue({ code: 'custom', path: ['endDate'], message: 'Ends before it starts' })
+  }
+}
+
+function splitSchedule<T extends ScheduleFields>({
+  startDate,
+  startTime,
+  endDate,
+  endTime,
+  ...rest
+}: T) {
+  return {
+    ...(rest as Omit<T, keyof ScheduleFields>),
     ...scheduleFromFields({ startDate, startTime, endDate, endTime }),
-  }))
+  }
+}
+
+/** What a web form posts: the advance's method fields arrive as a JSON string. */
+export const orderInputSchema = z
+  .object(orderShape)
+  .superRefine(checkSchedule)
+  .transform(splitSchedule)
+
+/**
+ * The same order for the service layer and the API: JSON-native, so the
+ * advance's method fields may be an object as well as a JSON string. Dates are
+ * 'yyyy-mm-dd' strings, the schedule 'HH:mm' strings; the output is identical.
+ */
+export const orderJsonSchema = z
+  .object({
+    ...orderShape,
+    advancePaymentDetails: z
+      .union([z.string().max(4000), z.record(z.string(), z.unknown())])
+      .default(''),
+  })
+  .superRefine(checkSchedule)
+  .transform(splitSchedule)
 
 export type OrderData = z.output<typeof orderInputSchema>
+/** What the order service takes (what `orderJsonSchema` produces). */
+export type OrderServiceInput = z.output<typeof orderJsonSchema>

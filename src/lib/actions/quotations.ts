@@ -2,19 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { requireCapability } from '@/lib/session'
-import { logActivity } from '@/lib/activity'
-import { nextQuotationNumber } from '@/lib/codes'
-import { copyUpload, deleteUpload } from '@/lib/storage'
-import { invalidateApproval } from '@/lib/reapproval'
-import { applySizeRule, documentTotals, lineTotals } from '@/lib/pricing'
 import { quotationInputSchema } from '@/lib/validation/quotations'
-import type { QuotationData } from '@/lib/validation/quotations'
 import { fieldErrorsFrom, rawValues, type FormState } from '@/lib/form-state'
-import { QuotationStatus } from '@/generated/prisma/enums'
+import * as quotations from '@/lib/services/quotations'
+import type { QuotationStatus } from '@/generated/prisma/enums'
 
 export type { FormState }
+
+// Thin adapters: permission check, FormData -> input, then the service in
+// src/lib/services/quotations.ts does the work; here the result becomes the
+// FormState / SimpleResult the pages expect, plus revalidation and redirects.
 
 function parse(formData: FormData) {
   let lines: unknown = []
@@ -45,78 +43,6 @@ function parse(formData: FormData) {
   })
 }
 
-async function assertReferences(data: QuotationData) {
-  const customer = await prisma.customer.findUnique({
-    where: { id: data.customerId },
-    select: { id: true },
-  })
-
-  if (!customer) {
-    return 'Selected customer no longer exists'
-  }
-
-  const partnerIds = [data.architectId, data.carpenterId].filter(
-    Boolean,
-  ) as string[]
-
-  if (partnerIds.length > 0) {
-    const partners = await prisma.partner.findMany({
-      where: { id: { in: partnerIds } },
-      select: { id: true, type: true },
-    })
-    const byId = new Map(partners.map((partner) => [partner.id, partner.type]))
-
-    if (data.architectId && byId.get(data.architectId) !== 'ARCHITECT') {
-      return 'Selected architect is not an architect'
-    }
-
-    if (data.carpenterId && byId.get(data.carpenterId) !== 'CARPENTER') {
-      return 'Selected carpenter is not a carpenter'
-    }
-  }
-
-  return null
-}
-
-function buildPersistable(input: QuotationData) {
-  const data = { ...input, lines: input.lines.map(applySizeRule) }
-
-  const totals = documentTotals({
-    lines: data.lines,
-    discountType: data.discountType,
-    discountValue: data.discountValue,
-  })
-
-  const lines = data.lines.map((line, index) => {
-    const computed = lineTotals(line)
-
-    return {
-      position: index + 1,
-      itemId: line.itemId,
-      description: line.description,
-      unit: line.unit,
-      materialSupply: line.materialSupply,
-      isFlatRate: line.isFlatRate,
-      autoSize: line.autoSize,
-      dimensionUnit: line.dimensionUnit,
-      length: line.length,
-      width: line.width,
-      pieces: line.pieces,
-      quantity: line.quantity,
-      rate: line.rate,
-      discountPercent: line.discountPercent,
-      taxRatePercent: line.taxRatePercent,
-      hsnCode: line.hsnCode,
-      amount: computed.amount,
-      taxAmount: computed.taxAmount,
-      lineTotal: computed.lineTotal,
-      notes: line.notes,
-    }
-  })
-
-  return { totals, lines }
-}
-
 export async function createQuotation(
   _previous: FormState,
   formData: FormData,
@@ -133,51 +59,17 @@ export async function createQuotation(
     }
   }
 
-  const referenceError = await assertReferences(parsed.data)
+  const result = await quotations.createQuotation(
+    { userId: user.id, name: user.name },
+    parsed.data,
+  )
 
-  if (referenceError) {
-    return { status: 'error', message: referenceError }
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
   }
 
-  const { totals, lines } = buildPersistable(parsed.data)
-  const number = await nextQuotationNumber()
-
-  const quotation = await prisma.quotation.create({
-    data: {
-      number,
-      revision: 1,
-      status: parsed.data.status,
-      customerId: parsed.data.customerId,
-      architectId: parsed.data.architectId,
-      carpenterId: parsed.data.carpenterId,
-      subject: parsed.data.subject,
-      quotationDate: parsed.data.quotationDate,
-      validUntil: parsed.data.validUntil,
-      siteAddress: parsed.data.siteAddress,
-      siteCity: parsed.data.siteCity,
-      sitePincode: parsed.data.sitePincode,
-      discountType: parsed.data.discountType,
-      discountValue: parsed.data.discountValue,
-      advancePercent: parsed.data.advancePercent,
-      notes: parsed.data.notes,
-      terms: parsed.data.terms,
-      ...totals,
-      createdById: user.id,
-      updatedById: user.id,
-      lines: { create: lines },
-    },
-  })
-
-  await logActivity({
-    entity: 'quotation',
-    id: quotation.id,
-    action: 'created',
-    summary: 'created the quotation',
-    actor: { id: user.id, name: user.name },
-  })
-
   revalidatePath('/quotations')
-  redirect(`/quotations/${quotation.id}?created=1`)
+  redirect(`/quotations/${result.id}?created=1`)
 }
 
 export async function updateQuotation(
@@ -197,294 +89,59 @@ export async function updateQuotation(
     }
   }
 
-  const existing = await prisma.quotation.findUnique({
-    where: { id },
-    select: { id: true, status: true },
-  })
-
-  if (!existing) {
-    return { status: 'error', message: 'Quotation not found' }
-  }
-
-  if (existing.status === 'CONVERTED') {
-    return {
-      status: 'error',
-      message: 'This quotation has been converted to an order and cannot be edited',
-    }
-  }
-
-  const referenceError = await assertReferences(parsed.data)
-
-  if (referenceError) {
-    return { status: 'error', message: referenceError }
-  }
-
-  const { totals, lines } = buildPersistable(parsed.data)
-
-  await prisma.$transaction([
-    prisma.quotationLine.deleteMany({ where: { quotationId: id } }),
-    prisma.quotation.update({
-      where: { id },
-      data: {
-        status: parsed.data.status,
-        customerId: parsed.data.customerId,
-        architectId: parsed.data.architectId,
-        carpenterId: parsed.data.carpenterId,
-          subject: parsed.data.subject,
-        quotationDate: parsed.data.quotationDate,
-        validUntil: parsed.data.validUntil,
-        siteAddress: parsed.data.siteAddress,
-        siteCity: parsed.data.siteCity,
-        sitePincode: parsed.data.sitePincode,
-        discountType: parsed.data.discountType,
-        discountValue: parsed.data.discountValue,
-        advancePercent: parsed.data.advancePercent,
-        notes: parsed.data.notes,
-        terms: parsed.data.terms,
-        ...totals,
-        updatedById: user.id,
-        lines: { create: lines },
-      },
-    }),
-  ])
-
-  const wasApproved = await invalidateApproval(id, 'Quotation amended')
-
-  await logActivity({
-    entity: 'quotation',
+  const result = await quotations.updateQuotation(
+    { userId: user.id, name: user.name },
     id,
-    action: 'updated',
-    summary: wasApproved
-      ? 'edited the quotation (customer approval cleared)'
-      : 'edited the quotation',
-    actor: { id: user.id, name: user.name },
-  })
+    parsed.data,
+  )
+
+  if (!result.ok) {
+    return { status: 'error', message: result.error }
+  }
 
   revalidatePath('/quotations')
   revalidatePath(`/quotations/${id}`)
 
-  return {
-    status: 'success',
-    message: wasApproved
-      ? 'Quotation saved. The customer approval was cleared and the link now asks for approval again.'
-      : 'Quotation saved',
-    id,
-  }
+  return { status: 'success', message: result.message, id }
 }
 
 export type SimpleResult =
   | { ok: true; message: string; id?: string }
   | { ok: false; error: string }
 
-const ALLOWED_TRANSITIONS: Record<QuotationStatus, QuotationStatus[]> = {
-  DRAFT: ['SENT'],
-  SENT: ['ACCEPTED', 'REJECTED', 'EXPIRED', 'DRAFT'],
-  ACCEPTED: ['CONVERTED', 'SENT'],
-  REJECTED: ['SENT'],
-  EXPIRED: ['SENT'],
-  CONVERTED: [],
-}
-
 export async function setQuotationStatus(
   id: string,
   status: QuotationStatus,
 ): Promise<SimpleResult> {
   const user = await requireCapability('quotation:update')
+  const result = await quotations.setQuotationStatus({ userId: user.id, name: user.name }, id, status)
 
-  const existing = await prisma.quotation.findUnique({
-    where: { id },
-    select: { status: true, number: true, revision: true },
-  })
-
-  if (!existing) {
-    return { ok: false, error: 'Quotation not found' }
-  }
-
-  if (!ALLOWED_TRANSITIONS[existing.status].includes(status)) {
-    return {
-      ok: false,
-      error: `A ${existing.status.toLowerCase()} quotation cannot move to ${status.toLowerCase()}`,
-    }
-  }
-
-  await prisma.quotation.update({
-    where: { id },
-    data: { status, updatedById: user.id },
-  })
-
-  await logActivity({
-    entity: 'quotation',
-    id,
-    action: 'status',
-    summary: `marked the quotation as ${status.toLowerCase()}`,
-    actor: { id: user.id, name: user.name },
-  })
+  if (!result.ok) return result
 
   revalidatePath('/quotations')
   revalidatePath(`/quotations/${id}`)
 
-  return { ok: true, message: `Marked as ${status.toLowerCase()}` }
+  return { ok: true, message: result.message }
 }
 
 export async function createRevision(id: string): Promise<SimpleResult> {
   const user = await requireCapability('quotation:create')
+  const result = await quotations.createRevision({ userId: user.id, name: user.name }, id)
 
-  const source = await prisma.quotation.findUnique({
-    where: { id },
-    include: {
-      lines: { orderBy: { position: 'asc' } },
-      attachments: { where: { removedAt: null }, orderBy: { createdAt: 'asc' } },
-    },
-  })
-
-  if (!source) {
-    return { ok: false, error: 'Quotation not found' }
-  }
-
-  const latest = await prisma.quotation.findFirst({
-    where: { number: source.number },
-    orderBy: { revision: 'desc' },
-    select: { revision: true },
-  })
-
-  const revision = (latest?.revision ?? source.revision) + 1
-
-  const copiedAttachments = []
-
-  for (const attachment of source.attachments) {
-    try {
-      const storedName = await copyUpload(attachment.storedName)
-
-      copiedAttachments.push({
-        fileName: attachment.fileName,
-        storedName,
-        mimeType: attachment.mimeType,
-        sizeBytes: attachment.sizeBytes,
-        comment: attachment.comment,
-        uploadedById: attachment.uploadedById,
-      })
-    } catch {
-      continue
-    }
-  }
-
-  const created = await prisma.quotation.create({
-    data: {
-      number: source.number,
-      revision,
-      status: 'DRAFT',
-      parentId: source.parentId ?? source.id,
-      customerId: source.customerId,
-      architectId: source.architectId,
-      carpenterId: source.carpenterId,
-      subject: source.subject,
-      quotationDate: new Date(),
-      validUntil: source.validUntil,
-      siteAddress: source.siteAddress,
-      siteCity: source.siteCity,
-      sitePincode: source.sitePincode,
-      discountType: source.discountType,
-      discountValue: source.discountValue,
-      advancePercent: source.advancePercent,
-      subtotal: source.subtotal,
-      discountAmount: source.discountAmount,
-      taxableAmount: source.taxableAmount,
-      taxAmount: source.taxAmount,
-      roundOff: source.roundOff,
-      total: source.total,
-      notes: source.notes,
-      terms: source.terms,
-      createdById: user.id,
-      updatedById: user.id,
-      attachments: { create: copiedAttachments },
-      lines: {
-        create: source.lines.map((line) => ({
-          position: line.position,
-          itemId: line.itemId,
-          description: line.description,
-          unit: line.unit,
-          materialSupply: line.materialSupply,
-          isFlatRate: line.isFlatRate,
-          autoSize: line.autoSize,
-          dimensionUnit: line.dimensionUnit,
-          length: line.length,
-          width: line.width,
-          pieces: line.pieces,
-          quantity: line.quantity,
-          rate: line.rate,
-          discountPercent: line.discountPercent,
-          taxRatePercent: line.taxRatePercent,
-          hsnCode: line.hsnCode,
-          amount: line.amount,
-          taxAmount: line.taxAmount,
-          lineTotal: line.lineTotal,
-          notes: line.notes,
-        })),
-      },
-    },
-  })
-
-  const actor = { id: user.id, name: user.name }
-
-  await logActivity({
-    entity: 'quotation',
-    id: created.id,
-    action: 'created',
-    summary: `created revision R${revision} from R${source.revision}`,
-    actor,
-  })
-  await logActivity({
-    entity: 'quotation',
-    id: source.id,
-    action: 'revised',
-    summary: `created revision R${revision}`,
-    actor,
-  })
+  if (!result.ok) return result
 
   revalidatePath('/quotations')
 
-  return {
-    ok: true,
-    message: `Revision ${revision} created`,
-    id: created.id,
-  }
+  return { ok: true, message: result.message, id: result.id }
 }
 
 export async function deleteQuotation(id: string): Promise<SimpleResult> {
-  await requireCapability('quotation:delete')
+  const user = await requireCapability('quotation:delete')
+  const result = await quotations.deleteQuotation({ userId: user.id, name: user.name }, id)
 
-  const quotation = await prisma.quotation.findUnique({
-    where: { id },
-    select: {
-      number: true,
-      status: true,
-      attachments: { select: { storedName: true } },
-    },
-  })
-
-  if (!quotation) {
-    return { ok: false, error: 'Quotation not found' }
-  }
-
-  const [orders, revisions] = await Promise.all([
-    prisma.order.count({ where: { quotationId: id } }),
-    prisma.quotation.count({ where: { parentId: id } }),
-  ])
-
-  if (orders > 0 || revisions > 0) {
-    return {
-      ok: false,
-      error: 'This quotation has orders or later revisions linked to it. Delete those first.',
-    }
-  }
-
-  await prisma.quotation.delete({ where: { id } })
-
-  await Promise.all(
-    quotation.attachments.map((file) => deleteUpload(file.storedName)),
-  )
+  if (!result.ok) return result
 
   revalidatePath('/quotations')
 
-  return { ok: true, message: `${quotation.number} deleted` }
+  return { ok: true, message: result.message }
 }
